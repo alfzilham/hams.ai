@@ -1,0 +1,67 @@
+# ============================================================
+# Logging Configuration
+# Uses loguru for application logs + OpenTelemetry for traces.
+# ============================================================
+
+logging:
+  # Global log level: DEBUG | INFO | WARNING | ERROR | CRITICAL
+  level: INFO
+
+  # Console output
+  console:
+    enabled: true
+    format: "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan> - {message}"
+    colorize: true
+    level: INFO
+
+  # File output (rotated daily, kept 7 days)
+  file:
+    enabled: true
+    path: ./logs/agent_{time:YYYY-MM-DD}.log
+    rotation: "00:00"       # rotate at midnight
+    retention: "7 days"
+    compression: zip
+    level: DEBUG
+    format: "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} | {message}"
+
+  # Structured JSON log (for log aggregation services)
+  json:
+    enabled: false
+    path: ./logs/agent_structured.jsonl
+    level: INFO
+
+observability:
+  # OpenTelemetry tracing
+  tracing:
+    enabled: false
+    exporter: otlp          # otlp | jaeger | zipkin | console
+    endpoint: http://localhost:4317
+    service_name: ai-coding-agent
+    service_version: "0.1.0"
+
+    # Span attributes added to every trace
+    resource_attributes:
+      deployment.environment: development
+
+  # Cost tracking
+  cost_tracking:
+    enabled: true
+    output_path: ./logs/cost_report.jsonl
+
+    # Pricing per 1M tokens (USD) — update when provider prices change
+    pricing:
+      claude-sonnet-4-5:
+        input: 3.00
+        output: 15.00
+      claude-opus-4:
+        input: 15.00
+        output: 75.00
+      claude-haiku-4-5:
+        input: 0.25
+        output: 1.25
+      gpt-4o:
+        input: 2.50
+        output: 10.00
+      gpt-4o-mini:
+        input: 0.15
+        output: 0.60

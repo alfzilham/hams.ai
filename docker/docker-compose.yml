@@ -1,0 +1,67 @@
+# ============================================================
+# AI Coding Agent — Docker Compose (Development)
+# ============================================================
+
+version: "3.9"
+
+services:
+
+  # ---- Main agent (runs on host network, needs API access) ----
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    image: ai-coding-agent-dev:latest
+    container_name: ai-coding-agent
+    volumes:
+      - ..:/app                          # hot-reload source
+      - ../workspace:/app/workspace      # shared working directory
+      - ../logs:/app/logs                # persist logs
+      - /var/run/docker.sock:/var/run/docker.sock  # needed to spin up sandbox containers
+    env_file:
+      - ../.env
+    environment:
+      - LOG_LEVEL=DEBUG
+      - AGENT_LLM_PROVIDER=${AGENT_LLM_PROVIDER:-anthropic}
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+    networks:
+      - agent-net
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # ---- Sandbox container (isolated, no network) ----
+  sandbox:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ai-coding-agent-sandbox:latest
+    container_name: ai-coding-agent-sandbox
+    volumes:
+      - ../workspace:/workspace          # agent writes here; sandbox reads/writes here
+    environment:
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    # No network access — fully isolated
+    network_mode: none
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: false                     # workspace volume is writable
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    restart: "no"                        # sandbox is ephemeral
+
+# ---- Networks ----
+networks:
+  agent-net:
+    driver: bridge

@@ -1,0 +1,73 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# === Virtual environments ===
+.venv/
+venv/
+env/
+.conda/
+
+# === Secrets (never bake into image) ===
+.env
+.env.*
+*.pem
+*.key
+*.secret
+
+# === Tests ===
+tests/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# === Dev tools ===
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# === Git ===
+.git/
+.gitignore
+.gitattributes
+*.md
+
+# === Docker (avoid recursive copy) ===
+docker/
+deployment/
+docker-compose*.yml
+Dockerfile*
+
+# === Runtime artifacts ===
+workspace/
+.agent_checkpoints/
+.agent_logs/
+chroma_db/
+faiss_index/
+logs/
+*.log
+
+# === Examples (not needed in prod image) ===
+examples/
+
+# === CI ===
+.github/
+.gitlab-ci.yml
+.circleci/
+
+# === Docs ===
+docs/
+READme/

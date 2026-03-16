@@ -1,0 +1,58 @@
+# === Secrets ===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# === Testing & coverage ===
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# === Docker ===
+docker/volumes/
+*.log
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# === Agent runtime artifacts ===
+/workspace/         # agent working directory (ephemeral)
+/runs/              # task run logs
+/checkpoints/       # agent state snapshots
+*.agent_state.json
+
+# === Vector store data ===
+chroma_db/
+faiss_index/
+*.faiss
+*.pkl
+
+# === Benchmark artifacts ===
+tests/benchmarks/results/
+swebench_predictions.jsonl

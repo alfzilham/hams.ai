@@ -1,0 +1,60 @@
+# ============================================================
+# Sandbox Configuration
+# Controls the Docker container used for code execution.
+# ============================================================
+
+sandbox:
+  # Docker image for the sandbox container
+  image: ai-coding-agent-sandbox:latest
+
+  # Resource limits
+  cpu_limit: "1.0"       # CPU cores (string for Docker API)
+  memory_limit: "512m"   # RAM — m=MB, g=GB
+  pids_limit: 64         # Max processes inside container
+
+  # Execution timeout (seconds) per run_command / run_code call
+  execution_timeout: 30
+
+  # Network access inside sandbox
+  # "none" = fully isolated (recommended for untrusted code)
+  # "bridge" = allow outbound HTTP (needed for pip installs etc.)
+  network_mode: none
+
+  # Filesystem mounts (read-only by default)
+  mounts:
+    workspace:
+      host_path: ./workspace     # agent's working directory on host
+      container_path: /workspace
+      read_only: false
+    readonly_src:
+      host_path: ./agent
+      container_path: /agent_src
+      read_only: true
+
+  # Paths the agent is allowed to read/write inside the sandbox
+  allowed_paths:
+    - /workspace
+    - /tmp
+
+  # Paths that are always blocked
+  blocked_paths:
+    - /etc
+    - /root
+    - /home
+    - /proc
+    - /sys
+
+  # Environment variables passed into the sandbox
+  # (do NOT pass API keys here — use agent-level env only)
+  env_vars:
+    PYTHONDONTWRITEBYTECODE: "1"
+    PYTHONUNBUFFERED: "1"
+
+  # Seccomp profile path (relative to project root)
+  seccomp_profile: security/seccomp_profile.json
+
+  # Container auto-removal after task completes
+  auto_remove: true
+
+  # Reuse the same container across steps (faster but less isolated)
+  reuse_container: false

@@ -1,0 +1,149 @@
+{
+  "name": "ai-coding-agent",
+  "displayName": "AI Coding Agent",
+  "description": "Autonomous coding assistant — write, test, fix, and explain code directly in VS Code",
+  "version": "0.1.0",
+  "publisher": "yourname",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourname/ai-coding-agent"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": ["ai", "agent", "coding", "claude", "gpt", "assistant"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiAgent.startChat",
+        "title": "AI Agent: Open Chat",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "aiAgent.runTask",
+        "title": "AI Agent: Run Task on File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "aiAgent.explainSelection",
+        "title": "AI Agent: Explain Selection"
+      },
+      {
+        "command": "aiAgent.generateTests",
+        "title": "AI Agent: Generate Tests for File"
+      },
+      {
+        "command": "aiAgent.fixSelection",
+        "title": "AI Agent: Fix This Code"
+      },
+      {
+        "command": "aiAgent.refactorCode",
+        "title": "AI Agent: Suggest Refactoring"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "aiAgent.explainSelection",
+          "when": "editorHasSelection",
+          "group": "aiAgent@1"
+        },
+        {
+          "command": "aiAgent.fixSelection",
+          "when": "editorHasSelection",
+          "group": "aiAgent@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "aiAgent.generateTests",
+          "when": "resourceExtname == .py || resourceExtname == .js || resourceExtname == .ts",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "AI Coding Agent",
+      "properties": {
+        "aiAgent.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "URL of the AI Coding Agent API server"
+        },
+        "aiAgent.provider": {
+          "type": "string",
+          "default": "anthropic",
+          "enum": ["anthropic", "openai", "ollama"],
+          "description": "LLM provider to use"
+        },
+        "aiAgent.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model name (leave blank for provider default)"
+        },
+        "aiAgent.maxSteps": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum reasoning steps per task"
+        },
+        "aiAgent.streamResponses": {
+          "type": "boolean",
+          "default": true,
+          "description": "Stream agent responses in real-time"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aiAgentSidebar",
+          "title": "AI Coding Agent",
+          "icon": "$(robot)"
+        }
+      ]
+    },
+    "views": {
+      "aiAgentSidebar": [
+        {
+          "type": "webview",
+          "id": "aiAgentChatView",
+          "name": "Chat",
+          "icon": "$(comment-discussion)"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "aiAgent.startChat",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a"
+      },
+      {
+        "command": "aiAgent.explainSelection",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorHasSelection"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "echo 'No build step required'",
+    "lint": "eslint extension.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0"
+  }
+}

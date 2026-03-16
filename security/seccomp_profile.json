@@ -1,0 +1,113 @@
+{
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "architectures": ["SCMP_ARCH_X86_64", "SCMP_ARCH_X86", "SCMP_ARCH_X32"],
+  "syscalls": [
+    {
+      "comment": "Allow core process / memory operations",
+      "names": [
+        "read", "write", "open", "openat", "close",
+        "stat", "fstat", "lstat", "poll", "lseek",
+        "mmap", "mprotect", "munmap", "brk",
+        "access", "dup", "dup2", "dup3",
+        "nanosleep", "getpid", "getppid",
+        "exit", "exit_group", "wait4", "waitpid",
+        "execve", "execveat",
+        "clone", "fork", "vfork"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Filesystem — limited to /workspace and /tmp",
+      "names": [
+        "getcwd", "chdir", "mkdir", "mkdirat",
+        "unlink", "unlinkat", "rename", "renameat", "renameat2",
+        "readdir", "getdents", "getdents64",
+        "truncate", "ftruncate",
+        "chmod", "fchmod", "fchmodat",
+        "readlink", "readlinkat",
+        "symlink", "symlinkat",
+        "link", "linkat"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "I/O and file descriptors",
+      "names": [
+        "fcntl", "ioctl", "pipe", "pipe2",
+        "select", "pselect6", "epoll_create", "epoll_create1",
+        "epoll_ctl", "epoll_wait", "epoll_pwait",
+        "sendfile", "splice", "tee",
+        "fsync", "fdatasync", "sync_file_range",
+        "pread64", "pwrite64", "readv", "writev", "preadv", "pwritev"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Signals",
+      "names": [
+        "kill", "tkill", "tgkill",
+        "rt_sigaction", "rt_sigprocmask", "rt_sigreturn",
+        "rt_sigsuspend", "rt_sigtimedwait", "rt_sigqueueinfo",
+        "sigaltstack", "signal"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Thread / futex",
+      "names": [
+        "futex", "set_tid_address", "set_robust_list",
+        "get_robust_list", "gettid",
+        "sched_yield", "sched_getaffinity", "sched_setaffinity"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Time",
+      "names": [
+        "gettimeofday", "time", "clock_gettime", "clock_getres",
+        "clock_nanosleep", "times", "utime", "utimes", "utimensat"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Memory / mmap extended",
+      "names": [
+        "madvise", "mincore", "mlock", "munlock",
+        "mremap", "msync", "remap_file_pages"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Resource limits (ulimit)",
+      "names": ["getrlimit", "setrlimit", "prlimit64"],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "User / group identity (read-only)",
+      "names": ["getuid", "getgid", "geteuid", "getegid", "getgroups"],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "Python / CPython internals",
+      "names": [
+        "arch_prctl", "prctl",
+        "getrandom", "uname",
+        "sysinfo", "capget",
+        "restart_syscall"
+      ],
+      "action": "SCMP_ACT_ALLOW"
+    },
+    {
+      "comment": "EXPLICITLY BLOCKED — deny loudly",
+      "names": [
+        "mount", "umount2",
+        "ptrace",
+        "kexec_load", "kexec_file_load",
+        "create_module", "init_module", "finit_module", "delete_module",
+        "syslog",
+        "acct"
+      ],
+      "action": "SCMP_ACT_ERRNO"
+    }
+  ]
+}

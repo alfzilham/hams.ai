@@ -1,0 +1,40 @@
+# ============================================================
+# AI Coding Agent — Development Image
+# Includes debugging tools, hot-reload, and dev dependencies.
+#
+# Build:  docker build -f docker/Dockerfile.dev -t ai-coding-agent-dev .
+# Run:    docker-compose -f docker/docker-compose.yml up agent-dev
+# ============================================================
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Dev tools: git, vim, curl, procps (for ps/kill)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    vim \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install all dependencies including dev extras
+COPY pyproject.toml requirements.txt ./
+RUN pip install --no-cache-dir -e ".[dev,observability]" || \
+    pip install --no-cache-dir -r requirements.txt
+
+# Mount source at runtime (volume) — don't COPY here for hot-reload
+# COPY . .  ← intentionally omitted
+
+# Create non-root dev user (with home for shell history etc.)
+RUN useradd --uid 1000 --create-home --shell /bin/bash devuser && \
+    chown -R devuser:devuser /app
+
+USER devuser
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    LOG_LEVEL=DEBUG
+
+# Expose nothing by default — dev tools connect via exec
+CMD ["python", "-m", "agent.main", "--help"]
