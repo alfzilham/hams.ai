@@ -1,28 +1,47 @@
 # ============================================================
 # Hams AI — Docker Compose (Development)
+# Includes: agent (hot-reload) + sandbox + ollama
+#
+# Usage:
+#   docker-compose -f docker/docker-compose.yml up
+#   docker-compose -f docker/docker-compose.yml up agent   # API only
+#   docker-compose -f docker/docker-compose.yml up ollama  # Ollama only
 # ============================================================
 
 version: "3.9"
 
 services:
 
-  # ---- Main agent (runs on host network, needs API access) ----
+  # ── Agent API (dev, hot-reload) ─────────────────────────────────────────
   agent:
     build:
       context: ..
       dockerfile: docker/Dockerfile.dev
     image: hams-ai-dev:latest
-    container_name: hams-ai
+    container_name: hams-ai-dev
+    ports:
+      - "8000:8000"
     volumes:
-      - ..:/app                          # hot-reload source
-      - ../workspace:/app/workspace      # shared working directory
-      - ../logs:/app/logs                # persist logs
-      - /var/run/docker.sock:/var/run/docker.sock  # needed to spin up sandbox containers
+      - ..:/app                                          # hot-reload source
+      - ../workspace:/app/workspace                      # shared workspace
+      - ../logs:/app/logs                                # persist logs
+      - /var/run/docker.sock:/var/run/docker.sock        # spawn sandbox containers
     env_file:
       - ../.env
     environment:
       - LOG_LEVEL=DEBUG
       - AGENT_LLM_PROVIDER=${AGENT_LLM_PROVIDER:-ollama}
+      # Point to ollama service inside Docker network
+      - OLLAMA_BASE_URL=http://ollama:11434
+    command: >
+      python -m uvicorn agent.api:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --log-level debug
+    depends_on:
+      ollama:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -31,10 +50,8 @@ services:
     networks:
       - agent-net
     restart: unless-stopped
-    stdin_open: true
-    tty: true
 
-  # ---- Sandbox container (isolated, no network) ----
+  # ── Sandbox (isolated, no network) ──────────────────────────────────────
   sandbox:
     build:
       context: ..
@@ -42,7 +59,7 @@ services:
     image: hams-ai-sandbox:latest
     container_name: hams-ai-sandbox
     volumes:
-      - ../workspace:/workspace          # agent writes here; sandbox reads/writes here
+      - ../workspace:/workspace
     environment:
       - PYTHONUNBUFFERED=1
     deploy:
@@ -50,18 +67,51 @@ services:
         limits:
           cpus: "1.0"
           memory: 512M
-    # No network access — fully isolated
     network_mode: none
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    read_only: false                     # workspace volume is writable
     tmpfs:
       - /tmp:size=64m,mode=1777
-    restart: "no"                        # sandbox is ephemeral
+    restart: "no"
 
-# ---- Networks ----
+  # ── Ollama (local LLM server) ────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hams-ai-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama                        # persist downloaded models
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        # Uncomment if you have NVIDIA GPU:
+        # reservations:
+        #   devices:
+        #     - driver: nvidia
+        #       count: 1
+        #       capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 5
+    networks:
+      - agent-net
+    restart: unless-stopped
+
+# ── Named volumes ────────────────────────────────────────────────────────
+volumes:
+  ollama_data:
+    driver: local
+
+# ── Networks ─────────────────────────────────────────────────────────────
 networks:
   agent-net:
     driver: bridge

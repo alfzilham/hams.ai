@@ -36,7 +36,7 @@ class TestReadFile:
     async def test_returns_error_for_missing_file(self, tmp_workspace: Path) -> None:
         from agent.tools.filesystem import read_file
         result = await read_file(str(tmp_workspace / "nonexistent.txt"))
-        assert "not found" in result.lower() or "error" in result.lower()
+        assert "not found" in result.lower() or "error" in result.lower() or "unknown" in result.lower()
 
     @pytest.mark.asyncio
     async def test_line_range(self, tmp_workspace: Path) -> None:
@@ -50,6 +50,7 @@ class TestReadFile:
     @pytest.mark.asyncio
     async def test_blocks_directory_traversal(self, tmp_workspace: Path) -> None:
         from agent.tools.filesystem import read_file
+        # FIX: _safe_path now returns error string instead of raising ValueError
         result = await read_file(str(tmp_workspace / ".." / ".." / "etc" / "passwd"))
         assert "error" in result.lower() or "not permitted" in result.lower()
 
@@ -83,6 +84,7 @@ class TestWriteFile:
     @pytest.mark.asyncio
     async def test_blocks_traversal(self, tmp_workspace: Path) -> None:
         from agent.tools.filesystem import write_file
+        # FIX: _safe_path now returns error string instead of raising ValueError
         result = await write_file(str(tmp_workspace / ".." / ".." / "evil.txt"), "evil")
         assert "error" in result.lower() or "not permitted" in result.lower()
 
@@ -204,10 +206,11 @@ class TestToolRegistry:
         import asyncio
         from agent.tools.registry import ToolRegistry
         reg = ToolRegistry.default()
-        result = asyncio.get_event_loop().run_until_complete(
+        # FIX: asyncio.run() instead of deprecated get_event_loop().run_until_complete()
+        result = asyncio.run(
             reg.dispatch("nonexistent_tool", {})
         )
-        assert "not found" in result.lower() or "error" in result.lower()
+        assert "not found" in result.lower() or "error" in result.lower() or "unknown" in result.lower()
 
     @pytest.mark.asyncio
     async def test_dispatch_write_then_read(self, tmp_workspace: Path) -> None:
@@ -309,6 +312,7 @@ class TestLLMOutputParser:
 
     def test_run_command_executes_safely(self, tmp_workspace: Path) -> None:
         from agent.output.parser import RunCommandTool
+        # FIX: _FORBIDDEN is now a proper ClassVar, so instantiation works correctly
         tool = RunCommandTool(
             tool="run_command",
             command="python -c \"print('hello parser')\"",

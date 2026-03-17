@@ -1,28 +1,33 @@
 # ============================================================
 # Hams AI — Production Docker Compose
+# Supports: Ollama (local) + Groq + Google Gemini
 #
-# Usage:
-#   docker-compose -f deployment/docker-compose.prod.yml up -d
+# Setup:
+#   1. cp .env.example .env && fill in your API keys
+#   2. docker build -f docker/Dockerfile.app -t hams-ai-app:latest .
+#   3. docker-compose -f deployment/docker-compose.prod.yml up -d
 #
-# Prerequisites:
-#   1. Build the image:  docker build -f docker/Dockerfile -t hams-ai:latest .
-#   2. Create .env with API keys (see .env.example)
+# Switch provider (no rebuild needed):
+#   AGENT_LLM_PROVIDER=groq   docker-compose ... up -d
+#   AGENT_LLM_PROVIDER=google docker-compose ... up -d
+#   AGENT_LLM_PROVIDER=ollama docker-compose ... up -d
 # ============================================================
 
 version: "3.9"
 
 services:
 
-  # ── Agent API (production) ──────────────────────────────────────────────
+  # ── Agent API (production) ───────────────────────────────────────────────
   agent:
-    image: hams-ai:latest
+    image: hams-ai-app:latest
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/Dockerfile.app
+    container_name: hams-ai-prod
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"    # bind to localhost only — nginx is the public face
     volumes:
-      - agent_workspace:/workspace
+      - agent_workspace:/app/workspace
       - agent_logs:/app/logs
     env_file:
       - ../.env
@@ -30,9 +35,13 @@ services:
       - AGENT_ENV=production
       - LOG_LEVEL=INFO
       - AGENT_LLM_PROVIDER=${AGENT_LLM_PROVIDER:-ollama}
+      # Ollama: point to the ollama service in this compose network
+      # If using groq/google, this is ignored
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
     deploy:
-      mode: replicated
-      replicas: 2
       resources:
         limits:
           cpus: "2.0"
@@ -40,24 +49,14 @@ services:
         reservations:
           cpus: "0.5"
           memory: 1G
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
-      update_config:
-        parallelism: 1
-        delay: 10s
-        failure_action: rollback
-        order: start-first
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
-      start_period: 15s
+      start_period: 20s
       retries: 3
     networks:
-      - agent-prod
+      - prod-net
     logging:
       driver: "json-file"
       options:
@@ -65,39 +64,81 @@ services:
         max-file: "5"
     security_opt:
       - no-new-privileges:true
-    read_only: false
-    tmpfs:
-      - /tmp:size=128m
+    restart: unless-stopped
+
+  # ── Ollama (local LLM — used when AGENT_LLM_PROVIDER=ollama) ────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hams-ai-ollama-prod
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    # NOT exposed to host — only accessible inside prod-net
+    expose:
+      - "11434"
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        # Uncomment for NVIDIA GPU:
+        # reservations:
+        #   devices:
+        #     - driver: nvidia
+        #       count: 1
+        #       capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 5
+    networks:
+      - prod-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+    restart: unless-stopped
 
   # ── Nginx reverse proxy ──────────────────────────────────────────────────
   nginx:
     image: nginx:1.27-alpine
+    container_name: hams-ai-nginx
     ports:
       - "80:80"
+      # Uncomment after setting up SSL:
+      # - "443:443"
     volumes:
-      - ../deployment/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Uncomment after setting up SSL:
+      # - ./ssl/cert.pem:/etc/nginx/ssl/cert.pem:ro
+      # - ./ssl/key.pem:/etc/nginx/ssl/key.pem:ro
     depends_on:
       agent:
         condition: service_healthy
     networks:
-      - agent-prod
-    restart: unless-stopped
+      - prod-net
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+    restart: unless-stopped
 
-# ── Named volumes ────────────────────────────────────────────────────────
+# ── Named volumes ─────────────────────────────────────────────────────────
 volumes:
   agent_workspace:
     driver: local
   agent_logs:
     driver: local
+  ollama_data:
+    driver: local
 
-# ── Networks ─────────────────────────────────────────────────────────────
+# ── Networks ──────────────────────────────────────────────────────────────
 networks:
-  agent-prod:
+  prod-net:
     driver: bridge
     ipam:
       config:

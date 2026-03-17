@@ -27,7 +27,8 @@ import json
 import os
 import re
 import subprocess
-from typing import Any, Literal, Optional
+# FIX: added ClassVar import
+from typing import Any, ClassVar, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -153,8 +154,8 @@ class RunCommandTool(BaseModel):
     working_directory: str = Field(".", description="Working directory")
     timeout_seconds: int = Field(60, ge=1, le=300, description="Execution timeout")
 
-    # Block dangerous commands at parse time
-    _FORBIDDEN = re.compile(
+    # FIX: ClassVar annotation so Pydantic v2 does NOT treat this as a model field
+    _FORBIDDEN: ClassVar[re.Pattern[str]] = re.compile(
         r"rm\s+-rf\s+/|chmod\s+777\s+/|curl.*\|\s*bash|wget.*\|\s*sh",
         re.IGNORECASE,
     )
@@ -198,9 +199,7 @@ class WebSearchTool(BaseModel):
         import asyncio
         from agent.tools.web_search import web_search
         try:
-            return asyncio.get_event_loop().run_until_complete(
-                web_search(self.query, max_results=self.max_results)
-            )
+            return asyncio.run(web_search(self.query, max_results=self.max_results))
         except Exception as exc:
             return f"Search error: {exc}"
 
@@ -280,7 +279,17 @@ class LLMOutputParser:
         except json.JSONDecodeError:
             pass
 
-        # Fall back: find outermost braces
+        # FIX: search entire original text for any JSON object, not just clean
+        # This handles JSON embedded in prose like "I will do X.\n{...}\nLet me know."
+        for match in re.finditer(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}", text, re.DOTALL):
+            candidate = match.group(0)
+            try:
+                json.loads(candidate)
+                return candidate
+            except json.JSONDecodeError:
+                continue
+
+        # Fall back: find outermost braces in cleaned text
         start = clean.find("{")
         end = clean.rfind("}") + 1
         if start != -1 and end > start:
@@ -389,9 +398,8 @@ class StructuredAgent:
         """Call the LLM synchronously."""
         import asyncio
         if hasattr(self.llm, "generate_text"):
-            return asyncio.get_event_loop().run_until_complete(
-                self.llm.generate_text(messages)
-            )
+            # FIX: asyncio.run() instead of deprecated get_event_loop()
+            return asyncio.run(self.llm.generate_text(messages))
         # Fallback: call synchronously (MockLLM)
         return self.llm.invoke(str(messages))
 

@@ -1,0 +1,123 @@
+# ============================================================
+# Hams AI — Deploy Pipeline
+# Triggers on push to main branch only.
+#
+# Requirements (GitHub Secrets):
+#   DOCKERHUB_USERNAME   — Docker Hub username
+#   DOCKERHUB_TOKEN      — Docker Hub access token
+#   SERVER_HOST          — VPS IP or hostname
+#   SERVER_USER          — SSH username (e.g. ubuntu)
+#   SERVER_SSH_KEY       — Private SSH key (contents of ~/.ssh/id_rsa)
+# ============================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*.*.*"
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/hams-ai-app
+
+jobs:
+
+  # ── Build & Push to Docker Hub ──────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.app
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push sandbox image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hams-ai-sandbox:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+
+  # ── Deploy to Server via SSH ─────────────────────────────────────────────
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            # Go to project directory
+            cd ~/hams-ai
+
+            # Pull latest compose files
+            git pull origin main
+
+            # Pull new images
+            docker pull ${{ env.IMAGE_NAME }}:main
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/hams-ai-sandbox:latest
+
+            # Tag as latest
+            docker tag ${{ env.IMAGE_NAME }}:main hams-ai-app:latest
+            docker tag ${{ secrets.DOCKERHUB_USERNAME }}/hams-ai-sandbox:latest hams-ai-sandbox:latest
+
+            # Rolling restart — zero downtime
+            docker-compose -f deployment/docker-compose.prod.yml up -d --no-build
+
+            # Wait for health check
+            echo "Waiting for health check..."
+            sleep 10
+            curl -f http://localhost:8000/health || (echo "Health check failed!" && exit 1)
+
+            # Clean up old images
+            docker image prune -f
+
+            echo "✅ Deployment complete!"

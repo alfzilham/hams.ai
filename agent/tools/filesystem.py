@@ -80,7 +80,11 @@ async def read_file(
         start_line: Optional first line to return (1-indexed). Omit to start from line 1.
         end_line: Optional last line to return (1-indexed, inclusive). Omit for end of file.
     """
-    resolved = _safe_path(path)
+    # FIX: catch ValueError from _safe_path and return error string
+    try:
+        resolved = _safe_path(path)
+    except ValueError as exc:
+        return f"Error: {exc}"
 
     if not resolved.exists():
         return f"Error: file not found: {path}"
@@ -121,7 +125,12 @@ async def write_file(path: str, content: str, encoding: str = "utf-8") -> str:
         content: Raw text to write. Do NOT wrap in markdown code fences.
         encoding: File encoding — utf-8 (default), utf-8-sig, latin-1, ascii.
     """
-    resolved = _safe_path(path)
+    # FIX: catch ValueError from _safe_path and return error string
+    try:
+        resolved = _safe_path(path)
+    except ValueError as exc:
+        return f"Error: {exc}"
+
     resolved.parent.mkdir(parents=True, exist_ok=True)
 
     try:
