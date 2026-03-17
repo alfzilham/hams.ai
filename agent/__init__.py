@@ -1,5 +1,5 @@
 """
-AI Coding Agent — autonomous coding assistant.
+Hams AI — autonomous coding assistant.
 
 Public API::
 

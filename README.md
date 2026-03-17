@@ -1,4 +1,4 @@
-# AI Coding Agent 🤖
+# Hams AI 🤖
 
 An open-source autonomous coding assistant that can write, test, debug, and deploy code — powered by Claude, GPT-4o, or local models via Ollama.
 
@@ -37,8 +37,8 @@ The agent receives a natural language task and autonomously:
 
 ```bash
 # 1. Clone
-git clone https://github.com/yourname/ai-coding-agent.git
-cd ai-coding-agent
+git clone https://github.com/yourname/hams-ai.git
+cd hams-ai
 
 # 2. Set up Python environment
 python -m venv .venv
@@ -89,7 +89,7 @@ Agent Core ───────────────────────
 ## Project Structure
 
 ```
-ai-coding-agent/
+hams-ai/
 ├── agent/
 │   ├── core/          # Agent, reasoning loop, planner, state
 │   ├── llm/           # LLM provider abstraction (Claude, OpenAI, Ollama)

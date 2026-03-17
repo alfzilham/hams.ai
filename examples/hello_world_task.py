@@ -172,7 +172,7 @@ async def test_agent_e2e() -> None:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
-    print("\n🔍 AI Coding Agent — Smoke Tests\n")
+    print("\n🔍 Hams AI — Smoke Tests\n")
 
     print("── Settings ──")
     test_settings()

@@ -5,7 +5,7 @@
 # executes the command passed in.
 #
 # Usage (set as Docker CMD or docker run override):
-#   docker run ... ai-coding-agent-sandbox bash sandbox_entrypoint.sh python script.py
+#   docker run ... hams-ai-sandbox bash sandbox_entrypoint.sh python script.py
 # ============================================================
 
 set -euo pipefail

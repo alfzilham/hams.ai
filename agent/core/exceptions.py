@@ -1,5 +1,5 @@
 """
-Custom exception hierarchy for the AI Coding Agent.
+Custom exception hierarchy for the Hams AI.
 
 Every error carries:
   - message       : human-readable description

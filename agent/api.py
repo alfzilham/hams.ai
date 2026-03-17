@@ -1,5 +1,5 @@
 """
-HTTP API for the AI Coding Agent.
+HTTP API for the Hams AI.
 
 Provides:
   GET  /health         — liveness + readiness probe (used by Docker healthcheck)
@@ -28,7 +28,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 app = FastAPI(
-    title="AI Coding Agent",
+    title="Hams AI",
     description="Autonomous coding assistant API",
     version="0.1.0",
 )
@@ -52,7 +52,7 @@ _tasks: dict[str, dict[str, Any]] = {}
 
 class RunRequest(BaseModel):
     task: str = Field(..., description="The coding task to complete", min_length=1)
-    provider: str = Field("anthropic", description="LLM provider: anthropic | openai | ollama")
+    provider: str = Field("ollama", description="LLM provider: ollama | groq | google")
     model: str | None = Field(None, description="Model name — uses provider default if omitted")
     max_steps: int = Field(30, ge=1, le=100)
 

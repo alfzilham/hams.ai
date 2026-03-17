@@ -1,5 +1,5 @@
 """
-Reasoning Loop — the heart of the AI Coding Agent.
+Reasoning Loop — the heart of the Hams AI.
 
 Implements the Perceive → Reason → Act → Observe → Reflect cycle
 based on the ReAct (Reasoning + Acting) framework.

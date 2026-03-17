@@ -1,13 +1,13 @@
 {
-  "name": "ai-coding-agent",
-  "displayName": "AI Coding Agent",
+  "name": "hams-ai",
+  "displayName": "Hams AI",
   "description": "Autonomous coding assistant — write, test, fix, and explain code directly in VS Code",
   "version": "0.1.0",
-  "publisher": "yourname",
+  "publisher": "alfizilham",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourname/ai-coding-agent"
+    "url": "https://github.com/alfizilham/hams-ai"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -17,7 +17,15 @@
     "Programming Languages",
     "Other"
   ],
-  "keywords": ["ai", "agent", "coding", "claude", "gpt", "assistant"],
+  "keywords": [
+    "ai",
+    "agent",
+    "coding",
+    "ollama",
+    "groq",
+    "gemini",
+    "assistant"
+  ],
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -26,29 +34,29 @@
     "commands": [
       {
         "command": "aiAgent.startChat",
-        "title": "AI Agent: Open Chat",
+        "title": "Hams AI: Open Chat",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "aiAgent.runTask",
-        "title": "AI Agent: Run Task on File",
+        "title": "Hams AI: Run Task on File",
         "icon": "$(play)"
       },
       {
         "command": "aiAgent.explainSelection",
-        "title": "AI Agent: Explain Selection"
+        "title": "Hams AI: Explain Selection"
       },
       {
         "command": "aiAgent.generateTests",
-        "title": "AI Agent: Generate Tests for File"
+        "title": "Hams AI: Generate Tests for File"
       },
       {
         "command": "aiAgent.fixSelection",
-        "title": "AI Agent: Fix This Code"
+        "title": "Hams AI: Fix This Code"
       },
       {
         "command": "aiAgent.refactorCode",
-        "title": "AI Agent: Suggest Refactoring"
+        "title": "Hams AI: Suggest Refactoring"
       }
     ],
     "menus": {
@@ -74,17 +82,21 @@
     },
     "configuration": {
       "type": "object",
-      "title": "AI Coding Agent",
+      "title": "Hams AI",
       "properties": {
         "aiAgent.apiUrl": {
           "type": "string",
           "default": "http://localhost:8000",
-          "description": "URL of the AI Coding Agent API server"
+          "description": "URL of the Hams AI API server"
         },
         "aiAgent.provider": {
           "type": "string",
-          "default": "anthropic",
-          "enum": ["anthropic", "openai", "ollama"],
+          "default": "ollama",
+          "enum": [
+            "ollama",
+            "groq",
+            "google"
+          ],
           "description": "LLM provider to use"
         },
         "aiAgent.model": {
@@ -110,7 +122,7 @@
       "activitybar": [
         {
           "id": "aiAgentSidebar",
-          "title": "AI Coding Agent",
+          "title": "Hams AI",
           "icon": "$(robot)"
         }
       ]

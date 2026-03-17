@@ -1,12 +1,12 @@
 # ============================================================
-# AI Coding Agent — Sandbox Image
+# Hams AI — Sandbox Image
 # Multi-stage build for minimal attack surface.
 #
-# Build:  docker build -f docker/Dockerfile -t ai-coding-agent-sandbox .
+# Build:  docker build -f docker/Dockerfile -t hams-ai-sandbox .
 # ============================================================
 
 # ---- Stage 1: builder ----
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /build
 
@@ -22,9 +22,9 @@ RUN pip install --user --no-cache-dir -r requirements.txt
 
 
 # ---- Stage 2: runtime sandbox ----
-FROM python:3.12-slim AS sandbox
+FROM python:3.14-slim AS sandbox
 
-LABEL maintainer="ai-coding-agent"
+LABEL maintainer="hams-ai"
 LABEL description="Isolated sandbox for AI agent code execution"
 
 WORKDIR /workspace

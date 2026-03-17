@@ -1,11 +1,11 @@
 # ============================================================
-# AI Coding Agent — Production Docker Compose
+# Hams AI — Production Docker Compose
 #
 # Usage:
 #   docker-compose -f deployment/docker-compose.prod.yml up -d
 #
 # Prerequisites:
-#   1. Build the image:  docker build -f docker/Dockerfile -t ai-coding-agent:latest .
+#   1. Build the image:  docker build -f docker/Dockerfile -t hams-ai:latest .
 #   2. Create .env with API keys (see .env.example)
 # ============================================================
 
@@ -15,7 +15,7 @@ services:
 
   # ── Agent API (production) ──────────────────────────────────────────────
   agent:
-    image: ai-coding-agent:latest
+    image: hams-ai:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -29,7 +29,7 @@ services:
     environment:
       - AGENT_ENV=production
       - LOG_LEVEL=INFO
-      - AGENT_LLM_PROVIDER=${AGENT_LLM_PROVIDER:-anthropic}
+      - AGENT_LLM_PROVIDER=${AGENT_LLM_PROVIDER:-ollama}
     deploy:
       mode: replicated
       replicas: 2

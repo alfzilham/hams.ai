@@ -1,12 +1,12 @@
 # ============================================================
-# AI Coding Agent — Development Image
+# Hams AI — Development Image
 # Includes debugging tools, hot-reload, and dev dependencies.
 #
-# Build:  docker build -f docker/Dockerfile.dev -t ai-coding-agent-dev .
+# Build:  docker build -f docker/Dockerfile.dev -t hams-ai-dev .
 # Run:    docker-compose -f docker/docker-compose.yml up agent-dev
 # ============================================================
 
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 

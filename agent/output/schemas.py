@@ -1,5 +1,5 @@
 """
-Structured output schemas for the AI Coding Agent.
+Structured output schemas for the Hams AI.
 
 Pydantic models for:
   - CodeResult        : result of a code generation or edit task

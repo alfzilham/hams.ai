@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python **3.12+** (check with `python --version`)
+- Python **3.14** (check with `python --version`)
 - Docker Desktop (for sandbox — chapter 04)
 - Git
 
@@ -12,15 +12,15 @@
 
 ### Check existing version
 ```bash
-python --version   # needs 3.12+
+python --version   # needs 3.14
 ```
 
 ### Install via pyenv (recommended — works on all platforms)
 ```bash
 # macOS / Linux
 brew install pyenv          # or: curl https://pyenv.run | bash
-pyenv install 3.12.0
-pyenv local 3.12.0          # pins version for this project
+pyenv install 3.14.0
+pyenv local 3.14.0          # pins version for this project
 ```
 
 ### Windows
@@ -31,8 +31,8 @@ Download the installer from [python.org](https://www.python.org/downloads/) and 
 ## 2. Clone & Virtual Environment
 
 ```bash
-git clone https://github.com/yourname/ai-coding-agent.git
-cd ai-coding-agent
+git clone https://github.com/alfizilham/hams-ai.git
+cd hams-ai
 
 # Create isolated environment
 python -m venv .venv
@@ -58,7 +58,7 @@ pip install --upgrade pip
 pip install -e ".[dev]"
 
 # Verify key packages
-pip show anthropic pydantic chromadb docker rich
+pip show ollama groq google-generativeai pydantic chromadb docker rich
 ```
 
 ---
@@ -77,16 +77,17 @@ Minimum required — add at least **one** LLM provider key:
 
 ```env
 # .env
-ANTHROPIC_API_KEY=sk-ant-...      # recommended
-OPENAI_API_KEY=sk-...             # optional fallback
+GROQ_API_KEY=gsk_...
+GOOGLE_API_KEY=AIzaSy...
+OLLAMA_BASE_URL=http://localhost:11434
 TAVILY_API_KEY=tvly-...           # for web search tool
 ```
 
 ### Where to get keys
 | Provider | URL |
 |---|---|
-| Anthropic | https://console.anthropic.com/ |
-| OpenAI | https://platform.openai.com/api-keys |
+| Groq | https://console.groq.com/ |
+| Google AI Studio | https://aistudio.google.com/ |
 | Tavily | https://tavily.com/ |
 
 > **Never commit `.env`** — it is already in `.gitignore`.
@@ -136,7 +137,7 @@ AGENT_LLM_PROVIDER=ollama AGENT_MODEL=codestral \
 ## 7. Project Layout After Setup
 
 ```
-ai-coding-agent/
+hams-ai/
 ├── .venv/             ← virtual environment (git-ignored)
 ├── .env               ← your API keys (git-ignored)
 ├── agent/             ← source code
@@ -151,8 +152,8 @@ ai-coding-agent/
 
 | Problem | Fix |
 |---|---|
-| `ModuleNotFoundError: anthropic` | Run `pip install -e ".[dev]"` |
-| `ANTHROPIC_API_KEY not set` | Check `.env` file and run `source .env` |
+| `ModuleNotFoundError: ollama` | Run `pip install -r requirements.txt` |
+| `GROQ_API_KEY not set` | Check `.env` file |
 | `chromadb` build fails on Windows | Install [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) |
 | Docker not found | Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
 | `pyenv: command not found` | Add pyenv to PATH — see [pyenv docs](https://github.com/pyenv/pyenv#installation) |

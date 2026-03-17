@@ -36,7 +36,7 @@ observability:
     enabled: false
     exporter: otlp          # otlp | jaeger | zipkin | console
     endpoint: http://localhost:4317
-    service_name: ai-coding-agent
+    service_name: hams-ai
     service_version: "0.1.0"
 
     # Span attributes added to every trace
@@ -50,18 +50,30 @@ observability:
 
     # Pricing per 1M tokens (USD) — update when provider prices change
     pricing:
-      claude-sonnet-4-5:
-        input: 3.00
-        output: 15.00
-      claude-opus-4:
-        input: 15.00
-        output: 75.00
-      claude-haiku-4-5:
-        input: 0.25
-        output: 1.25
-      gpt-4o:
-        input: 2.50
-        output: 10.00
-      gpt-4o-mini:
-        input: 0.15
-        output: 0.60
+      # Ollama (local — no cost)
+      deepseek-coder:
+        input: 0.00
+        output: 0.00
+      llama3:
+        input: 0.00
+        output: 0.00
+      mistral:
+        input: 0.00
+        output: 0.00
+      codellama:
+        input: 0.00
+        output: 0.00
+      # Groq (per 1M tokens)
+      llama3-70b-8192:
+        input: 0.59
+        output: 0.79
+      mixtral-8x7b-32768:
+        input: 0.24
+        output: 0.24
+      # Google Gemini (per 1M tokens)
+      gemini-1.5-flash:
+        input: 0.075
+        output: 0.30
+      gemini-1.5-pro:
+        input: 3.50
+        output: 10.50

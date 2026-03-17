@@ -10,7 +10,7 @@ Usage::
 
     from agent.config.settings import settings
 
-    print(settings.anthropic_api_key)
+    print(settings.groq_api_key)
     print(settings.agent.max_steps)
     print(settings.sandbox.memory_limit)
 """
@@ -52,7 +52,7 @@ class AgentSettings(BaseSettings):
 class SandboxSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SANDBOX_", extra="ignore")
 
-    image: str = "ai-coding-agent-sandbox:latest"
+    image: str = "hams-ai-sandbox:latest"
     cpu_limit: str = "1.0"
     memory_limit: str = "512m"
     pids_limit: int = 64
@@ -134,8 +134,7 @@ class Settings(BaseSettings):
     def get_api_key(self, provider: str) -> str:
         """Return the API key string for the given provider name."""
         mapping = {
-            "anthropic": self.anthropic_api_key,
-            "openai": self.openai_api_key,
+            "groq": self.groq_api_key,
             "google": self.google_api_key,
             "tavily": self.tavily_api_key,
         }
@@ -147,7 +146,7 @@ class Settings(BaseSettings):
 
     def active_providers(self) -> list[str]:
         """Return a list of providers that have API keys configured."""
-        candidates = ["anthropic", "openai", "google"]
+        candidates = ["groq", "google", "ollama"]
         return [p for p in candidates if self.has_api_key(p)]
 
     def __repr__(self) -> str:

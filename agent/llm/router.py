@@ -65,27 +65,33 @@ class LLMRouter(BaseLLM):
         Build a router from environment variables.
         Automatically enables whichever providers have API keys set.
         """
-        from agent.llm.anthropic_provider import AnthropicLLM
-        from agent.llm.openai_provider import OpenAILLM
         from agent.llm.ollama_provider import OllamaLLM
 
-        provider_name = os.environ.get("AGENT_LLM_PROVIDER", "anthropic").lower()
+        provider_name = os.environ.get("AGENT_LLM_PROVIDER", "ollama").lower()
         model = os.environ.get("AGENT_MODEL")
 
         providers: list[BaseLLM] = []
 
-        if provider_name == "anthropic" or os.environ.get("ANTHROPIC_API_KEY"):
-            providers.append(AnthropicLLM(model=model if provider_name == "anthropic" else None))
-        if provider_name == "openai" or os.environ.get("OPENAI_API_KEY"):
-            providers.append(OpenAILLM(model=model if provider_name == "openai" else None))
         if provider_name == "ollama":
-            providers.append(OllamaLLM(model=model or "llama3"))
+            providers.append(OllamaLLM(model=model or "deepseek-coder"))
 
-        if not providers:
-            raise RuntimeError(
-                "No LLM provider configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, "
-                "or AGENT_LLM_PROVIDER=ollama in your .env file."
-            )
+        elif provider_name == "groq" or os.environ.get("GROQ_API_KEY"):
+            try:
+                from agent.llm.groq_provider import GroqLLM
+                providers.append(GroqLLM(model=model or "llama3-70b-8192"))
+            except ImportError:
+                pass
+
+        elif provider_name == "google" or os.environ.get("GOOGLE_API_KEY"):
+            try:
+                from agent.llm.google_provider import GoogleLLM
+                providers.append(GoogleLLM(model=model or "gemini-1.5-flash"))
+            except ImportError:
+                pass
+
+        # Ollama selalu jadi fallback terakhir
+        if not any(isinstance(p, OllamaLLM) for p in providers):
+            providers.append(OllamaLLM(model="deepseek-coder"))
 
         primary = providers[0]
         fallbacks = providers[1:]

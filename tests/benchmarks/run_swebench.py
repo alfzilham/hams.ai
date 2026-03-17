@@ -1,5 +1,5 @@
 """
-SWE-bench Runner — runs the AI Coding Agent against SWE-bench tasks
+SWE-bench Runner — runs the Hams AI against SWE-bench tasks
 and records results using BenchmarkTracker.
 
 SWE-bench evaluates agents on resolving real GitHub issues from popular

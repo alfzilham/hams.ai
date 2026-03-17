@@ -1,5 +1,5 @@
 """
-Agent Metrics — comprehensive evaluation metrics for the AI Coding Agent.
+Agent Metrics — comprehensive evaluation metrics for the Hams AI.
 
 Implements all 6 core metrics from Agent Metrics.md:
   1. Task Completion Rate (TCR)

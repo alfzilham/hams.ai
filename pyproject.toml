@@ -3,28 +3,28 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-coding-agent"
+name = "hams-ai"
 version = "0.1.0"
-description = "Open-source autonomous coding assistant powered by Claude, GPT-4o, or local LLMs"
+description = "Open-source autonomous coding assistant powered by Ollama, Groq, Gemini, or local LLMs"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 authors = [
-    { name = "Your Name", email = "you@example.com" },
+    { name = "Alfiz Ilham", email = "alfizilham51@outlook.com" },
 ]
-keywords = ["ai", "agent", "coding", "llm", "automation", "claude"]
+keywords = ["ai", "agent", "coding", "llm", "automation", "ollama", "groq"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Code Generators",
 ]
 
 dependencies = [
     # LLM providers
-    "anthropic>=0.40.0",
-    "openai>=1.50.0",
+    "groq>=0.13.0",
+    "google-generativeai>=0.8.0",
     "ollama>=0.4.0",
 
     # Agent framework
@@ -72,9 +72,9 @@ observability = [
 agent = "agent.main:app"
 
 [project.urls]
-Repository = "https://github.com/yourname/ai-coding-agent"
-Issues = "https://github.com/yourname/ai-coding-agent/issues"
-Documentation = "https://github.com/yourname/ai-coding-agent/tree/main/docs"
+Repository = "https://github.com/alfizilham/hams-ai"
+Issues = "https://github.com/alfizilham/hams-ai/issues"
+Documentation = "https://github.com/alfizilham/hams-ai/tree/main/docs"
 
 # --- Tool configs ---
 
@@ -83,14 +83,14 @@ packages = ["agent"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "ANN", "B", "SIM", "RUF"]
 ignore = ["ANN101", "ANN102"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 strict = true
 ignore_missing_imports = true
 
