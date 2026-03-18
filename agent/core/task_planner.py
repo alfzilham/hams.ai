@@ -48,7 +48,9 @@ Rules:
 - Each subtask must be atomic — one clear goal.
 - List dependencies explicitly (by subtask id).
 - Aim for 3–8 subtasks. Don't over-split simple tasks.
-- Respond ONLY with valid JSON matching the schema — no markdown, no explanation.
+- Respond ONLY with valid JSON matching the schema below.
+- Do NOT include markdown code fences, backticks, or any explanation.
+- Start your response directly with { and end with }
 
 Schema:
 {
@@ -66,7 +68,7 @@ class TaskPlanner:
 
     Example::
 
-        planner = TaskPlanner(llm=claude)
+        planner = TaskPlanner(llm=ollama)
         plan = await planner.plan("Build a REST API for a todo app with FastAPI")
     """
 
@@ -83,7 +85,7 @@ class TaskPlanner:
                 "role": "user",
                 "content": (
                     f"Decompose this coding task into subtasks:\n\n{task}\n\n"
-                    "Return only JSON."
+                    "Return only JSON. No markdown. No explanation. Start with {{"
                 ),
             }
         ]
@@ -131,8 +133,17 @@ class TaskPlanner:
         import json
         import re
 
+        # Strip markdown fences
         clean = re.sub(r"```(?:json)?|```", "", raw).strip()
-        data: dict[str, Any] = json.loads(clean)
+
+        # Extract JSON object — find first { to last }
+        start = clean.find("{")
+        end = clean.rfind("}") + 1
+        if start == -1 or end == 0:
+            raise ValueError(f"No JSON object found in response: {clean[:200]}")
+
+        json_str = clean[start:end]
+        data: dict[str, Any] = json.loads(json_str)
         return PlanSpec(**data)
 
     def _fallback_plan(self, task: str) -> PlanSpec:
@@ -147,4 +158,4 @@ class TaskPlanner:
                 )
             ],
             estimated_steps=10,
-        )
+    )

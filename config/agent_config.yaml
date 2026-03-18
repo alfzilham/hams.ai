@@ -1,24 +1,24 @@
 # ============================================================
-# Agent Configuration
+# Hams AI — Agent Configuration
 # Override any value with an environment variable:
 #   AGENT_MAX_STEPS=20 python -m agent.main "task"
 # ============================================================
 
 agent:
-  # LLM provider: anthropic | openai | ollama
-  llm_provider: anthropic
+  # LLM provider: ollama | groq | google
+  llm_provider: ollama
 
   # Model name (uses provider default if empty)
-  model: claude-sonnet-4-5
+  model: deepseek-coder
 
   # Hard cap on reasoning loop iterations
   max_steps: 30
 
   # Seconds before a single tool call is killed
-  tool_timeout: 30
+  tool_timeout: 60
 
   # Whether to run task decomposition before the loop
-  use_planner: true
+  use_planner: false
 
   # Stream step-by-step logs to stdout
   verbose: true
@@ -41,30 +41,30 @@ agent:
     - web_search
 
 llm:
-  # Anthropic-specific
-  anthropic:
-    default_model: claude-sonnet-4-5
-    max_tokens: 4096
-    temperature: 0.0
-
-  # OpenAI-specific
-  openai:
-    default_model: gpt-4o
-    max_tokens: 4096
-    temperature: 0.0
-
-  # Ollama-specific (local)
+  # Ollama-specific (local — default)
   ollama:
-    default_model: llama3
+    default_model: deepseek-coder
     base_url: http://localhost:11434
+    max_tokens: 4096
+    temperature: 0.0
+
+  # Groq-specific (cloud — fast)
+  groq:
+    default_model: llama3-70b-8192
+    max_tokens: 4096
+    temperature: 0.0
+
+  # Google Gemini-specific
+  google:
+    default_model: gemini-1.5-flash
     max_tokens: 4096
     temperature: 0.0
 
   # Router fallback order (if primary fails)
   fallback_order:
-    - anthropic
-    - openai
     - ollama
+    - groq
+    - google
 
   # Max retries per provider before trying the next
   max_retries: 3
