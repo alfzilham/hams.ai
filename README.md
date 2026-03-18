@@ -8,11 +8,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.14+-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-0.1.0-orange.svg?style=flat-square)](pyproject.toml)
+[![npm](https://img.shields.io/npm/v/@hams-ai/cli?style=flat-square&logo=npm&label=%40hams-ai%2Fcli)](https://www.npmjs.com/package/@hams-ai/cli)
 [![Open Source](https://img.shields.io/badge/Open%20Source-❤️-red.svg?style=flat-square)](https://github.com/alfizilham/hams-ai)
 
 **AI Coding Agent open source yang berjalan lokal — tanpa biaya API, tanpa batas.**
 
-[Demo](#-demo) · [Instalasi](#-instalasi) · [Penggunaan](#-penggunaan) · [Kontribusi](#-kontribusi) · [Roadmap](#-roadmap)
+[Demo](#-demo) · [Instalasi](#-instalasi) · [CLI (npm)](#-cli-via-npm) · [Penggunaan](#-penggunaan) · [Kontribusi](#-kontribusi) · [Roadmap](#-roadmap)
 
 </div>
 
@@ -29,6 +30,7 @@ Hams AI adalah **autonomous coding assistant** yang dapat menulis, menjalankan, 
 - 🛠️ **8 Tools Bawaan** — File system, terminal, web search, code executor
 - 🐳 **Sandbox Docker** — Eksekusi kode dalam environment yang terisolasi
 - 🔍 **Observability** — Tracing, cost tracking, dan dashboard built-in
+- 💻 **CLI Global** — Install sekali via npm, jalankan `hams` dari mana saja
 
 ---
 
@@ -121,6 +123,95 @@ TAVILY_API_KEY=tvly-...
 
 ---
 
+## 💻 CLI via npm
+
+Gunakan Hams AI langsung dari terminal mana saja menggunakan `hams` — tanpa perlu masuk ke folder project setiap kali.
+
+### Prasyarat CLI
+- [Node.js](https://nodejs.org) 16+
+- Python 3.14+ (sudah terinstall dari langkah di atas)
+- Repository hams-ai sudah di-clone di komputer kamu
+
+### Instalasi CLI
+
+**PowerShell (Windows):**
+
+```powershell
+# Step 1 — Install CLI secara global
+npm install -g @hams-ai/cli
+
+# Step 2 — Tambahkan Python Scripts ke PATH (jika belum)
+$env:PATH += ";C:\Users\<username>\AppData\Local\Python\pythoncore-3.14-64\Scripts"
+
+# Step 3 — Install Python dependencies (pertama kali saja)
+pip install -r "C:\path\to\hams-ai\requirements.txt"
+
+# Step 4 — Set path ke folder project hams-ai
+$env:HAMS_PATH = "C:\path\to\hams-ai"
+
+# Step 5 — Jalankan!
+hams
+```
+
+> **Ganti** `C:\path\to\hams-ai` dengan path aktual folder hasil clone di komputer kamu.
+> Contoh: `D:\2026\Workspace\Website\.hams.ai`
+
+### Buat PATH permanen (agar tidak perlu set ulang setiap restart)
+
+```powershell
+# Buka PowerShell profile
+notepad $PROFILE
+
+# Tambahkan dua baris ini ke dalam file, lalu simpan:
+$env:PATH += ";C:\Users\<username>\AppData\Local\Python\pythoncore-3.14-64\Scripts"
+$env:HAMS_PATH = "C:\path\to\hams-ai"
+```
+
+### Perintah CLI
+
+```powershell
+# Mode chat interaktif (default)
+hams
+
+# Jalankan satu task langsung
+hams run "Buatkan fungsi Python untuk sorting bubble sort"
+
+# Lihat daftar tools yang tersedia
+hams tools
+
+# Cek status backend
+hams status
+
+# Tampilkan output Python (untuk debug)
+hams --verbose
+
+# Gunakan port custom
+hams --port 9000
+```
+
+### Contoh Sesi Chat
+
+```
+PS C:\Users\LENOVO> hams
+
+hams.ai — AI Coding Agent
+
+✔ hams.ai ready — port 8000
+
+  Type your task and press Enter. Type "exit" to quit.
+
+› Buatkan REST API sederhana dengan FastAPI
+
+  Baik, saya akan membuat REST API dengan FastAPI...
+  [agent bekerja...]
+
+› exit
+
+  Goodbye.
+```
+
+---
+
 ## 🚀 Penggunaan
 
 ### Jalankan Agent
@@ -139,7 +230,7 @@ python examples/basic_agent.py "Buat fungsi Python untuk sorting bubble sort"
 python examples/basic_agent.py --demo
 ```
 
-### Via CLI
+### Via CLI Python
 
 ```bash
 # Jalankan task
@@ -224,6 +315,9 @@ hams-ai/
 │   ├── memory/             ← Short-term & long-term memory
 │   ├── sandbox/            ← Docker isolation
 │   └── prompts/            ← System & task prompts
+├── cli/                    ← npm CLI (@hams-ai/cli)
+│   ├── bin/hams.js         ← Entry point CLI
+│   └── lib/                ← client, server, installer
 ├── config/                 ← YAML configuration
 ├── examples/               ← Contoh penggunaan
 ├── tests/                  ← Unit & integration tests
@@ -297,6 +391,7 @@ Kontribusi sangat disambut! Hams AI adalah project open source dan kami senang m
 - [x] Docker sandbox isolation
 - [x] FastAPI server
 - [x] VS Code extension
+- [x] npm CLI (`@hams-ai/cli`)
 
 ### v0.2.0 — Memory & Intelligence 🚧
 - [ ] Long-term memory dengan ChromaDB
