@@ -1,5 +1,5 @@
-# ============================================================
-# Hams AI — Production App Image
+﻿# ============================================================
+# Hams AI â€” Production App Image
 # Runs the FastAPI API server (agent/api.py) via uvicorn.
 #
 # Build:  docker build -f docker/Dockerfile.app -t hams-ai-app .
@@ -28,7 +28,7 @@ RUN pip install --user --no-cache-dir -e "." || \
 FROM python:3.14-slim AS app
 
 LABEL maintainer="alfizilham51@outlook.com"
-LABEL description="Hams AI — production API server"
+LABEL description="Hams AI â€” production API server"
 LABEL version="0.1.0"
 
 WORKDIR /app
@@ -68,7 +68,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 EXPOSE 8000
 
-# Health check — hits /health endpoint
+# Health check â€” hits /health endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
 
