@@ -222,6 +222,65 @@ async def get_status(run_id: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# /chat  — endpoint untuk Hams.ai chatbox widget (menggunakan Groq)
+# ---------------------------------------------------------------------------
+ 
+class ChatMessage(BaseModel):
+    role: str        # "user" | "assistant"
+    content: str
+ 
+class ChatRequest(BaseModel):
+    session_id: str | None = None
+    message: str
+    history: list[ChatMessage] | None = []
+ 
+class ChatResponse(BaseModel):
+    session_id: str
+    response: str
+ 
+ 
+@app.post("/chat", response_model=ChatResponse, tags=["chat"])
+async def chat(req: ChatRequest) -> ChatResponse:
+    """
+    Endpoint untuk chatbox widget di website.
+    Menggunakan Groq via LLMRouter yang sudah ada di project.
+    """
+    import uuid as _uuid
+    from agent.llm.router import LLMRouter
+ 
+    session_id = req.session_id or str(_uuid.uuid4())
+ 
+    # Bangun prompt dari history + pesan baru
+    system_prompt = (
+        "Kamu adalah Hams.ai, asisten AI milik Alfizham. "
+        "Bantu pengunjung website dengan ramah dan profesional. "
+        "Jawab dalam bahasa yang sama dengan pengguna. "
+        "Tetap singkat, jelas, dan to the point."
+    )
+ 
+    # Gabungkan history menjadi konteks
+    context = ""
+    for msg in (req.history or []):
+        prefix = "User" if msg.role == "user" else "Assistant"
+        context += f"{prefix}: {msg.content}\n"
+ 
+    full_prompt = f"{system_prompt}\n\n{context}User: {req.message}\nAssistant:"
+ 
+    try:
+        llm = LLMRouter.from_env()
+        messages = [{"role": "user", "content": full_prompt}]
+        reply = await llm.generate_text(
+            messages=messages,
+            max_tokens=1024,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return ChatResponse(session_id=session_id, response=reply.strip())
+
+
+# ---------------------------------------------------------------------------
 # Entry point — dipakai oleh hams CLI (npm install -g @hams-ai/cli)
 # ---------------------------------------------------------------------------
 

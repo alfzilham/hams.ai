@@ -35,7 +35,7 @@ class GroqLLM(BaseLLM):
         response = await llm.generate(messages=[...], tools=[...], system="...")
     """
 
-    DEFAULT_MODEL = "llama3-70b-8192"
+    DEFAULT_MODEL = "llama-3.3-70b-versatile"
     TOOL_PROMPT_SUFFIX = """
 
 Respond with a JSON object in one of these two formats:
