@@ -89,6 +89,13 @@ class LLMRouter(BaseLLM):
             except ImportError:
                 pass
 
+        elif provider_name == "hams-max" or os.environ.get("HAMS_MAX_API_KEY"):
+            try:
+                from agent.llm.hams_max_provider import HamsMaxLLM
+                providers.append(HamsMaxLLM(model=model or "groq"))
+            except (ImportError, RuntimeError) as e:
+                logger.warning(f"[router] HamsMaxLLM not available: {e}")        
+
         # Ollama selalu jadi fallback terakhir
         if not any(isinstance(p, OllamaLLM) for p in providers):
             providers.append(OllamaLLM(model="deepseek-coder"))

@@ -354,7 +354,13 @@ async def chat(req: ChatRequest) -> ChatResponse:
     full_prompt = f"{system_prompt}\n\n{context}User: {req.message}\nAssistant:"
  
     try:
-        llm = LLMRouter.from_env()
+        hams_key = os.environ.get("HAMS_MAX_API_KEY")
+        if hams_key:
+            from agent.llm.hams_max_provider import HamsMaxLLM
+            llm = HamsMaxLLM(model="groq")
+        else:
+            llm = LLMRouter.from_env()
+
         messages = [{"role": "user", "content": full_prompt}]
         reply = await llm.generate_text(
             messages=messages,
