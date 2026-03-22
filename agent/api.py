@@ -2,10 +2,11 @@
 HTTP API for the Hams AI.
 
 Provides:
-  GET  /health         — liveness + readiness probe (used by Docker healthcheck)
-  POST /run            — submit a task and get the result
-  POST /run/stream     — submit a task and stream the response (Server-Sent Events)
+  GET  /health           — liveness + readiness probe (used by Docker healthcheck)
+  POST /run              — submit a task and get the result
+  POST /run/stream       — submit a task and stream the response (Server-Sent Events)
   GET  /status/{run_id} — check status of a running task
+  GET  /chat-ui          — web chat interface
 
 Run standalone:
     uvicorn agent.api:app --host 0.0.0.0 --port 8000 --reload
@@ -25,7 +26,7 @@ from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 app = FastAPI(
@@ -223,23 +224,34 @@ async def get_status(run_id: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# /chat-ui  — halaman web chat interface
+# ---------------------------------------------------------------------------
+
+@app.get("/chat-ui", tags=["chat"], include_in_schema=False)
+async def chat_ui() -> FileResponse:
+    """Serve halaman web chat untuk HAMS.AI."""
+    html_path = os.path.join(os.path.dirname(__file__), "templates", "chat.html")
+    return FileResponse(html_path, media_type="text/html")
+
+
+# ---------------------------------------------------------------------------
 # /chat  — endpoint untuk Hams.ai chatbox widget (menggunakan Groq)
 # ---------------------------------------------------------------------------
- 
+
 class ChatMessage(BaseModel):
     role: str        # "user" | "assistant"
     content: str
- 
+
 class ChatRequest(BaseModel):
     session_id: str | None = None
     message: str
     history: list[ChatMessage] | None = []
- 
+
 class ChatResponse(BaseModel):
     session_id: str
     response: str
- 
- 
+
+
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
 async def chat(req: ChatRequest) -> ChatResponse:
     """
@@ -248,14 +260,14 @@ async def chat(req: ChatRequest) -> ChatResponse:
     """
     import uuid as _uuid
     from agent.llm.router import LLMRouter
- 
+
     session_id = req.session_id or str(_uuid.uuid4())
- 
+
     # Bangun prompt dari history + pesan baru
     system_prompt = (
         "Kamu adalah Hams.ai, asisten AI pribadi milik Alfiz Ilham yang tertanam di website portfolio-nya (www.alfizilham.my.id). "
         "Tugasmu adalah membantu pengunjung mengenal Alfiz Ilham secara profesional dan menjawab pertanyaan umum dengan ramah.\n\n"
-    
+
         "## IDENTITAS\n"
         "Nama: Alfiz Ilham\n"
         "Profesi: Frontend UI Developer & Graphic Designer & Kaligrafer\n"
@@ -265,30 +277,30 @@ async def chat(req: ChatRequest) -> ChatResponse:
         "Website: www.alfizilham.my.id\n"
         "Jobstreet: https://id.jobstreet.com/id/profiles/alfiz-ilham-Tz4g3rB6XC\n"
         "Status: Fresh Graduate, Tersedia untuk Freelance\n\n"
-    
+
         "## TENTANG\n"
         "Fresh graduate dari MAS Jeumala Amal (2026) dengan minat kuat di desain grafis dan pengembangan web. "
         "Berfokus pada tampilan visual yang bersih, terstruktur, dan bermakna. "
         "Memiliki komunikasi yang baik, disiplin, terbuka terhadap umpan balik, dan siap berkontribusi di lingkungan profesional.\n\n"
-    
+
         "## PENDIDIKAN\n"
         "- MTsS Darul Ihsan, Siem Darussalam (Lulus 2023)\n"
         "- SMKs Darul Ihsan, Siem Darussalam (2023-2024, pindah ke MAS)\n"
         "- MAS Jeumala Amal, Lueng Putu Pidie Jaya (Lulus 2026)\n\n"
-    
+
         "## KETERAMPILAN TEKNIS\n"
         "Frontend: HTML5, CSS3, JavaScript, Tailwind CSS\n"
         "Desain: Adobe Photoshop, CorelDRAW, Canva, Adobe Illustrator, Adobe Lightroom\n"
         "Tools: VS Code\n"
         "Kaligrafi: Kaligrafi Arab (Naskah & Hiasan Mushaf, Diwani Jali)\n"
         "Windows: Instalasi OS Windows, Troubleshooting, Registry Editor, DiskPart, DxDiag\n\n"
-    
+
         "## LAYANAN\n"
         "1. Web Developer — Website modern dengan HTML, CSS, JavaScript, performa cepat dan responsif\n"
         "2. Graphic Design — Materi visual untuk branding, promosi, media digital\n"
         "3. Calligraphy — Kaligrafi Arab handmade untuk dekorasi, sertifikat, undangan, karya seni\n"
         "4. Windows Support — Instalasi dan troubleshooting Windows\n\n"
-    
+
         "## PROYEK UNGGULAN\n"
         "Web:\n"
         "- Grand Place Travel Hero Section — UI website travel menampilkan Masjid Raya Baiturrahman\n"
@@ -311,24 +323,24 @@ async def chat(req: ChatRequest) -> ChatResponse:
         "- Kaligrafi Naskah Dekoratif Latar Biru (Ayat Kursi)\n"
         "- Kaligrafi Rainbow Scratch Paper\n"
         "- Custom Rainbow Scratch Paper Calligraphy (pesanan klien)\n\n"
-    
+
         "## PENGALAMAN\n"
         "- Desainer Freelance di Imam Travel (Juni 2025 - Sekarang): Desain poster promosi wisata\n"
         "- Anggota Dept. Dekorasi OSMID Jeumala Amal (2025-2026): Desain poster/banner acara, "
         "dekorasi edukatif, instalasi Windows, troubleshooting komputer\n\n"
-    
+
         "## SERTIFIKAT & PRESTASI\n"
         "- Juara II Kaligrafi Hiasan Mushaf Penegak MTR-XXIV 2025, Meulaboh\n"
         "- Sertifikat Anggota Dept. Dekorasi OSMID 2025-2026\n"
         "- Peserta OMSDJA ke-V 2025 (Olimpiade Matematika & Sains Dayah Jeumala Amal)\n"
         "- Sertifikat Tahfiz 2 Juz Gema Ramadhan 2025\n"
         "- Peserta & Piagam KPMN 2024 (Kemah Pramuka Madrasah Nasional), Cibubur Jakarta\n\n"
-    
+
         "## BAHASA\n"
         "- Bahasa Indonesia (Penutur Asli)\n"
         "- Bahasa Arab (Menengah)\n"
         "- Bahasa Inggris (Menengah)\n\n"
-    
+
         "## FAQ (Jawab sesuai ini jika ditanya)\n"
         "- Layanan: Web Dev, Graphic Design, Kaligrafi, Windows Support\n"
         "- Proses: Diskusi → Konsep → Desain/Dev → Revisi → Finalisasi\n"
@@ -336,7 +348,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         "- Revisi: Tersedia sesuai kesepakatan awal\n"
         "- Pembayaran: DP di awal, pelunasan setelah selesai (bisa disesuaikan)\n"
         "- Kolaborasi: Terbuka untuk project custom dan kolaborasi\n\n"
-    
+
         "## ATURAN MENJAWAB\n"
         "- Jawab dalam bahasa yang sama dengan pengguna (Indonesia/Inggris/Arab).\n"
         "- Untuk pertanyaan tentang Alfiz, jawab akurat berdasarkan info di atas.\n"
@@ -345,15 +357,15 @@ async def chat(req: ChatRequest) -> ChatResponse:
         "- Jangan mengarang informasi yang tidak ada di atas.\n"
         "- Tetap singkat, jelas, dan profesional."
     )
- 
+
     # Gabungkan history menjadi konteks
     context = ""
     for msg in (req.history or []):
         prefix = "User" if msg.role == "user" else "Assistant"
         context += f"{prefix}: {msg.content}\n"
- 
+
     full_prompt = f"{system_prompt}\n\n{context}User: {req.message}\nAssistant:"
- 
+
     try:
         hams_key = os.environ.get("HAMS_MAX_API_KEY")
         if hams_key:
@@ -379,7 +391,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import os
     import argparse
     import uvicorn
 
