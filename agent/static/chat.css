@@ -72,7 +72,7 @@ body {
 
 body {
     font-family: 'Sora', sans-serif;
-    /* background: var(--bg); */
+    background: var(--bg);
     color: var(--text);
     display: flex;
     height: 100dvh;
