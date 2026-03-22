@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Awaitable, Callable, Protocol
 
 from loguru import logger
 
@@ -60,6 +60,15 @@ class ReasoningLoop:
     """
     Drives the agent through its Perceive → Reason → Act → Observe → Reflect cycle.
 
+    Args:
+        llm:           LLM provider instance.
+        tool_registry: Registry of all available tools.
+        max_steps:     Hard cap on iterations.
+        verbose:       Log step-by-step to stdout.
+        step_callback: Optional async callback called after each step.
+                       Signature: async def callback(step: ReasoningStep) -> None
+                       Used for real-time streaming of agent progress.
+
     Usage::
 
         loop = ReasoningLoop(llm=claude, tool_registry=registry)
@@ -72,11 +81,13 @@ class ReasoningLoop:
         tool_registry: "ToolRegistry",
         max_steps: int = 30,
         verbose: bool = True,
+        step_callback: Callable[[ReasoningStep], Awaitable[None]] | None = None,
     ) -> None:
         self.llm = llm
         self.tool_registry = tool_registry
         self.max_steps = max_steps
         self.verbose = verbose
+        self.step_callback = step_callback   # ← NEW: agentic streaming callback
 
     # -----------------------------------------------------------------------
     # Public API
@@ -84,8 +95,7 @@ class ReasoningLoop:
 
     async def run(self, state: AgentState) -> AgentState:
         """
-        Run the full reasoning loop until the task is complete,
-        the agent chooses to return a final answer, or max_steps is reached.
+        Run the full reasoning loop until complete, final_answer, or max_steps.
         """
         logger.info(f"[run:{state.run_id}] Starting reasoning loop — task: {state.task!r}")
         state.status = AgentStatus.RUNNING
@@ -100,7 +110,6 @@ class ReasoningLoop:
             state = await self.run_step(state)
 
         if state.status == AgentStatus.RUNNING:
-            # Shouldn't happen, but guard against infinite loops
             state.status = AgentStatus.FAILED
             state.error = "Loop exited in RUNNING state — unexpected."
 
@@ -116,20 +125,20 @@ class ReasoningLoop:
             logger.info(f"  ── Step {step_num}/{self.max_steps} ──")
 
         try:
-            # 1. PERCEIVE — assemble context
+            # 1. PERCEIVE
             messages = self._perceive(state)
 
-            # 2. REASON — call LLM
+            # 2. REASON
             llm_response = await self.llm.generate(
                 messages=messages,
                 tools=self.tool_registry.tool_schemas(),
                 system=self._system_prompt(state),
             )
-            step.thought = llm_response.thought
-            step.action_type = llm_response.action_type
-            step.tool_calls = llm_response.tool_calls
+            step.thought      = llm_response.thought
+            step.action_type  = llm_response.action_type
+            step.tool_calls   = llm_response.tool_calls
             step.final_answer = llm_response.final_answer
-            step.input_tokens = llm_response.input_tokens
+            step.input_tokens  = llm_response.input_tokens
             step.output_tokens = llm_response.output_tokens
 
             if self.verbose and step.thought:
@@ -141,6 +150,9 @@ class ReasoningLoop:
                 step.mark_complete(StepStatus.SUCCESS)
                 state.add_step(step)
                 self._finish(state, step)
+
+                # Fire callback for final step
+                await self._fire_callback(step)
                 return state
 
             step.tool_results = await self._act_and_observe(step.tool_calls)
@@ -151,15 +163,34 @@ class ReasoningLoop:
 
         except Exception as exc:
             logger.exception(f"  Step {step_num} raised an exception: {exc}")
-            step.status = StepStatus.FAILED
+            step.status     = StepStatus.FAILED
             step.reflection = f"Step failed with error: {exc}"
             state.add_step(step)
             state.status = AgentStatus.FAILED
-            state.error = str(exc)
+            state.error  = str(exc)
+
+            await self._fire_callback(step)
             return state
 
         state.add_step(step)
+
+        # ── Fire step callback (for streaming) ──
+        await self._fire_callback(step)
+
         return state
+
+    # -----------------------------------------------------------------------
+    # Private: Callback
+    # -----------------------------------------------------------------------
+
+    async def _fire_callback(self, step: ReasoningStep) -> None:
+        """Invoke step_callback safely — never lets it break the reasoning loop."""
+        if self.step_callback is None:
+            return
+        try:
+            await self.step_callback(step)
+        except Exception as exc:
+            logger.warning(f"[loop] step_callback raised: {exc} — ignoring")
 
     # -----------------------------------------------------------------------
     # Private: Perceive
@@ -168,9 +199,7 @@ class ReasoningLoop:
     def _perceive(self, state: AgentState) -> list[dict]:
         """
         Build the message list for the next LLM call.
-
-        First message is always the user's task. Subsequent messages
-        are the interleaved thought/action/observation history.
+        First message = user task, then interleaved thought/action/observation history.
         """
         messages: list[dict] = [{"role": "user", "content": state.task}]
         messages.extend(state.context_messages())
@@ -181,12 +210,7 @@ class ReasoningLoop:
     # -----------------------------------------------------------------------
 
     async def _act_and_observe(self, tool_calls: list[ToolCall]) -> list[ToolResult]:
-        """
-        Execute all tool calls chosen by the LLM and collect their outputs.
-
-        Tool calls are executed sequentially. Parallel execution is possible
-        for independent tools, but sequential is safer for filesystem ops.
-        """
+        """Execute all tool calls chosen by the LLM and collect outputs."""
         results: list[ToolResult] = []
 
         for tc in tool_calls:
@@ -226,16 +250,12 @@ class ReasoningLoop:
     # -----------------------------------------------------------------------
 
     def _reflect(self, state: AgentState, step: ReasoningStep) -> None:
-        """
-        Post-observation reflection: examine tool results, detect errors,
-        decide whether the task is complete (when no final_answer is returned).
-        """
-        failed_tools = [r for r in step.tool_results if not r.success]
-
-        if failed_tools:
-            names = [r.tool_name for r in failed_tools]
+        """Post-observation reflection: check errors, decide if done."""
+        failed = [r for r in step.tool_results if not r.success]
+        if failed:
+            names = [r.tool_name for r in failed]
             step.reflection = (
-                f"⚠️  {len(failed_tools)} tool(s) failed: {names}. "
+                f"⚠️  {len(failed)} tool(s) failed: {names}. "
                 "Will try to recover on the next step."
             )
             if self.verbose:
@@ -244,10 +264,10 @@ class ReasoningLoop:
             step.reflection = "All tools executed successfully."
 
     def _finish(self, state: AgentState, step: ReasoningStep) -> None:
-        """Mark the agent state as complete when a final answer is produced."""
-        state.final_answer = step.final_answer
-        state.status = AgentStatus.COMPLETE
-        state.completed_at = step.completed_at
+        """Mark state as complete when final answer is produced."""
+        state.final_answer  = step.final_answer
+        state.status        = AgentStatus.COMPLETE
+        state.completed_at  = step.completed_at
         if self.verbose:
             logger.success(f"  ✔ Task complete. Answer: {str(step.final_answer)[:200]}")
 
@@ -263,7 +283,7 @@ class ReasoningLoop:
         plan_section = ""
         if state.plan:
             completed = len(state.plan.completed_subtasks)
-            total = len(state.plan.subtasks)
+            total     = len(state.plan.subtasks)
             plan_section = (
                 f"\n\n## Current Plan ({completed}/{total} steps done)\n"
                 + "\n".join(
@@ -272,7 +292,7 @@ class ReasoningLoop:
                 )
             )
 
-        return f"""You are an expert AI coding agent. Your job is to complete the given software engineering task autonomously.
+        return f"""You are an expert AI coding agent. Complete the given task autonomously.
 
 ## Rules
 - Think step by step before acting.
@@ -280,7 +300,7 @@ class ReasoningLoop:
 - Prefer small, targeted edits over large rewrites.
 - Always verify your work by reading files back or running tests.
 - When the task is fully complete, use the final_answer action.
-- If you are stuck after 3 failed attempts on a subtask, explain why and stop.
+- If stuck after 3 failed attempts on a subtask, explain why and stop.
 
 ## Available Tools
 {tools_list}
