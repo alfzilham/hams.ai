@@ -42,8 +42,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Gunakan path absolut agar Railway bisa menemukan folder static
-_STATIC_DIR = os.path.join(os.path.dirname(__file__), "..", "examples", "static")
+_STATIC_DIR    = os.path.join(os.path.dirname(__file__), "static")
+_TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
 # ---------------------------------------------------------------------------
@@ -221,7 +222,7 @@ async def health() -> HealthResponse:
 
 @app.get("/chat-ui", tags=["chat"], include_in_schema=False)
 async def chat_ui() -> FileResponse:
-    html_path = os.path.join(os.path.dirname(__file__), "..", "examples", "templates", "chat.html")
+    html_path = os.path.join(_TEMPLATES_DIR, "chat.html")
     return FileResponse(html_path, media_type="text/html")
 
 
