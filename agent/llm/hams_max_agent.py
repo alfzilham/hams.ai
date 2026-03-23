@@ -44,19 +44,9 @@ Untuk final answer (HANYA setelah task 100% selesai):
 def _format_tools_text(tools: list[dict]) -> str:
     lines = []
     for t in tools:
-        name     = t.get("name", "")
-        desc     = t.get("description", "")
-        schema   = t.get("input_schema", {})
-        props    = schema.get("properties", {})
-        required = schema.get("required", [])
-        params   = [
-            f"  {'*' if p in required else '?'} {p} ({info.get('type','str')}): {info.get('description','')}"
-            for p, info in props.items()
-        ]
-        lines += [f"### {name}", f"Description: {desc}"]
-        if params:
-            lines += ["Parameters (* = required):"] + params
-        lines.append("")
+        name = t.get("name", "")
+        desc = t.get("description", "").split("\n")[0].split(".")[0]
+        lines.append(f"- {name}: {desc}")
     return "\n".join(lines)
 
 
