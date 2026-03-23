@@ -17,9 +17,7 @@ from agent.llm.hams_max_base import HamsMaxBase
 from agent.llm.base import LLMResponse
 
 # ── ReAct system prompt ────────────────────────────────────────────────────
-_REACT_SYSTEM = """{base_system}
-
-## TOOL CALLING FORMAT — IKUTI PERSIS
+_REACT_SYSTEM = """## TOOL CALLING FORMAT — IKUTI PERSIS
 
 Untuk memanggil tool:
 <thought>Alasan mengapa tool ini diperlukan</thought>
@@ -122,7 +120,6 @@ class HamsMaxAgentLLM(HamsMaxBase):
 
         # Build ReAct system prompt — tanpa extended thinking
         react_system = _REACT_SYSTEM.format(
-            base_system=system or "",
             tools_text=_format_tools_text(tools),
         )
 
