@@ -541,8 +541,14 @@ function appendMsg(role, content, thinkingText) {
         <button class="msg-action-btn" title="Bad response" onclick="this.classList.toggle('active')">
             <i class="bi bi-hand-thumbs-down"></i>
         </button>
+        <button class="msg-action-btn" title="Share" onclick="shareMsg(this)">
+            <i class="bi bi-reply-fill" style="transform:scaleX(-1);display:inline-block"></i>
+        </button>
         <button class="msg-action-btn" title="Regenerate" onclick="regenMsg(this)">
             <i class="bi bi-arrow-counterclockwise"></i>
+        </button>
+        <button class="msg-action-btn" title="More">
+            <i class="bi bi-three-dots"></i>
         </button>`;
         bubble.appendChild(actions);
     } else {
@@ -917,6 +923,17 @@ function regenMsg(btn) {
     if (!lastUser) return;
     history = history.slice(0, -1);
     sendMessage(lastUser.content);
+}
+
+function shareMsg(btn) {
+    const md = btn.closest('.bubble').querySelector('.md-body');
+    const text = md.innerText;
+    if (navigator.share) {
+        navigator.share({ text });
+    } else {
+        navigator.clipboard.writeText(text);
+        showToast('Copied to clipboard!');
+    }
 }
 
 // ═══════════════════════════════════════════════
