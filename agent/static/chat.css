@@ -896,11 +896,11 @@ body>* {
     height: 10px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%,
-            #4a4a6a 0%,
+            #7b7b9b 0%,
             #1a1a2e 40%,
             #000000 100%);
     box-shadow:
-        0 0 6px rgba(150, 140, 255, 0.3),
+        0 0 6px rgba(188, 182, 255, 0.3),
         inset 0 1px 2px rgba(255, 255, 255, 0.1);
     position: absolute;
     transition: transform 0.06s linear;
@@ -2457,8 +2457,8 @@ body>* {
 }
 
 .hmodal-box {
-    background: linear-gradient(145deg, rgba(18, 18, 18, 0.98) 0%, rgba(10, 10, 10, 0.99) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: var(--surface);
+    border: 1px solid var(--border2);
     border-radius: 20px;
     width: 100%;
     max-width: 560px;
@@ -2467,8 +2467,8 @@ body>* {
     flex-direction: column;
     overflow: hidden;
     backdrop-filter: blur(24px);
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    animation: modalIn 0.2s cubic-bezier(.4, 0, .2, 1);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+    animation: modalIn 0.2s cubic-bezier(.4,0,.2,1);
 }
 
 @keyframes modalIn {
@@ -2488,8 +2488,9 @@ body>* {
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    background: var(--glass-bg);
 }
 
 .hmodal-title {
@@ -2526,8 +2527,9 @@ body>* {
     align-items: center;
     gap: 8px;
     padding: 12px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    background: var(--surface2);
 }
 
 .hmodal-search i {
@@ -2586,16 +2588,16 @@ body>* {
 }
 
 .hmodal-item:hover {
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: var(--glass-bg);
+    border-color: var(--border2);
 }
 
 .hmodal-item-icon {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--glass-bg);
+    border: 1px solid var(--border2);
     display: flex;
     align-items: center;
     justify-content: center;
