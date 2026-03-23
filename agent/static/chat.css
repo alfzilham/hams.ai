@@ -894,7 +894,7 @@ body>* {
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    width: 28px;
+    width: 32px;
     height: 14px;
     pointer-events: none;
 }
@@ -902,7 +902,7 @@ body>* {
 .orb-smile {
     width: 28px;
     height: 14px;
-    border: 2.5px solid rgba(255, 255, 255, 0.55);
+    border: 2.5px solid rgba(0, 0, 0, 0.55);
     border-top: none;
     border-radius: 0 0 28px 28px;
     box-shadow: 0 2px 8px rgba(255, 255, 255, 0.15);
