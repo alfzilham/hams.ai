@@ -408,7 +408,7 @@ async def agent_stream(req: AgentRunRequest) -> StreamingResponse:
 
         while True:
             try:
-                event = await asyncio.wait_for(queue.get(), timeout=120.0)
+                event = await asyncio.wait_for(queue.get(), timeout=300.0)
             except asyncio.TimeoutError:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'Timeout'})}\n\n"
                 break

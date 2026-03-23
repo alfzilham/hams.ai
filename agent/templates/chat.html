@@ -36,52 +36,75 @@
 ══════════════════════════════════════ -->
     <div id="sidebar">
 
-        <!-- Logo -->
+        <!-- Logo + Collapse -->
         <div class="sidebar-logo">
             <div class="logo-icon">
                 <img src="/static/image/logo.png" alt="HAMS.AI"
-                    style="width:22px;height:22px;border-radius:5px;object-fit:cover;background:transparent;" />
+                    style="width:22px;height:22px;border-radius:5px;object-fit:cover;" />
             </div>
-            HAMS<span class="logo-dot">AI</span>
+            <span class="sidebar-label">HAMS<span class="logo-dot">AI</span></span>
+            <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse">
+                <i class="bi bi-layout-sidebar-reverse"></i>
+            </button>
+        </div>
+
+        <!-- New Chat -->
+        <div class="sidebar-new-chat">
+            <button class="new-chat-btn" onclick="clearChat()">
+                <i class="bi bi-plus-lg"></i>
+                <span class="sidebar-label">New chat</span>
+            </button>
         </div>
 
         <!-- Search -->
         <div class="sidebar-search">
             <i class="bi bi-search"></i>
-            <input type="text" placeholder="Search chats" id="searchInput" autocomplete="off" />
-            <span class="search-kbd">⌘K</span>
+            <input type="text" placeholder="Search chats" id="searchInput" autocomplete="off" class="sidebar-label" />
+            <span class="search-kbd sidebar-label">⌘K</span>
         </div>
 
         <!-- Navigation -->
         <nav class="sidebar-nav">
-            <div class="nav-item active" id="navHome" onclick="clearChat()">
-                <i class="bi bi-house-door"></i> Home
+            <div class="nav-item active" id="navHome" onclick="clearChat()" title="Home">
+                <i class="bi bi-house-door"></i> <span class="sidebar-label">Home</span>
             </div>
-            <div class="nav-item" id="navChat" onclick="setMode('chat'); closeSidebar()">
-                <i class="bi bi-chat-dots"></i> Chat
+            <div class="nav-item" id="navChat" onclick="setMode('chat'); closeSidebar()" title="Chat">
+                <i class="bi bi-chat-dots"></i> <span class="sidebar-label">Chat</span>
             </div>
-            <div class="nav-item" id="navAgent" onclick="setMode('agent'); closeSidebar()">
-                <i class="bi bi-lightning-charge"></i> Agent
+            <div class="nav-item" id="navAgent" onclick="setMode('agent'); closeSidebar()" title="Agent">
+                <i class="bi bi-lightning-charge"></i> <span class="sidebar-label">Agent</span>
             </div>
-            <div class="nav-item">
-                <i class="bi bi-compass"></i> Explore
+            <div class="nav-item" title="Explore">
+                <i class="bi bi-compass"></i> <span class="sidebar-label">Explore</span>
             </div>
-            <div class="nav-item">
-                <i class="bi bi-clock-history"></i> History
+            <div class="nav-item" title="History">
+                <i class="bi bi-clock-history"></i> <span class="sidebar-label">History</span>
             </div>
         </nav>
 
         <div class="sidebar-divider"></div>
 
         <!-- Chat history -->
-        <div class="sidebar-history" id="historyList">
+        <div class="sidebar-history sidebar-label" id="historyList">
             <div class="history-empty">Belum ada riwayat chat</div>
         </div>
 
-        <!-- Bottom actions -->
+        <!-- Bottom -->
         <div class="sidebar-bottom">
-            <div class="nav-item" onclick="toggleTheme()">
-                <i class="bi bi-sun" id="themeIcon"></i> Theme
+            <div class="nav-item" onclick="toggleTheme()" title="Theme">
+                <i class="bi bi-sun" id="themeIcon"></i>
+                <span class="sidebar-label">Theme</span>
+            </div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-profile">
+                <div class="profile-avatar">AI</div>
+                <div class="profile-info sidebar-label">
+                    <div class="profile-name">HAMS User</div>
+                    <div class="profile-plan">Free plan</div>
+                </div>
+                <button class="profile-menu-btn sidebar-label" title="Menu">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
             </div>
         </div>
 

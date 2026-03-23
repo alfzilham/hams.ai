@@ -64,20 +64,12 @@ _FRONTEND_TO_HAMSMAX: dict[str, tuple[str, str]] = {
 }
 
 FALLBACK_CHAIN: list[str] = [
-    "nvidia/nemotron-super-3",   # primary
+    "nvidia/nemotron-super-3",
     "nvidia/deepseek-v3.2",
-    "nvidia/qwen-397b",
-    "nvidia/kimi-k2.5",
-    "nvidia/mistral-small-4",
     "nvidia/qwen-3.5",
-    "nvidia/minimax-m25",
-    "nvidia/glm-5",
-    "nvidia/stepfun-step3.5",
-    "nvidia/kimi-k2-thinking",
-    "llama-3.3-70b-versatile",   # groq — rate limit prone, paling akhir
-    "compound-beta",
-    "gemma2-9b-it",
-    "llama-3.1-8b-instant",      # last resort
+    "nvidia/mistral-small-4",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
 ]
 
 

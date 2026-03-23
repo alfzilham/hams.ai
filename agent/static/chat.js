@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load sidebar history
     renderHistoryList();
 
+    if (localStorage.getItem('hams_sidebar_collapsed') === 'true') {
+        document.getElementById('sidebar')?.classList.add('collapsed');
+    }
+
     // Search input
     document.getElementById('searchInput')?.addEventListener('input', e => {
         const q = e.target.value.toLowerCase();
@@ -956,6 +960,12 @@ function clearChat() {
     document.getElementById('navHome')?.classList.add('active');
     renderHistoryList();
     closeSidebar();
+}
+
+function toggleSidebarCollapse() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    localStorage.setItem('hams_sidebar_collapsed', sidebar.classList.contains('collapsed'));
 }
 
 // ═══════════════════════════════════════════════

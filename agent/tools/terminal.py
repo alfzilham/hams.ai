@@ -110,7 +110,7 @@ class _LocalExecutor:
 
 async def run_command(
     command: str,
-    working_directory: str = "/workspace",
+    working_directory: str = None,
     timeout_seconds: Optional[int] = 60,
 ) -> str:
     """
@@ -131,7 +131,9 @@ async def run_command(
             Must be under /workspace. Defaults to /workspace.
         timeout_seconds: Max seconds before killing the process. Default 60, max 300.
     """
-    timeout = min(int(timeout_seconds or 60), 300)
+    if not working_directory:
+        from agent.tools.filesystem import WORKSPACE_ROOT
+        working_directory = str(WORKSPACE_ROOT)
 
     logger.info(f"[terminal] $ {command[:120]}")
 
