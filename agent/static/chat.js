@@ -597,7 +597,7 @@ function showTypingWithTimer() {
     bubble.innerHTML = `
         <div class="typing-dot" id="typingDots"><span></span><span></span><span></span></div>
         <div id="typingStatus" style="font-size:12px;color:var(--text-3);margin-top:6px;">
-            Menghubungi AI...
+            Connecting...
         </div>`;
 
     row.appendChild(av);
@@ -611,10 +611,10 @@ function showTypingWithTimer() {
         secs++;
         const el = document.getElementById('typingStatus');
         if (!el) { clearInterval(timer); return; }
-        if (secs < 5)       el.textContent = 'Menghubungi AI...';
-        else if (secs < 15) el.textContent = `Memproses... (${secs}s)`;
-        else if (secs < 30) el.textContent = `Model sedang berpikir... (${secs}s)`;
-        else                el.textContent = `Hampir selesai... (${secs}s)`;
+        if (secs < 5)       el.textContent = 'Connecting...';
+        else if (secs < 15) el.textContent = `Processing... (${secs}s)`;
+        else if (secs < 30) el.textContent = `Model is thinking... (${secs}s)`;
+        else                el.textContent = `Almost done... (${secs}s)`;
     }, 1000);
 
     // Simpan timer id di row agar bisa di-clear
@@ -781,7 +781,7 @@ async function sendAgent(text, model) {
 
     const statusBanner = document.createElement('div');
     statusBanner.className = 'agent-status';
-    statusBanner.innerHTML = `<div class="spinner"></div><span id="agentStatusText">Memulai agent...</span>`;
+    statusBanner.innerHTML = `<div class="spinner"></div><span id="agentStatusText">Connecting... (0s)</span>`;
 
     // Timer untuk agent
     let agentSecs = 0;
@@ -789,10 +789,7 @@ async function sendAgent(text, model) {
         agentSecs++;
         const el = document.getElementById('agentStatusText');
         if (!el) { clearInterval(agentTimer); return; }
-        // Hanya update kalau masih menampilkan "Memulai" atau "Menunggu"
-        if (el.textContent.startsWith('Memulai') || el.textContent.startsWith('Menunggu')) {
-            el.textContent = `Menunggu model... (${agentSecs}s)`;
-        }
+        el.textContent = `Processing... (${agentSecs}s)`;
     }, 1000);
     statusBanner._timer = agentTimer;
 

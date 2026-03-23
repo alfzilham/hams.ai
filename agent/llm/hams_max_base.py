@@ -5,6 +5,7 @@ Di-import oleh hams_max_chat.py, hams_max_agent.py, hams_max_thinking.py.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import uuid
@@ -175,7 +176,7 @@ class HamsMaxBase(BaseLLM):
             "tpd", "tpm", "capacity", "overloaded", "503",
         ])
 
-    async def _call_api_with_fallback(self, payload: dict) -> str:
+    async def _call_api_with_fallback(self, payload: dict, per_model_timeout: float = 15.0) -> str:
         # Tentukan starting point di chain
         if self._active_model in FALLBACK_CHAIN:
             start_idx = FALLBACK_CHAIN.index(self._active_model)
@@ -190,11 +191,21 @@ class HamsMaxBase(BaseLLM):
             patched = {**payload, "model": model_id, "provider": provider}
             try:
                 logger.info(f"[hams-max] trying: {frontend_key}")
-                result = await self._call_api(patched)
+                result = await asyncio.wait_for(
+                    self._call_api(patched),
+                    timeout=per_model_timeout,
+                )
                 if frontend_key != self._active_model:
                     logger.warning(f"[hams-max] fallback: {self._active_model} → {frontend_key}")
                     self._active_model = frontend_key
                 return result
+            except asyncio.TimeoutError as exc:
+                last_error = exc
+                logger.warning(
+                    f"[hams-max] timeout on {frontend_key} after {per_model_timeout}s, next..."
+                )
+                # Timeout diperlakukan seperti fallback trigger (mirip rate limit).
+                continue
             except Exception as exc:
                 last_error = exc
                 if self._is_rate_limit_error(exc):
