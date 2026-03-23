@@ -209,19 +209,35 @@ function closeSidebar() {
 let currentExpr = 'idle';
 let idleTimer = null;
 let winkTimeout = null;
+let randomExprTimer = null;
+
+const IDLE_EXPRS = ['idle', 'idle', 'idle', 'happy', 'wink', 'cool', 'confused', 'excited'];
+const LOADING_EXPRS = ['thinking'];
+let isOrbLocked = false;
 
 function setOrbExpr(expr) {
     const orb = document.getElementById('orb');
-    if (!orb || currentExpr === expr) return;
+    if (!orb) return;
     currentExpr = expr;
     orb.setAttribute('data-expr', expr);
 }
 
-function resetIdleTimer() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-        if (!isLoading) setOrbExpr('sleepy');
-    }, 30000);
+function startRandomExpr() {
+    stopRandomExpr();
+    randomExprTimer = setInterval(() => {
+        if (isOrbLocked || isLoading) return;
+        const pool = IDLE_EXPRS;
+        const next = pool[Math.floor(Math.random() * pool.length)];
+        setOrbExpr(next);
+        if (next === 'wink') {
+            isOrbLocked = true;
+            setTimeout(() => { isOrbLocked = false; }, 1200);
+        }
+    }, 3500 + Math.random() * 2000);
+}
+
+function stopRandomExpr() {
+    if (randomExprTimer) { clearInterval(randomExprTimer); randomExprTimer = null; }
 }
 
 function initOrbEyes() {
@@ -232,77 +248,47 @@ function initOrbEyes() {
     orb.setAttribute('data-expr', 'idle');
 
     const pupils = document.querySelectorAll('.orb-pupil');
-    const eyes = document.querySelectorAll('.orb-eye');
-    const MAX_PUPIL = 3, MAX_EYE = 2;
+    const eyes   = document.querySelectorAll('.orb-eye');
+    const MAX_PUPIL = 3.5, MAX_EYE = 2.5;
 
-    // ── Cursor tracking + ekspresi berdasarkan jarak ──
     function trackCursor(e) {
         const orbRect = orbWrap.getBoundingClientRect();
-        const cx = orbRect.left + orbRect.width / 2;
-        const cy = orbRect.top + orbRect.height / 2;
-
+        const cx = orbRect.left + orbRect.width  / 2;
+        const cy = orbRect.top  + orbRect.height / 2;
         const clientX = e.clientX ?? (e.touches?.[0]?.clientX ?? cx);
         const clientY = e.clientY ?? (e.touches?.[0]?.clientY ?? cy);
-
         const dx = clientX - cx;
         const dy = clientY - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const dist = Math.sqrt(dx*dx + dy*dy) || 1;
         const norm = Math.min(dist / 200, 1);
 
-        // Pupil movement
-        const ex = (dx / dist) * norm * MAX_EYE;
-        const ey = (dy / dist) * norm * MAX_EYE;
+        const ex = (dx/dist)*norm*MAX_EYE;
+        const ey = (dy/dist)*norm*MAX_EYE;
         eyes.forEach(eye => {
             if (!eye.classList.contains('blink'))
                 eye.style.transform = `translate(${ex}px,${ey}px)`;
         });
-        const px = (dx / dist) * norm * MAX_PUPIL;
-        const py = (dy / dist) * norm * MAX_PUPIL;
-        pupils.forEach(p => {
-            p.style.transform = `translate(${px}px,${py}px)`;
-        });
-
-        // Ekspresi berdasarkan jarak cursor ke orb
-        if (!isLoading && currentExpr !== 'wink') {
-            if (dist < 80) setOrbExpr('surprised');
-            else if (dist < 200) setOrbExpr('idle');
-            else setOrbExpr('idle');
-        }
-
-        resetIdleTimer();
+        const px = (dx/dist)*norm*MAX_PUPIL;
+        const py = (dy/dist)*norm*MAX_PUPIL;
+        pupils.forEach(p => { p.style.transform = `translate(${px}px,${py}px)`; });
     }
 
     document.addEventListener('mousemove', trackCursor);
     document.addEventListener('touchmove', e => trackCursor(e.touches[0]), { passive: true });
 
-    // ── Klik orb → wink ──
+    // Klik orb → wink
     orb.addEventListener('click', () => {
+        isOrbLocked = true;
         setOrbExpr('wink');
         clearTimeout(winkTimeout);
-        winkTimeout = setTimeout(() => setOrbExpr('idle'), 1200);
+        winkTimeout = setTimeout(() => {
+            isOrbLocked = false;
+            setOrbExpr('idle');
+        }, 1200);
     });
 
-    // ── Reset idle timer saat ada aktivitas ──
-    document.addEventListener('keydown', resetIdleTimer);
-    document.addEventListener('click', resetIdleTimer);
-
-    resetIdleTimer();
-}
-
-// ── Blink ──
-let blinkTimeout;
-function scheduleNextBlink() {
-    const delay = 2000 + Math.random() * 4000;
-    blinkTimeout = setTimeout(doBlink, delay);
-}
-function doBlink() {
-    if (currentExpr === 'sleepy') { scheduleNextBlink(); return; }
-    const eyes = document.querySelectorAll('.orb-eye');
-    eyes.forEach(e => {
-        e.classList.add('blink');
-        setTimeout(() => e.classList.remove('blink'), 160);
-    });
-    scheduleNextBlink();
+    // Mulai random ekspresi
+    startRandomExpr();
 }
 
 // ═══════════════════════════════════════════════
