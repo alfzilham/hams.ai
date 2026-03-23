@@ -766,7 +766,7 @@ body>* {
     width: 130px;
     height: 130px;
     margin-bottom: 28px;
-    cursor: pointer;
+    cursor: none;
 }
 
 .orb {
@@ -784,11 +784,6 @@ body>* {
     animation: orbFloat 6s ease-in-out infinite;
     position: relative;
     overflow: hidden;
-    transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
-}
-
-.orb:active {
-    transform: scale(0.94);
 }
 
 .orb-highlight {
@@ -797,14 +792,10 @@ body>* {
     left: 12%;
     width: 38%;
     height: 28%;
-    background: radial-gradient(ellipse,
-            rgba(255, 255, 255, 0.75) 0%,
-            rgba(255, 255, 255, 0.1) 60%,
-            transparent 100%);
+    background: radial-gradient(ellipse, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.1) 60%, transparent 100%);
     border-radius: 50%;
     transform: rotate(-30deg);
     pointer-events: none;
-    z-index: 10;
 }
 
 .orb::after {
@@ -816,7 +807,6 @@ body>* {
     animation: orbGlow 4s ease-in-out infinite alternate;
 }
 
-/* ── Mata ── */
 .orb-eyes {
     position: absolute;
     top: 50%;
@@ -826,213 +816,43 @@ body>* {
     gap: 22px;
     margin-top: -4px;
     pointer-events: none;
-    z-index: 5;
-    transition: gap 0.25s ease, margin-top 0.25s ease;
 }
 
 .orb-eye {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
-    background: radial-gradient(circle at 40% 35%, #0a0a0a, #000);
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    background: radial-gradient(circle at 40% 35%, #0a0a0a, #000000);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
     box-shadow:
         inset 0 1px 3px rgba(0, 0, 0, 0.9),
-        0 0 14px rgba(255, 255, 255, 0.18);
+        0 0 10px rgba(255, 255, 255, 0.12);
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    transition: width 0.25s ease, height 0.25s ease, border-radius 0.25s ease, transform 0.25s ease;
-}
-
-.orb-eye-shine-big {
-    position: absolute;
-    top: 4px;
-    left: 5px;
-    width: 10px;
-    height: 8px;
-    background: radial-gradient(ellipse,
-            rgba(255, 255, 255, 0.85) 0%,
-            rgba(255, 255, 255, 0.2) 60%,
-            transparent 100%);
-    border-radius: 50%;
-    z-index: 3;
-    pointer-events: none;
 }
 
 .orb-pupil {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: radial-gradient(circle at 30% 30%,
-            #4a4a6a 0%, #1a1a2e 40%, #000 100%);
+            #4a4a6a 0%,
+            #1a1a2e 40%,
+            #000000 100%);
     box-shadow:
-        0 0 8px rgba(150, 140, 255, 0.35),
+        0 0 6px rgba(150, 140, 255, 0.3),
         inset 0 1px 2px rgba(255, 255, 255, 0.1);
     position: absolute;
-    transition: transform 0.06s linear, width 0.25s ease, height 0.25s ease;
-    z-index: 2;
-}
-
-.orb-pupil-shine {
-    position: absolute;
-    top: 1px;
-    left: 2px;
-    width: 4px;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 50%;
+    transition: transform 0.06s linear;
 }
 
 .orb-eye.blink {
     animation: eyeBlink 0.15s ease-in-out;
 }
 
-/* ── Mulut ── */
-.orb-mouth {
-    position: absolute;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 36px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    z-index: 5;
-    transition: all 0.3s ease;
-}
-
-.orb-lips {
-    width: 28px;
-    height: 12px;
-    border: 2.5px solid rgba(20,20,20,0.9);
-    border-top: none;
-    border-radius: 0 0 28px 28px;
-    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3);
-    background: transparent;
-    transition: all 0.4s cubic-bezier(.4,0,.2,1);
-}
-
-/* ════════════════════
-   EKSPRESI
-════════════════════ */
-
-/* IDLE */
-.orb[data-expr="idle"] .orb-eye  { width: 26px; height: 26px; border-radius: 50%; }
-.orb[data-expr="idle"] .orb-lips {
-    width: 28px; height: 12px;
-    border-radius: 0 0 28px 28px;
-    border-color: rgba(20,20,20,0.85);
-    border-top: none;
-}
-
-/* HAPPY */
-.orb[data-expr="happy"] .orb-eye {
-    height: 14px;
-    border-radius: 50% 50% 0 0;
-    transform: scaleY(0.65);
-}
-.orb[data-expr="happy"] .orb-lips {
-    width: 40px; height: 20px;
-    border-radius: 0 0 40px 40px;
-    border-color: rgba(15,15,15,0.95);
-    border-width: 3px;
-    border-top: none;
-}
-
-/* SURPRISED */
-.orb[data-expr="surprised"] .orb-eye  { width: 34px; height: 34px; }
-.orb[data-expr="surprised"] .orb-pupil { width: 15px; height: 15px; }
-.orb[data-expr="surprised"] .orb-lips {
-    width: 18px; height: 18px;
-    border: 2.5px solid rgba(15,15,15,0.9);
-    border-radius: 50%;
-    background: rgba(0,0,0,0.25);
-}
-
-/* THINKING */
-.orb[data-expr="thinking"] .orb-eye   { width: 26px; height: 26px; }
-.orb[data-expr="thinking"] #eyeRight  { transform: scaleY(0.6); }
-.orb[data-expr="thinking"] .orb-lips  {
-    width: 16px; height: 16px;
-    border: 2.5px solid rgba(15,15,15,0.85);
-    border-radius: 50%;
-    transform: translateX(5px);
-    background: rgba(0,0,0,0.1);
-}
-
-/* WINK */
-.orb[data-expr="wink"] #eyeRight {
-    height: 3px;
-    border-radius: 50%;
-    transform: scaleY(0.12);
-    overflow: hidden;
-}
-.orb[data-expr="wink"] .orb-lips {
-    width: 34px; height: 15px;
-    border-radius: 0 0 34px 34px;
-    border-color: rgba(15,15,15,0.9);
-    border-top: none;
-    transform: translateX(4px);
-}
-
-/* SLEEPY */
-.orb[data-expr="sleepy"] .orb-eye {
-    height: 12px;
-    border-radius: 50% 50% 50% 50% / 70% 70% 30% 30%;
-    overflow: hidden;
-}
-.orb[data-expr="sleepy"] .orb-pupil { transform: translateY(5px); }
-.orb[data-expr="sleepy"] .orb-lips  {
-    width: 20px; height: 7px;
-    border-radius: 0 0 20px 20px;
-    border-color: rgba(15,15,15,0.5);
-    border-width: 2px;
-    border-top: none;
-}
-
-/* EXCITED */
-.orb[data-expr="excited"] .orb-eyes { gap: 18px; }
-.orb[data-expr="excited"] .orb-eye  { width: 30px; height: 30px; }
-.orb[data-expr="excited"] .orb-pupil { width: 14px; height: 14px; }
-.orb[data-expr="excited"] .orb-lips {
-    width: 44px; height: 22px;
-    border-radius: 0 0 44px 44px;
-    border-color: rgba(10,10,10,1);
-    border-width: 3.5px;
-    border-top: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-/* CONFUSED */
-.orb[data-expr="confused"] .orb-eye  { width: 26px; height: 26px; }
-.orb[data-expr="confused"] #eyeLeft  { transform: scaleY(0.8) translateY(-2px); }
-.orb[data-expr="confused"] .orb-lips {
-    width: 24px; height: 10px;
-    border-radius: 4px 12px 12px 4px;
-    border-color: rgba(15,15,15,0.8);
-    border-top: 2.5px solid rgba(15,15,15,0.8);
-    transform: rotate(-8deg) translateX(-2px);
-}
-
-/* COOL — squint */
-.orb[data-expr="cool"] .orb-eye {
-    height: 10px;
-    border-radius: 50% 50% 50% 50% / 80% 80% 20% 20%;
-    overflow: hidden;
-}
-.orb[data-expr="cool"] .orb-lips {
-    width: 30px; height: 10px;
-    border-radius: 0 0 30px 30px;
-    border-color: rgba(10,10,10,0.9);
-    border-top: none;
-}
-
-/* ── Animasi dasar ── */
 @keyframes eyeBlink {
 
     0%,
@@ -1041,7 +861,7 @@ body>* {
     }
 
     50% {
-        transform: scaleY(0.06);
+        transform: scaleY(0.08);
     }
 }
 
