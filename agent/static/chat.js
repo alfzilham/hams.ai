@@ -791,16 +791,15 @@ function toggleModelDropdown() {
 function selectModel(el) {
     event.stopPropagation();
     const value = el.dataset.value;
-    const label = el.textContent.trim();
+    // Ambil hanya teks node terakhir, bukan badge
+    const label = el.childNodes[el.childNodes.length - 1].textContent.trim();
 
     document.getElementById('modelSelect').value = value;
     document.getElementById('modelLabel').textContent = label;
 
-    // Update selected state
     document.querySelectorAll('.model-option').forEach(o => o.classList.remove('selected'));
     el.classList.add('selected');
 
-    // Close dropdown
     modelDropdownOpen = false;
     document.getElementById('modelPanel').classList.remove('open');
     document.getElementById('modelDropdown').classList.remove('open');
