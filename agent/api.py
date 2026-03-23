@@ -278,13 +278,46 @@ async def chat(req: ChatRequest) -> ChatResponse:
         response_text = raw
 
     return ChatResponse(
-        session_id=session_id,
-        response=response_text.strip(),
-        thinking=thinking,
-        model_used=model,
-        extended=req.extended,
-    )
+            session_id=session_id,
+            response=response_text.strip(),
+            thinking=thinking,
+            model_used=model,
+            extended=req.extended,
+        )
 
+
+# ---------------------------------------------------------------------------
+# /chat/stream — streaming SSE
+# ---------------------------------------------------------------------------
+
+@app.post("/chat/stream", tags=["chat"])
+async def chat_stream(req: ChatRequest) -> StreamingResponse:
+    model = req.model or "llama-3.3-70b-versatile"
+
+    context = ""
+    for msg in (req.history or []):
+        prefix = "User" if msg.role == "user" else "Assistant"
+        context += f"{prefix}: {msg.content}\n"
+
+    full_prompt = f"{_MULTITASK_SYSTEM}\n\n{context}User: {req.message}\nAssistant:"
+
+    async def event_stream() -> AsyncIterator[str]:
+        try:
+            llm = _build_llm(model)
+            async for chunk in llm.stream(
+                messages=[{"role": "user", "content": full_prompt}]
+            ):
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 # ---------------------------------------------------------------------------
 # /agent/run — agentic blocking

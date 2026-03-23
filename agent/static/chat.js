@@ -565,12 +565,16 @@ function removeTyping() {
 }
 
 // ═══════════════════════════════════════════════
-// SEND — CHAT mode
+// SEND — CHAT mode (streaming)
 // ═══════════════════════════════════════════════
 async function sendChat(text, model) {
     showTyping(extended);
+
+    // Buat bubble AI kosong dulu, siap diisi chunk
+    const bubbleId = 'bubble-' + Date.now();
+
     try {
-        const res = await fetch('/chat', {
+        const res = await fetch('/chat/stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -578,21 +582,53 @@ async function sendChat(text, model) {
                 history, model, extended
             })
         });
+
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
             throw new Error(err.detail || `HTTP ${res.status}`);
         }
-        const data = await res.json();
-        sessionId = data.session_id;
-        const reply = data.response || 'Tidak ada respons.';
-        const thinking = data.thinking || null;
 
-        history.push({ role: 'user', content: text });
-        history.push({ role: 'assistant', content: reply, thinking });
         removeTyping();
-        appendMsg('ai', reply, thinking);
 
-        // Save to localStorage — title = first user message (max 50 chars)
+        // Buat bubble kosong
+        let fullReply = '';
+        appendMsgStreaming('ai', '', bubbleId);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // simpan baris yang belum lengkap
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const raw = line.slice(6).trim();
+                if (raw === '[DONE]') break;
+
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed.error) throw new Error(parsed.error);
+                    if (parsed.chunk) {
+                        fullReply += parsed.chunk;
+                        updateStreamingBubble(bubbleId, fullReply);
+                    }
+                } catch (e) {
+                    // skip malformed chunk
+                }
+            }
+        }
+
+        // Simpan ke history
+        const reply = fullReply || 'Tidak ada respons.';
+        history.push({ role: 'user', content: text });
+        history.push({ role: 'assistant', content: reply });
+
         const title = history.find(m => m.role === 'user')?.content?.slice(0, 50) || text.slice(0, 50);
         saveChatToHistory(title, history);
 
@@ -601,6 +637,28 @@ async function sendChat(text, model) {
         appendMsg('ai', `⚠️ **Error:** ${err.message}`);
         showToast(err.message);
     }
+}
+
+// ── Helper: buat bubble streaming kosong ──────────
+function appendMsgStreaming(role, text, id) {
+    const wrap = document.createElement('div');
+    wrap.className = `msg ${role}`;
+    wrap.innerHTML = `
+        <div class="orb-small"></div>
+        <div class="bubble" id="${id}"></div>`;
+    document.getElementById('messages').appendChild(wrap);
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+// ── Helper: update bubble dengan teks terbaru ─────
+function updateStreamingBubble(id, text) {
+    const bubble = document.getElementById(id);
+    if (!bubble) return;
+    // Render markdown kalau ada fungsi renderMarkdown, fallback ke teks biasa
+    bubble.innerHTML = typeof renderMarkdown === 'function'
+        ? renderMarkdown(text)
+        : text.replace(/\n/g, '<br>');
+    bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
 // ═══════════════════════════════════════════════
