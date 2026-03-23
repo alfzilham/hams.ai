@@ -41,11 +41,14 @@ def init_db():
     conn.close()
 
 # ── Password ──
+def _truncate(password: str) -> str:
+    return password[:72]
+
 def hash_password(password: str) -> str:
-    return pwd_ctx.hash(password)
+    return pwd_ctx.hash(_truncate(password))
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain, hashed)
+    return pwd_ctx.verify(_truncate(plain), hashed)
 
 # ── JWT ──
 def create_token(user_id: int, username: str) -> str:
