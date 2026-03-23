@@ -294,6 +294,11 @@ class ReasoningLoop:
 
         return f"""You are an expert AI coding agent. Complete the given task autonomously using tools.
 
+    ## WORKSPACE
+    - Working directory: /tmp (use this, NOT /workspace)
+    - To create files use write_file tool
+    - For final answer: show ALL generated code completely, ready to use
+
     ## CRITICAL RULES
     - NEVER give a final answer before using at least one tool
     - NEVER stop after just thinking — you MUST act

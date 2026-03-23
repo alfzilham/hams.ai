@@ -178,7 +178,11 @@ def _parse_react_response(text: str) -> tuple[str, str, str | None, dict | None]
                         pass
         return thought, "tool_call", tool_name, tool_args
 
-    answer = (answer_m.group(1).strip() if answer_m else None) or text.strip()
+    raw_answer = (answer_m.group(1).strip() if answer_m else None) or text.strip()
+    # Hapus baris yang terlihat seperti tool call
+    import re as _re
+    answer = _re.sub(r'\[Tool[^\]]*\][^\n]*\n?', '', raw_answer).strip()
+    answer = answer or raw_answer
     return thought, "final_answer", answer, None
 
 
