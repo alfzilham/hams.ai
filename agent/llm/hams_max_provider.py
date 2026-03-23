@@ -163,24 +163,6 @@ def _looks_like_tool_call(text: str) -> bool:
     return False
 
 
-def _extract_bracket_tool(text: str) -> tuple[str | None, dict]:
-    """
-    Extract tool name dan args dari format [Tool: name] {"args": ...}.
-    Handle kasus model menulis tool call tanpa XML tags.
-    """
-    m = re.search(r'\[Tool[:\s]+(\w+)\]\s*(\{.*?\})?', text, re.DOTALL | re.IGNORECASE)
-    if m:
-        tool_name = m.group(1).strip()
-        args = {}
-        if m.group(2):
-            try:
-                args = json.loads(m.group(2))
-            except json.JSONDecodeError:
-                pass
-        return tool_name, args
-    return None, {}
-
-
 def _clean_answer(text: str) -> str:
     """
     Bersihkan teks final answer dari artefak tool call.
@@ -242,23 +224,16 @@ def _parse_react_response(text: str) -> tuple[str, str, str | None, dict | None]
         raw_answer = answer_m.group(1).strip()
 
         # Validasi: kalau isi <answer> MASIH mengandung tool call → paksa jadi tool_call
-        if _looks_like_tool_call(raw_answer):
-            # Coba XML format dulu
-            if tool_m:
-                tool_name = tool_m.group(1).strip()
-                tool_args = {}
-                if args_m:
-                    try:
-                        tool_args = json.loads(args_m.group(1).strip())
-                    except json.JSONDecodeError:
-                        pass
-                logger.warning(f"[hams-max] <answer> berisi tool call XML, forcing tool_call: {tool_name}")
-                return thought, "tool_call", tool_name, tool_args
-            # Fallback: coba extract dari [Tool: name] format
-            bracket_tool, bracket_args = _extract_bracket_tool(raw_answer)
-            if bracket_tool:
-                logger.warning(f"[hams-max] <answer> berisi [Tool:] format, forcing tool_call: {bracket_tool}")
-                return thought, "tool_call", bracket_tool, bracket_args
+        if _looks_like_tool_call(raw_answer) and tool_m:
+            tool_name = tool_m.group(1).strip()
+            tool_args = {}
+            if args_m:
+                try:
+                    tool_args = json.loads(args_m.group(1).strip())
+                except json.JSONDecodeError:
+                    pass
+            logger.warning(f"[hams-max] <answer> tag contains tool call text, forcing tool_call: {tool_name}")
+            return thought, "tool_call", tool_name, tool_args
 
         # Bersihkan answer dari sisa-sisa tool call text
         clean = _clean_answer(raw_answer)
@@ -283,12 +258,6 @@ def _parse_react_response(text: str) -> tuple[str, str, str | None, dict | None]
                             pass
             logger.debug(f"[hams-max] No <answer> tag, detected tool call: {tool_name}")
             return thought, "tool_call", tool_name, tool_args
-
-        # FIX: Fallback ke [Tool: name] format (model kadang tidak pakai XML)
-        bracket_tool, bracket_args = _extract_bracket_tool(text)
-        if bracket_tool:
-            logger.debug(f"[hams-max] Detected [Tool:] bracket format: {bracket_tool}")
-            return thought, "tool_call", bracket_tool, bracket_args
 
     # ── CASE 4: Fallback — bersihkan text dan jadikan final answer ────────
     # Tapi hanya kalau TIDAK ada tanda-tanda tool call sama sekali
