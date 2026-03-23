@@ -13,7 +13,7 @@ SECRET_KEY  = os.environ.get("SECRET_KEY", "hams-secret-key-change-in-production
 ALGORITHM   = "HS256"
 TOKEN_EXPIRE = 60 * 24 * 7  # 7 hari
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12, truncate_error=False)
 
 # ── Database ──
 DB_PATH = Path(os.environ.get("HAMS_DB_PATH", "/app/data/hams.db"))
