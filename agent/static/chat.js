@@ -62,7 +62,6 @@ function saveChatToHistory(title, msgs) {
     const now = new Date();
 
     if (currentChatId) {
-        // Update existing
         const idx = chats.findIndex(c => c.id === currentChatId);
         if (idx !== -1) {
             chats[idx].messages = msgs;
@@ -74,7 +73,6 @@ function saveChatToHistory(title, msgs) {
         }
     }
 
-    // New entry
     currentChatId = Date.now().toString();
     chats.unshift({
         id: currentChatId,
@@ -116,7 +114,6 @@ function renderHistoryList() {
         return;
     }
 
-    // Group by date label
     const groups = {};
     chats.forEach(chat => {
         const label = getDateLabel(chat.updatedAt || chat.createdAt);
@@ -152,7 +149,6 @@ function restoreChat(id) {
     const chat = chats.find(c => c.id === id);
     if (!chat) return;
 
-    // Reset state
     history = [];
     sessionId = null;
     currentChatId = id;
@@ -162,7 +158,6 @@ function restoreChat(id) {
     document.getElementById('welcome').style.display = 'none';
     box.classList.add('active');
 
-    // Replay messages
     chat.messages.forEach(msg => {
         if (msg.role === 'user') {
             appendMsg('user', msg.content);
@@ -292,7 +287,6 @@ function setMode(m) {
     if (input) input.placeholder =
         m === 'agent' ? 'Describe your task for the agent...' : 'Message AI Chat...';
 
-    // ← tambah ini
     const slider = document.getElementById('agentSlider');
     if (slider) slider.style.display = m === 'agent' ? 'flex' : 'none';
 
@@ -532,7 +526,6 @@ function appendMsg(role, content, thinkingText) {
         md.innerHTML = parseMarkdown(content);
         bubble.appendChild(md);
 
-        // ── Action bar ──
         const actions = document.createElement('div');
         actions.className = 'msg-actions';
         actions.innerHTML = `
@@ -588,18 +581,63 @@ function showTyping(withThink) {
     box.scrollTop = box.scrollHeight;
 }
 
+// ── Typing indicator dengan counter waktu ──────
+function showTypingWithTimer() {
+    const box = showContent();
+    const row = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.id = 'typingRow';
+
+    const av = document.createElement('div');
+    av.className = 'avatar ai';
+    av.innerHTML = '<i class="bi bi-stars"></i>';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble ai';
+    bubble.innerHTML = `
+        <div class="typing-dot" id="typingDots"><span></span><span></span><span></span></div>
+        <div id="typingStatus" style="font-size:12px;color:var(--text-3);margin-top:6px;">
+            Menghubungi AI...
+        </div>`;
+
+    row.appendChild(av);
+    row.appendChild(bubble);
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
+
+    // Update status tiap detik
+    let secs = 0;
+    const timer = setInterval(() => {
+        secs++;
+        const el = document.getElementById('typingStatus');
+        if (!el) { clearInterval(timer); return; }
+        if (secs < 5)       el.textContent = 'Menghubungi AI...';
+        else if (secs < 15) el.textContent = `Memproses... (${secs}s)`;
+        else if (secs < 30) el.textContent = `Model sedang berpikir... (${secs}s)`;
+        else                el.textContent = `Hampir selesai... (${secs}s)`;
+    }, 1000);
+
+    // Simpan timer id di row agar bisa di-clear
+    row._typingTimer = timer;
+}
+
 function removeTyping() {
-    document.getElementById('typingRow')?.remove();
+    const row = document.getElementById('typingRow');
+    if (row) {
+        if (row._typingTimer) clearInterval(row._typingTimer);
+        row.remove();
+    }
 }
 
 // ═══════════════════════════════════════════════
 // SEND — CHAT mode (streaming)
 // ═══════════════════════════════════════════════
 async function sendChat(text, model) {
-    showTyping(extended);
+    // Tampilkan typing indicator dengan timer — tetap sampai chunk pertama tiba
+    showTypingWithTimer();
 
-    // Buat bubble AI kosong dulu, siap diisi chunk
     const bubbleId = 'bubble-' + Date.now();
+    let firstChunk = true;  // flag: typing belum dihapus
 
     try {
         const res = await fetch('/chat/stream', {
@@ -616,11 +654,9 @@ async function sendChat(text, model) {
             throw new Error(err.detail || `HTTP ${res.status}`);
         }
 
-        removeTyping();
+        // JANGAN removeTyping() di sini — tunggu chunk pertama dulu
 
-        // Buat bubble kosong
         let fullReply = '';
-        appendMsgStreaming('ai', '', bubbleId);
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -632,7 +668,7 @@ async function sendChat(text, model) {
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
-            buffer = lines.pop(); // simpan baris yang belum lengkap
+            buffer = lines.pop();
 
             for (const line of lines) {
                 if (!line.startsWith('data: ')) continue;
@@ -643,16 +679,26 @@ async function sendChat(text, model) {
                     const parsed = JSON.parse(raw);
                     if (parsed.error) throw new Error(parsed.error);
                     if (parsed.chunk) {
+                        // Chunk pertama tiba → baru hapus typing dan buat bubble
+                        if (firstChunk) {
+                            firstChunk = false;
+                            removeTyping();
+                            appendMsgStreaming('ai', '', bubbleId);
+                        }
                         fullReply += parsed.chunk;
                         updateStreamingBubble(bubbleId, fullReply);
                     }
                 } catch (e) {
-                    // skip malformed chunk
+                    if (e.message && !e.message.includes('JSON')) throw e;
                 }
             }
         }
 
-        // Simpan ke history
+        // Kalau stream selesai tapi tidak ada chunk (reply kosong)
+        if (firstChunk) {
+            removeTyping();
+        }
+
         const reply = fullReply || 'Tidak ada respons.';
         history.push({ role: 'user', content: text });
         history.push({ role: 'assistant', content: reply });
@@ -662,33 +708,26 @@ async function sendChat(text, model) {
 
     } catch (err) {
         removeTyping();
+
         const isNetwork = err.message.includes('fetch') || err.message.includes('network');
         const isTimeout = err.message.includes('timeout') || err.message.includes('Timeout');
-        const isServer = err.message.includes('500');
-        const isAuth = err.message.includes('401') || err.message.includes('403');
+        const isServer  = err.message.includes('500');
+        const isAuth    = err.message.includes('401') || err.message.includes('403');
 
-        let icon = '⚠️';
-        let title = 'Error';
-        let hint = '';
-
+        let icon = '⚠️', title = 'Error', hint = '';
         if (isNetwork) { icon = '🌐'; title = 'Connection Error'; hint = 'Periksa koneksi internet kamu.'; }
         else if (isTimeout) { icon = '⏱️'; title = 'Request Timeout'; hint = 'Server terlalu lama merespons.'; }
-        else if (isServer) { icon = '🔧'; title = 'Server Error'; hint = 'Ada masalah di server, coba beberapa saat lagi.'; }
-        else if (isAuth) { icon = '🔑'; title = 'Auth Error'; hint = 'API key tidak valid.'; }
+        else if (isServer)  { icon = '🔧'; title = 'Server Error';    hint = 'Ada masalah di server, coba beberapa saat lagi.'; }
+        else if (isAuth)    { icon = '🔑'; title = 'Auth Error';      hint = 'API key tidak valid.'; }
 
-        const errId = 'err-' + Date.now();
         appendMsg('ai', `${icon} **${title}**\n\n${err.message}${hint ? '\n\n> ' + hint : ''}`);
 
-        // Retry button
         const lastRow = document.getElementById('chatBox').lastElementChild;
         if (lastRow) {
             const retryBtn = document.createElement('button');
             retryBtn.className = 'retry-btn';
             retryBtn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Coba Lagi';
-            retryBtn.onclick = () => {
-                retryBtn.remove();
-                sendMessage(text);
-            };
+            retryBtn.onclick = () => { retryBtn.remove(); sendMessage(text); };
             lastRow.querySelector('.bubble')?.appendChild(retryBtn);
         }
 
@@ -744,6 +783,19 @@ async function sendAgent(text, model) {
     statusBanner.className = 'agent-status';
     statusBanner.innerHTML = `<div class="spinner"></div><span id="agentStatusText">Memulai agent...</span>`;
 
+    // Timer untuk agent
+    let agentSecs = 0;
+    const agentTimer = setInterval(() => {
+        agentSecs++;
+        const el = document.getElementById('agentStatusText');
+        if (!el) { clearInterval(agentTimer); return; }
+        // Hanya update kalau masih menampilkan "Memulai" atau "Menunggu"
+        if (el.textContent.startsWith('Memulai') || el.textContent.startsWith('Menunggu')) {
+            el.textContent = `Menunggu model... (${agentSecs}s)`;
+        }
+    }, 1000);
+    statusBanner._timer = agentTimer;
+
     blk.appendChild(statusBanner);
     cont.appendChild(blk);
     row.appendChild(av);
@@ -755,7 +807,12 @@ async function sendAgent(text, model) {
         const res = await fetch('/agent/stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ task: text, model, max_steps: parseInt(document.getElementById('maxStepsRange')?.value || 15), extended })
+            body: JSON.stringify({
+                task: text,
+                model,
+                max_steps: parseInt(document.getElementById('maxStepsRange')?.value || 15),
+                extended
+            })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -773,12 +830,18 @@ async function sendAgent(text, model) {
                 if (!line.startsWith('data: ')) continue;
                 try {
                     const event = JSON.parse(line.slice(6));
+                    // Clear timer saat event pertama datang
+                    if (statusBanner._timer) {
+                        clearInterval(statusBanner._timer);
+                        statusBanner._timer = null;
+                    }
                     handleAgentEvent(event, blk, statusBanner, text);
                     box.scrollTop = box.scrollHeight;
                 } catch (_) { }
             }
         }
     } catch (err) {
+        if (statusBanner._timer) clearInterval(statusBanner._timer);
         statusBanner.innerHTML =
             `<i class="bi bi-x-circle" style="color:var(--red)"></i> ${escHtml(err.message)}`;
         showToast(err.message);
@@ -841,7 +904,6 @@ function handleAgentEvent(ev, block, statusBanner, taskText) {
         history.push({ role: 'user', content: taskText || '' });
         history.push({ role: 'assistant', content: ev.answer || '' });
 
-        // Save to localStorage
         const title = (taskText || ev.answer || '').slice(0, 50);
         saveChatToHistory(title, history);
 
@@ -915,7 +977,6 @@ function toggleModelDropdown() {
 function selectModel(el) {
     event.stopPropagation();
     const value = el.dataset.value;
-    // Ambil hanya teks node terakhir, bukan badge
     const label = el.childNodes[el.childNodes.length - 1].textContent.trim();
 
     document.getElementById('modelSelect').value = value;
@@ -929,7 +990,6 @@ function selectModel(el) {
     document.getElementById('modelDropdown').classList.remove('open');
 }
 
-// Close dropdown when clicking outside
 document.addEventListener('click', e => {
     const dropdown = document.getElementById('modelDropdown');
     if (dropdown && !dropdown.contains(e.target)) {
@@ -978,71 +1038,29 @@ document.addEventListener('keydown', (e) => {
     const tag   = document.activeElement.tagName;
     const isTyping = tag === 'TEXTAREA' || tag === 'INPUT';
 
-    // Cmd/Ctrl + K → focus search sidebar
-    if (mod && e.key === 'k') {
-        e.preventDefault();
-        document.getElementById('searchInput')?.focus();
-    }
-
-    // Cmd/Ctrl + N → new chat
-    if (mod && e.key === 'n') {
-        e.preventDefault();
-        clearChat();
-    }
-
-    // Cmd/Ctrl + L → focus input
-    if (mod && e.key === 'l') {
-        e.preventDefault();
-        document.getElementById('userInput')?.focus();
-    }
-
-    // Cmd/Ctrl + / → toggle sidebar
+    if (mod && e.key === 'k') { e.preventDefault(); document.getElementById('searchInput')?.focus(); }
+    if (mod && e.key === 'n') { e.preventDefault(); clearChat(); }
+    if (mod && e.key === 'l') { e.preventDefault(); document.getElementById('userInput')?.focus(); }
     if (mod && e.key === '/') {
         e.preventDefault();
         const sidebar = document.getElementById('sidebar');
         sidebar?.classList.toggle('open');
         document.getElementById('sidebarOverlay')?.classList.toggle('open');
     }
-
-    // Cmd/Ctrl + M → toggle mode (chat ↔ agent)
-    if (mod && e.key === 'm') {
-        e.preventDefault();
-        const current = document.getElementById('btnChat')?.classList.contains('active');
-        setMode(current ? 'agent' : 'chat');
-    }
-
-    // Cmd/Ctrl + E → toggle extended thinking
-    if (mod && e.key === 'e') {
-        e.preventDefault();
-        toggleExtended();
-    }
-
-    // Cmd/Ctrl + Enter → send message (dari mana saja)
-    if (mod && e.key === 'Enter') {
-        e.preventDefault();
-        sendMessage();
-    }
-
-    // Cmd/Ctrl + Shift + C → copy last AI response
+    if (mod && e.key === 'm') { e.preventDefault(); const current = document.getElementById('btnChat')?.classList.contains('active'); setMode(current ? 'agent' : 'chat'); }
+    if (mod && e.key === 'e') { e.preventDefault(); toggleExtended(); }
+    if (mod && e.key === 'Enter') { e.preventDefault(); sendMessage(); }
     if (mod && e.shiftKey && e.key === 'C') {
         e.preventDefault();
         const bubbles = document.querySelectorAll('.md-body');
-        if (bubbles.length) {
-            const last = bubbles[bubbles.length - 1];
-            navigator.clipboard.writeText(last.innerText);
-            showToast('✅ Copied last response!');
-        }
+        if (bubbles.length) { navigator.clipboard.writeText(bubbles[bubbles.length - 1].innerText); showToast('✅ Copied last response!'); }
     }
-
-    // Escape → tutup preview / sidebar
     if (e.key === 'Escape') {
         closePreview();
         document.getElementById('sidebar')?.classList.remove('open');
         document.getElementById('sidebarOverlay')?.classList.remove('open');
         document.activeElement?.blur();
     }
-
-    // ? → tampilkan shortcut help (saat tidak typing)
     if (e.key === '?' && !isTyping) {
         e.preventDefault();
         showToast('⌨️ K=Search · N=New · L=Input · /=Sidebar · M=Mode · E=Extended · ↵=Send · ⇧C=Copy');
