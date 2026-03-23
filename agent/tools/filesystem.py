@@ -1,20 +1,11 @@
 """
 Filesystem Tools — read, write, list, search, and delete files in /workspace.
-
-Security rules enforced on every call:
-  - All paths must resolve inside WORKSPACE_ROOT (no directory traversal)
-  - /workspace is accepted as an alias and mapped to WORKSPACE_ROOT automatically
-  - File reads are capped at MAX_READ_BYTES to prevent memory exhaustion
-  - Writes create parent directories automatically
-  - Delete is restricted to /workspace and never removes the root itself
 """
 
 from __future__ import annotations
 
 import fnmatch
 import os
-import stat
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -22,14 +13,6 @@ from loguru import logger
 
 from agent.tools.registry import ToolRegistry
 
-# ---------------------------------------------------------------------------
-# Workspace root
-#
-# Priority:
-#   1. AGENT_WORKSPACE env var (explicit override)
-#   2. /workspace jika sudah exist (Railway persistent volume)
-#   3. ./workspace sebagai fallback dev
-# ---------------------------------------------------------------------------
 
 def _resolve_workspace() -> Path:
     env_ws = os.environ.get("AGENT_WORKSPACE")
@@ -37,13 +20,9 @@ def _resolve_workspace() -> Path:
         p = Path(env_ws).resolve()
         p.mkdir(parents=True, exist_ok=True)
         return p
-
-    # Gunakan /workspace kalau sudah exist (Railway volume mount)
     system_ws = Path("/workspace")
     if system_ws.exists() and system_ws.is_dir():
         return system_ws
-
-    # Fallback: ./workspace relatif ke CWD
     p = Path("./workspace").resolve()
     p.mkdir(parents=True, exist_ok=True)
     return p
@@ -51,34 +30,19 @@ def _resolve_workspace() -> Path:
 
 WORKSPACE_ROOT = _resolve_workspace()
 
-# Alias absolut yang selalu diterima → di-remap ke WORKSPACE_ROOT
 _WORKSPACE_ALIASES: list[Path] = [
     Path("/workspace"),
     WORKSPACE_ROOT,
 ]
 
-MAX_READ_BYTES   = 1_000_000   # 1 MB cap per read
+MAX_READ_BYTES     = 1_000_000
 MAX_SEARCH_RESULTS = 200
 
 logger.info(f"[fs] WORKSPACE_ROOT = {WORKSPACE_ROOT}")
 
 
-# ---------------------------------------------------------------------------
-# Path safety
-# ---------------------------------------------------------------------------
-
-
 def _safe_path(raw: str) -> Path:
-    """
-    Resolve `raw` ke absolute path dan pastikan ada di dalam WORKSPACE_ROOT.
-
-    FIX: /workspace/* sekarang di-remap ke WORKSPACE_ROOT/*
-    sehingga agent bisa pakai /workspace/file.py maupun file.py.
-    """
     p = Path(raw)
-
-    # Remap /workspace/... → WORKSPACE_ROOT/...
-    # Contoh: /workspace/backend.py → /app/workspace/backend.py
     for alias in _WORKSPACE_ALIASES:
         if alias == Path("/workspace") and alias != WORKSPACE_ROOT:
             try:
@@ -87,31 +51,20 @@ def _safe_path(raw: str) -> Path:
                 break
             except ValueError:
                 pass
-
     if not p.is_absolute():
         p = WORKSPACE_ROOT / p
-
     resolved = p.resolve()
-
-    # Pastikan WORKSPACE_ROOT ada
     WORKSPACE_ROOT.mkdir(parents=True, exist_ok=True)
-
     if not str(resolved).startswith(str(WORKSPACE_ROOT)):
         raise ValueError(
             f"Path '{raw}' resolves to '{resolved}' which is outside the "
-            f"allowed workspace '{WORKSPACE_ROOT}'. Directory traversal is not permitted."
+            f"allowed workspace '{WORKSPACE_ROOT}'."
         )
     return resolved
 
 
 def get_workspace_root() -> Path:
-    """Return WORKSPACE_ROOT — dipakai oleh terminal.py untuk sinkronisasi CWD."""
     return WORKSPACE_ROOT
-
-
-# ---------------------------------------------------------------------------
-# Tool implementations
-# ---------------------------------------------------------------------------
 
 
 async def read_file(
@@ -121,10 +74,6 @@ async def read_file(
 ) -> str:
     """
     Read the text content of a file in /workspace.
-
-    Returns the file content as a UTF-8 string. Use start_line / end_line
-    to read a specific range instead of the whole file (1-indexed, inclusive).
-    Always call this before editing a file you have not yet read.
 
     Args:
         path: Path to the file (absolute /workspace/... or relative).
@@ -167,13 +116,10 @@ async def write_file(path: str, content: str, encoding: str = "utf-8") -> str:
     """
     Write text content to a file, creating it (and parent dirs) if needed.
 
-    Overwrites the file if it already exists. Accepts both absolute paths
-    (/workspace/file.py) and relative paths (file.py).
-
     Args:
         path: Destination path (absolute /workspace/... or relative).
         content: Raw text to write. Do NOT wrap in markdown code fences.
-        encoding: File encoding — utf-8 (default), utf-8-sig, latin-1, ascii.
+        encoding: File encoding — utf-8 (default).
     """
     try:
         resolved = _safe_path(path)
@@ -190,14 +136,22 @@ async def write_file(path: str, content: str, encoding: str = "utf-8") -> str:
         return f"Error writing {path}: {exc}"
 
 
-async def list_dir(directory: str = "/workspace", recursive: bool = False) -> str:
+async def list_dir(
+    directory: str = "/workspace",
+    recursive: bool = False,
+    path: str = None,
+) -> str:
     """
     List files and subdirectories at the given path.
 
     Args:
         directory: Directory to list (absolute or relative to /workspace).
         recursive: Whether to recurse into subdirectories. Default False.
+        path: Alias for directory — model may send either name.
     """
+    if path is not None:
+        directory = path
+
     try:
         resolved = _safe_path(directory)
     except ValueError as exc:
@@ -232,15 +186,20 @@ async def search_files(
     pattern: str,
     directory: str = "/workspace",
     contains: Optional[str] = None,
+    path: str = None,
 ) -> str:
     """
     Search for files matching a glob pattern, optionally filtering by content.
 
     Args:
         pattern: Glob pattern, e.g. '*.py', '*config*'.
-        directory: Directory to search in. Defaults to /workspace.
+        directory: Directory to search in.
         contains: Optional text substring — only return files containing this.
+        path: Alias for directory — model may send either name.
     """
+    if path is not None:
+        directory = path
+
     try:
         resolved = _safe_path(directory)
     except ValueError as exc:
@@ -305,12 +264,6 @@ async def delete_file(path: str) -> str:
         return f"Error deleting {path}: {exc}"
 
 
-# ---------------------------------------------------------------------------
-# Registration
-# ---------------------------------------------------------------------------
-
-
 def register_filesystem_tools(registry: ToolRegistry) -> None:
-    """Register all filesystem tools into the given registry."""
     for fn in [read_file, write_file, list_dir, search_files, delete_file]:
         registry.tool(fn)
