@@ -52,7 +52,8 @@ _GROQ_MODELS: set[str] = {
 _FRONTEND_TO_HAMSMAX: dict[str, tuple[str, str]] = {
     "llama-3.3-70b-versatile": ("llama-3.3-70b-versatile", "groq"),
     "llama-3.1-8b-instant":    ("llama-3.1-8b-instant",    "groq"),
-    "llama3-8b-8192":          ("llama3-8b-8192",           "groq"),
+    "llama3-8b-8192":          ("llama-3.1-8b-instant",    "groq"),   # deprecated → redirect
+    "llama3-70b-8192":         ("llama-3.3-70b-versatile", "groq"),   # deprecated → redirect
     "gemma2-9b-it":            ("gemma2-9b-it",             "groq"),
     "compound-beta":           ("compound-beta",            "groq"),
     "nvidia/qwen-3.5":         ("qwen",       "nvidia"),
