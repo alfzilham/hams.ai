@@ -65,7 +65,7 @@ _FRONTEND_TO_HAMSMAX: dict[str, tuple[str, str]] = {
     "nvidia/deepseek-v3.2":    ("deepseek",   "nvidia"),
     "nvidia/kimi-k2-thinking": ("kimi-think", "nvidia"),
     "nvidia/nemotron-super-3": ("nemotron",   "nvidia"),
-    "hams-max":                ("deepseek",   "nvidia"),
+    "hams-max":                ("llama-3.3-70b-versatile", "groq"),
 }
 
 # ── System prompts ─────────────────────────────────────────────────────────
