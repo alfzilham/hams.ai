@@ -995,6 +995,13 @@ function sendSuggestion(text) {
     sendMessage();
 }
 
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+    if (el.value.length > 0) setOrbExpr('thinking');
+    else setOrbExpr('idle');
+}
+
 function clearChat() {
     history = [];
     sessionId = null;
