@@ -426,6 +426,7 @@ body>* {
     backdrop-filter: blur(8px);
     transition: border-color 0.15s, box-shadow 0.15s;
     user-select: none;
+    z-index: 75;
 }
 
 .model-dropdown:hover {
@@ -832,7 +833,7 @@ body>* {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #0d0d0d, #000000);
+    background: radial-gradient(circle at 35% 35%, #e1e1e1, #ffffff);
     position: absolute;
     transition: transform 0.06s linear;
     box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
