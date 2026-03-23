@@ -2,11 +2,15 @@
 Google Gemini provider — cloud inference via Google AI Studio.
 
 Supports models:
-  - gemini-1.5-flash  (fast, free tier)
-  - gemini-1.5-pro    (more capable)
-  - gemini-2.0-flash  (latest)
+  - gemini-2.5-flash-lite   (tercepat, paling hemat)
+  - gemini-2.5-flash        (seimbang)
+  - gemini-2.5-pro          (paling capable)
+  - gemini-2.0-flash        (stable)
+  - gemini-1.5-flash        (legacy)
+  - gemini-1.5-pro          (legacy)
 
 Requires: GOOGLE_API_KEY in .env
+SDK: pip install google-genai  ← SDK baru, bukan google-generativeai
 """
 
 from __future__ import annotations
@@ -21,20 +25,43 @@ from loguru import logger
 from agent.llm.base import BaseLLM, LLMResponse
 from agent.core.state import ActionType, ToolCall
 
+# ── Model name mapping (frontend → Google API model ID) ───────────────────
+_MODEL_ALIASES: dict[str, str] = {
+    # Gemini 2.5
+    "gemini-2.5-flash-lite":              "gemini-2.5-flash-lite",
+    "gemini-2.5-flash-lite-preview-06-17":"gemini-2.5-flash-lite",   # alias lama → normalize
+    "gemini-2.5-flash":                   "gemini-2.5-flash",
+    "gemini-2.5-flash-preview-05-20":     "gemini-2.5-flash",        # alias lama → normalize
+    "gemini-2.5-pro":                     "gemini-2.5-pro",
+    "gemini-2.5-pro-preview-05-06":       "gemini-2.5-pro",          # alias lama → normalize
+    # Gemini 2.0
+    "gemini-2.0-flash":                   "gemini-2.0-flash",
+    "gemini-2.0-flash-exp":               "gemini-2.0-flash",
+    # Gemini 1.5 (legacy)
+    "gemini-1.5-flash":                   "gemini-1.5-flash",
+    "gemini-1.5-pro":                     "gemini-1.5-pro",
+}
+
+
+def _resolve_model(model: str) -> str:
+    """Normalize model name ke ID yang valid di Google API."""
+    return _MODEL_ALIASES.get(model, model)
+
 
 class GoogleLLM(BaseLLM):
     """
     Google Gemini cloud LLM provider.
+    Menggunakan SDK baru: google-genai (pip install google-genai)
 
-    Tool calling is implemented via JSON-mode prompting.
+    Tool calling diimplementasikan via JSON-mode prompting.
 
     Usage::
-
-        llm = GoogleLLM(model="gemini-1.5-flash")
+        llm = GoogleLLM(model="gemini-2.5-flash")
         response = await llm.generate(messages=[...], tools=[...], system="...")
     """
 
-    DEFAULT_MODEL = "gemini-1.5-flash"
+    DEFAULT_MODEL = "gemini-2.5-flash"
+
     TOOL_PROMPT_SUFFIX = """
 
 Respond with a JSON object in one of these two formats:
@@ -55,29 +82,26 @@ Respond with ONLY the JSON — no markdown, no explanation outside the JSON.
         temperature: float = 0.0,
         api_key: str | None = None,
     ) -> None:
+        resolved = _resolve_model(model or self.DEFAULT_MODEL)
         super().__init__(
-            model=model or self.DEFAULT_MODEL,
+            model=resolved,
             max_tokens=max_tokens,
             temperature=temperature,
         )
         self.api_key = api_key or os.environ.get("GOOGLE_API_KEY", "")
         self._client: Any = None
 
+        logger.info(f"[google] model={self.model} (requested={model})")
+
     def _get_client(self) -> Any:
+        """Lazy-init google-genai client."""
         if self._client is None:
             try:
-                import google.generativeai as genai  # type: ignore[import]
-                genai.configure(api_key=self.api_key)
-                self._client = genai.GenerativeModel(
-                    model_name=self.model,
-                    generation_config={
-                        "max_output_tokens": self.max_tokens,
-                        "temperature": self.temperature,
-                    },
-                )
+                from google import genai  # type: ignore[import]
+                self._client = genai.Client(api_key=self.api_key)
             except ImportError as exc:
                 raise ImportError(
-                    "google-generativeai package not installed. Run: pip install google-generativeai"
+                    "google-genai package not installed. Run: pip install google-genai"
                 ) from exc
         return self._client
 
@@ -95,13 +119,22 @@ Respond with ONLY the JSON — no markdown, no explanation outside the JSON.
         client = self._get_client()
 
         full_system = self._build_system(system, tools)
-        prompt = self._build_prompt(messages, full_system)
+        prompt      = self._build_prompt(messages, full_system)
 
         logger.debug(f"[google] Calling {self.model} — {len(messages)} messages")
 
-        resp = await client.generate_content_async(prompt)
+        from google.genai import types  # type: ignore[import]
 
-        return self._parse_response(resp)
+        response = await client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                max_output_tokens=self.max_tokens,
+                temperature=self.temperature,
+            ),
+        )
+
+        return self._parse_response(response)
 
     # -----------------------------------------------------------------------
     # generate_text()
@@ -111,14 +144,23 @@ Respond with ONLY the JSON — no markdown, no explanation outside the JSON.
         self,
         messages: list[dict[str, Any]],
         system: str | None = None,
-        max_tokens: int = 1024,
+        max_tokens: int = 4096,
         **kwargs: Any,
     ) -> str:
-        client = self._get_client()
-        prompt = self._build_prompt(messages, system)
+        client  = self._get_client()
+        prompt  = self._build_prompt(messages, system)
 
-        resp = await client.generate_content_async(prompt)
-        return resp.text or ""
+        from google.genai import types  # type: ignore[import]
+
+        response = await client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                max_output_tokens=max_tokens,
+                temperature=self.temperature,
+            ),
+        )
+        return response.text or ""
 
     # -----------------------------------------------------------------------
     # stream()
@@ -133,7 +175,16 @@ Respond with ONLY the JSON — no markdown, no explanation outside the JSON.
         client = self._get_client()
         prompt = self._build_prompt(messages, system)
 
-        async for chunk in await client.generate_content_async(prompt, stream=True):
+        from google.genai import types  # type: ignore[import]
+
+        async for chunk in await client.aio.models.generate_content_stream(
+            model=self.model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                max_output_tokens=self.max_tokens,
+                temperature=self.temperature,
+            ),
+        ):
             if chunk.text:
                 yield chunk.text
 
@@ -142,7 +193,7 @@ Respond with ONLY the JSON — no markdown, no explanation outside the JSON.
     # -----------------------------------------------------------------------
 
     def _build_system(self, system: str | None, tools: list[dict] | None) -> str:
-        parts = [system or "You are a helpful AI coding assistant."]
+        parts = [system or "You are a helpful AI assistant."]
         if tools:
             tool_descs = "\n".join(
                 f"- {t['name']}: {t.get('description', '')}"
@@ -157,12 +208,12 @@ Respond with ONLY the JSON — no markdown, no explanation outside the JSON.
         messages: list[dict[str, Any]],
         system: str | None,
     ) -> str:
-        """Flatten conversation history into a single prompt string for Gemini."""
+        """Flatten conversation history ke single prompt string untuk Gemini."""
         parts = []
         if system:
             parts.append(f"[System]\n{system}\n")
         for m in messages:
-            role = m.get("role", "user").capitalize()
+            role    = m.get("role", "user").capitalize()
             content = m.get("content", "")
             if isinstance(content, list):
                 text_parts = []
