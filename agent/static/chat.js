@@ -209,63 +209,279 @@ function closeSidebar() {
     document.getElementById('sidebarOverlay').classList.remove('open');
 }
 
+/// ═══════════════════════════════════════════════
+// PROFESSIONAL ORB INTERACTIONS
 // ═══════════════════════════════════════════════
-// INTERACTIVE ORB EYES
-// ═══════════════════════════════════════════════
-function initOrbEyes() {
+
+function initProfessionalOrb() {
     const orbWrap = document.querySelector('.orb-wrap');
-    if (!orbWrap) return;
+    const orb = document.getElementById('orb');
+    if (!orbWrap || !orb) return;
 
-    const pupils = document.querySelectorAll('.orb-pupil');
-    const eyes = document.querySelectorAll('.orb-eye');
-    if (!pupils.length) return;
+    // Create magnetic cursor
+    const magneticCursor = document.createElement('div');
+    magneticCursor.className = 'magnetic-cursor';
+    document.body.appendChild(magneticCursor);
 
-    const MAX_PUPIL = 3;
-    const MAX_EYE = 2;
+    // Create status indicator
+    const statusIndicator = document.createElement('div');
+    statusIndicator.className = 'orb-status';
+    orbWrap.appendChild(statusIndicator);
 
-    function trackCursor(e) {
-        const orbRect = orbWrap.getBoundingClientRect();
-        const cx = orbRect.left + orbRect.width / 2;
-        const cy = orbRect.top + orbRect.height / 2;
+    // State variables
+    let mouseX = 0, mouseY = 0;
+    let cursorX = 0, cursorY = 0;
+    let orbCenterX = 0, orbCenterY = 0;
+    let isNearOrb = false;
+    let isHovering = false;
+    let animationId = null;
 
-        const clientX = e.clientX ?? (e.touches?.[0]?.clientX ?? cx);
-        const clientY = e.clientY ?? (e.touches?.[0]?.clientY ?? cy);
-
-        const dx = clientX - cx;
-        const dy = clientY - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const norm = Math.min(dist / 200, 1);
-
-        const ex = (dx / dist) * norm * MAX_EYE;
-        const ey = (dy / dist) * norm * MAX_EYE;
-        eyes.forEach(eye => {
-            eye.style.transform = `translate(${ex}px, ${ey}px)`;
-        });
-
-        const px = (dx / dist) * norm * MAX_PUPIL;
-        const py = (dy / dist) * norm * MAX_PUPIL;
-        pupils.forEach(p => {
-            p.style.transform = `translate(${px}px, ${py}px)`;
-        });
+    // Easing function for smooth movement
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
     }
 
-    document.addEventListener('mousemove', trackCursor);
-    document.addEventListener('touchmove', e => trackCursor(e.touches[0]), { passive: true });
+    // Update orb center position
+    function updateOrbCenter() {
+        const rect = orbWrap.getBoundingClientRect();
+        orbCenterX = rect.left + rect.width / 2;
+        orbCenterY = rect.top + rect.height / 2;
+    }
+
+    // Track mouse movement
+    document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+
+        // Check if near orb
+        const dx = mouseX - orbCenterX;
+        const dy = mouseY - orbCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        const nearThreshold = 150;
+        isNearOrb = distance < nearThreshold;
+        isHovering = distance < 80;
+
+        // Update cursor appearance
+        if (isNearOrb) {
+            magneticCursor.classList.add('active');
+            if (isHovering) {
+                magneticCursor.classList.add('near-orb');
+            } else {
+                magneticCursor.classList.remove('near-orb');
+            }
+        } else {
+            magneticCursor.classList.remove('active', 'near-orb');
+        }
+    });
+
+    // Click interaction
+    orbWrap.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        // Create ripple effect
+        const ripple = document.createElement('div');
+        ripple.className = 'orb-ripple';
+
+        const rect = orbWrap.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+        ripple.style.width = '20px';
+        ripple.style.height = '20px';
+
+        orbWrap.appendChild(ripple);
+
+        setTimeout(() => ripple.remove(), 600);
+
+        // Eye blink on click
+        const eyes = document.querySelectorAll('.orb-eye');
+        eyes.forEach(eye => {
+            eye.classList.add('blink');
+            setTimeout(() => eye.classList.remove('blink'), 160);
+        });
+
+        // Scale animation
+        orbWrap.style.transform = 'scale(0.92)';
+        setTimeout(() => {
+            orbWrap.style.transform = '';
+        }, 120);
+
+        // Show status
+        statusIndicator.classList.add('active');
+        setTimeout(() => statusIndicator.classList.remove('active'), 2000);
+
+        // Optional: Trigger a greeting or action
+        showToast('👋 HAMS AI is ready to help!');
+    });
+
+    // Animation loop for smooth cursor
+    function animate() {
+        // Smooth cursor movement
+        const dx = mouseX - cursorX;
+        const dy = mouseY - cursorY;
+        cursorX += dx * 0.15;
+        cursorY += dy * 0.15;
+
+        // Update magnetic cursor position
+        if (magneticCursor.classList.contains('active')) {
+            let targetX = cursorX;
+            let targetY = cursorY;
+
+            if (isHovering) {
+                // Magnetic effect - pull cursor towards orb
+                const pullStrength = 0.3;
+                targetX = cursorX + (orbCenterX - cursorX) * pullStrength;
+                targetY = cursorY + (orbCenterY - cursorY) * pullStrength;
+            }
+
+            magneticCursor.style.left = `${targetX}px`;
+            magneticCursor.style.top = `${targetY}px`;
+        }
+
+        // Enhanced eye tracking with easing
+        if (isNearOrb) {
+            const dx = cursorX - orbCenterX;
+            const dy = cursorY - orbCenterY;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+            // Smooth eye movement
+            const maxPupil = 4;
+            const maxEye = 3;
+            const norm = Math.min(dist / 200, 1);
+
+            const px = (dx / dist) * norm * maxPupil;
+            const py = (dy / dist) * norm * maxPupil;
+
+            const pupils = document.querySelectorAll('.orb-pupil');
+            pupils.forEach(p => {
+                p.style.transform = `translate(${px}px, ${py}px)`;
+            });
+        }
+
+        animationId = requestAnimationFrame(animate);
+    }
+
+    // Update orb center on scroll/resize
+    window.addEventListener('scroll', updateOrbCenter);
+    window.addEventListener('resize', updateOrbCenter);
+
+    // Initialize
+    updateOrbCenter();
+    animate();
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+        }
+    });
 }
 
-// ── Blink ──
-let blinkTimeout;
-function scheduleNextBlink() {
-    const delay = 2000 + Math.random() * 4000;
-    blinkTimeout = setTimeout(doBlink, delay);
+// Update orb mode (chat/agent)
+function updateOrbMode(mode) {
+    const orb = document.getElementById('orb');
+    if (!orb) return;
+
+    // Remove existing mode classes
+    orb.classList.remove('chat-mode', 'agent-mode');
+
+    // Add new mode class
+    orb.classList.add(`${mode}-mode`);
+
+    // Update status indicator color
+    const status = document.querySelector('.orb-status');
+    if (status) {
+        if (mode === 'agent') {
+            status.style.background = 'var(--green)';
+        } else {
+            status.style.background = 'var(--accent)';
+        }
+    }
 }
-function doBlink() {
-    const eyes = document.querySelectorAll('.orb-eye');
-    eyes.forEach(e => {
-        e.classList.add('blink');
-        setTimeout(() => e.classList.remove('blink'), 160);
-    });
-    scheduleNextBlink();
+
+// Enhanced blink with random intervals
+function scheduleProfessionalBlink() {
+    const baseDelay = 3000 + Math.random() * 5000;
+    const nextDelay = isHovering ? baseDelay * 0.7 : baseDelay;
+
+    setTimeout(() => {
+        const eyes = document.querySelectorAll('.orb-eye');
+        eyes.forEach(eye => {
+            eye.classList.add('blink');
+            setTimeout(() => eye.classList.remove('blink'), 160);
+        });
+        scheduleProfessionalBlink();
+    }, nextDelay);
+}
+
+// Add breathing animation when idle
+function initBreathingAnimation() {
+    const orb = document.getElementById('orb');
+    if (!orb) return;
+
+    let breathPhase = 0;
+    const breathSpeed = 0.02;
+
+    function breathe() {
+        if (!isHovering && !isNearOrb) {
+            breathPhase += breathSpeed;
+            const scale = 1 + Math.sin(breathPhase) * 0.02;
+            const opacity = 0.5 + Math.sin(breathPhase * 0.5) * 0.1;
+
+            orb.style.transform = `scale(${scale})`;
+
+            const glow = orb.querySelector('#orbShine');
+            if (glow) {
+                glow.style.opacity = opacity;
+            }
+        } else {
+            orb.style.transform = '';
+        }
+
+        requestAnimationFrame(breathe);
+    }
+
+    breathe();
+}
+
+// Initialize all professional orb features
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for basic orb initialization
+    setTimeout(() => {
+        initProfessionalOrb();
+        scheduleProfessionalBlink();
+        initBreathingAnimation();
+    }, 100);
+});
+
+function setMode(m) {
+    mode = m;
+    document.getElementById('btnChat')?.classList.toggle('active', m === 'chat');
+    document.getElementById('btnAgent')?.classList.toggle('active', m === 'agent');
+
+    const modeHint = document.getElementById('modeHint');
+    if (modeHint) modeHint.textContent = m === 'agent' ? 'Agent 🤖' : 'Chat 💬';
+
+    const input = document.getElementById('userInput');
+    if (input) input.placeholder =
+        m === 'agent' ? 'Describe your task for the agent...' : 'Message AI Chat...';
+
+    const slider = document.getElementById('agentSlider');
+    if (slider) slider.style.display = m === 'agent' ? 'flex' : 'none';
+
+    updateFeatureCards(m);
+
+    // NEW: Update orb appearance based on mode
+    updateOrbMode(m);
+
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const targetNav = m === 'agent'
+        ? document.getElementById('navAgent')
+        : document.getElementById('navChat');
+    targetNav?.classList.add('active');
 }
 
 // ═══════════════════════════════════════════════
