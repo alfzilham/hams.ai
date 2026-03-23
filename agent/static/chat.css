@@ -992,6 +992,41 @@ body>* {
     flex-direction: row-reverse;
 }
 
+/* ── AI message actions ── */
+.msg-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.msg-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: all 0.15s;
+}
+
+.msg-action-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.10);
+    color: var(--text-2);
+}
+
+.msg-action-btn.active {
+    color: var(--accent);
+}
+
 @keyframes fadeUp {
     from {
         opacity: 0;

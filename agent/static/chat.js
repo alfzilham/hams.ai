@@ -527,6 +527,24 @@ function appendMsg(role, content, thinkingText) {
         md.className = 'md-body';
         md.innerHTML = parseMarkdown(content);
         bubble.appendChild(md);
+
+        // ── Action bar ──
+        const actions = document.createElement('div');
+        actions.className = 'msg-actions';
+        actions.innerHTML = `
+        <button class="msg-action-btn" title="Copy" onclick="copyBubble(this)">
+            <i class="bi bi-copy"></i>
+        </button>
+        <button class="msg-action-btn" title="Good response" onclick="this.classList.toggle('active')">
+            <i class="bi bi-hand-thumbs-up"></i>
+        </button>
+        <button class="msg-action-btn" title="Bad response" onclick="this.classList.toggle('active')">
+            <i class="bi bi-hand-thumbs-down"></i>
+        </button>
+        <button class="msg-action-btn" title="Regenerate" onclick="regenMsg(this)">
+            <i class="bi bi-arrow-counterclockwise"></i>
+        </button>`;
+        bubble.appendChild(actions);
     } else {
         bubble.textContent = content;
     }
@@ -881,6 +899,25 @@ document.addEventListener('click', e => {
         dropdown.classList.remove('open');
     }
 });
+
+function copyBubble(btn) {
+    const md = btn.closest('.bubble').querySelector('.md-body');
+    navigator.clipboard.writeText(md.innerText).then(() => {
+        btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+        btn.classList.add('active');
+        setTimeout(() => {
+            btn.innerHTML = '<i class="bi bi-copy"></i>';
+            btn.classList.remove('active');
+        }, 1500);
+    });
+}
+
+function regenMsg(btn) {
+    const lastUser = [...history].reverse().find(m => m.role === 'user');
+    if (!lastUser) return;
+    history = history.slice(0, -1);
+    sendMessage(lastUser.content);
+}
 
 // ═══════════════════════════════════════════════
 // UTILITIES
