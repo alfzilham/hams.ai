@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════
-   HAMS.AI — Chat UI Logic
+   HAMS.AI — Chat UI Logic (FIXED v2)
+   Fixes: B1, B6, B7, B8, B19
    ═══════════════════════════════════════════════ */
 
 // ── State ──────────────────────────────────────
@@ -9,6 +10,10 @@ let isLoading = false;
 let mode = 'chat';
 let extended = false;
 let currentChatId = null;
+
+// ── B7 FIX: Global scope untuk orb interaction state ──
+let isHovering = false;
+let isNearOrb = false;
 
 // ── Init ────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,15 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Theme
     applyTheme(localStorage.getItem('hams_theme') || 'dark');
 
-    // Orb eyes
-    initOrbEyes();
-
-    // Auto-blink loop
-    scheduleNextBlink();
-
     // Load sidebar history
     renderHistoryList();
 
+    // Initialize 3D Orb (Three.js)
     initOrb3DLight();
 
     initProfile();
@@ -45,10 +45,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ── Auth Guard ──
+// ── Auth Guard + Google OAuth Token Extraction ──
 (function () {
+    // Check if returning from Google OAuth (token in URL)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    const urlUser = urlParams.get('user');
+
+    if (urlToken) {
+        // Store token from Google OAuth redirect
+        localStorage.setItem('hams_token', urlToken);
+
+        if (urlUser) {
+            try {
+                const userData = JSON.parse(decodeURIComponent(urlUser));
+                localStorage.setItem('hams_user', JSON.stringify(userData));
+            } catch (e) {
+                console.warn('[Auth] Failed to parse user data from URL:', e);
+            }
+        }
+
+        // Clean URL (remove token/user params)
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+    }
+
+    // Normal auth check
     const token = localStorage.getItem('hams_token');
-    if (!token) { window.location.href = '/login'; }
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    // Validate token is not expired (optional but recommended)
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const exp = payload.exp * 1000; // convert to ms
+        if (Date.now() > exp) {
+            localStorage.removeItem('hams_token');
+            localStorage.removeItem('hams_user');
+            window.location.href = '/login';
+            return;
+        }
+    } catch (e) {
+        // If token can't be decoded, let backend handle it
+    }
 })();
 
 // ═══════════════════════════════════════════════
@@ -209,7 +250,14 @@ function closeSidebar() {
     document.getElementById('sidebarOverlay').classList.remove('open');
 }
 
-/// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// SIDEBAR COLLAPSE
+// ═══════════════════════════════════════════════
+function toggleSidebarCollapse() {
+    document.getElementById('sidebar')?.classList.toggle('collapsed');
+}
+
+// ═══════════════════════════════════════════════
 // PROFESSIONAL ORB INTERACTIONS
 // ═══════════════════════════════════════════════
 
@@ -228,18 +276,11 @@ function initProfessionalOrb() {
     statusIndicator.className = 'orb-status';
     orbWrap.appendChild(statusIndicator);
 
-    // State variables
+    // State variables — B7 FIX: use global isHovering/isNearOrb
     let mouseX = 0, mouseY = 0;
     let cursorX = 0, cursorY = 0;
     let orbCenterX = 0, orbCenterY = 0;
-    let isNearOrb = false;
-    let isHovering = false;
     let animationId = null;
-
-    // Easing function for smooth movement
-    function easeOutCubic(t) {
-        return 1 - Math.pow(1 - t, 3);
-    }
 
     // Update orb center position
     function updateOrbCenter() {
@@ -253,16 +294,14 @@ function initProfessionalOrb() {
         mouseX = e.clientX;
         mouseY = e.clientY;
 
-        // Check if near orb
         const dx = mouseX - orbCenterX;
         const dy = mouseY - orbCenterY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         const nearThreshold = 150;
-        isNearOrb = distance < nearThreshold;
-        isHovering = distance < 80;
+        isNearOrb = distance < nearThreshold;   // B7: global
+        isHovering = distance < 80;              // B7: global
 
-        // Update cursor appearance
         if (isNearOrb) {
             magneticCursor.classList.add('active');
             if (isHovering) {
@@ -279,59 +318,53 @@ function initProfessionalOrb() {
     orbWrap.addEventListener('click', (e) => {
         e.preventDefault();
 
-        // Create ripple effect
         const ripple = document.createElement('div');
         ripple.className = 'orb-ripple';
-
         const rect = orbWrap.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
         ripple.style.left = `${x}px`;
         ripple.style.top = `${y}px`;
         ripple.style.width = '20px';
         ripple.style.height = '20px';
-
         orbWrap.appendChild(ripple);
-
         setTimeout(() => ripple.remove(), 600);
 
         // Eye blink on click
         const eyes = document.querySelectorAll('.orb-eye');
         eyes.forEach(eye => {
-            eye.classList.add('blink');
-            setTimeout(() => eye.classList.remove('blink'), 160);
+            eye.style.transition = 'transform 0.08s';
+            eye.style.transform = 'scaleY(0.1)';
+            setTimeout(() => { eye.style.transform = 'scaleY(1)'; }, 160);
         });
 
-        // Scale animation
         orbWrap.style.transform = 'scale(0.92)';
-        setTimeout(() => {
-            orbWrap.style.transform = '';
-        }, 120);
+        setTimeout(() => { orbWrap.style.transform = ''; }, 120);
 
-        // Show status
         statusIndicator.classList.add('active');
         setTimeout(() => statusIndicator.classList.remove('active'), 2000);
 
-        // Optional: Trigger a greeting or action
         showToast('👋 HAMS AI is ready to help!');
+
+        // 3D shockwave distortion on click
+        const canvas = document.getElementById('orbCanvas');
+        if (canvas && canvas._triggerShockwave) {
+            canvas._triggerShockwave();
+        }
     });
 
-    // Animation loop for smooth cursor
+    // Animation loop
     function animate() {
-        // Smooth cursor movement
         const dx = mouseX - cursorX;
         const dy = mouseY - cursorY;
         cursorX += dx * 0.15;
         cursorY += dy * 0.15;
 
-        // Update magnetic cursor position
         if (magneticCursor.classList.contains('active')) {
             let targetX = cursorX;
             let targetY = cursorY;
 
             if (isHovering) {
-                // Magnetic effect - pull cursor towards orb
                 const pullStrength = 0.3;
                 targetX = cursorX + (orbCenterX - cursorX) * pullStrength;
                 targetY = cursorY + (orbCenterY - cursorY) * pullStrength;
@@ -341,68 +374,68 @@ function initProfessionalOrb() {
             magneticCursor.style.top = `${targetY}px`;
         }
 
-        // Enhanced eye tracking with easing
+        // Eye tracking + 3D light position
         if (isNearOrb) {
-            const dx = cursorX - orbCenterX;
-            const dy = cursorY - orbCenterY;
-            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const edx = cursorX - orbCenterX;
+            const edy = cursorY - orbCenterY;
+            const dist = Math.sqrt(edx * edx + edy * edy) || 1;
 
-            // Smooth eye movement
             const maxPupil = 4;
-            const maxEye = 3;
             const norm = Math.min(dist / 200, 1);
+            const px = (edx / dist) * norm * maxPupil;
+            const py = (edy / dist) * norm * maxPupil;
 
-            const px = (dx / dist) * norm * maxPupil;
-            const py = (dy / dist) * norm * maxPupil;
-
-            const pupils = document.querySelectorAll('.orb-pupil');
-            pupils.forEach(p => {
+            // 2D pupil tracking (preserved)
+            document.querySelectorAll('.orb-pupil').forEach(p => {
                 p.style.transform = `translate(${px}px, ${py}px)`;
             });
+
+            // 3D light tracking — map cursor to Three.js light position
+            if (orbPointLight) {
+                const lightX = (edx / dist) * norm * 2.5;
+                const lightY = -(edy / dist) * norm * 2.0; // invert Y for 3D
+                orbPointLight.position.x = lightX;
+                orbPointLight.position.y = lightY;
+                orbPointLight.position.z = 2.5;
+            }
         }
 
         animationId = requestAnimationFrame(animate);
     }
 
-    // Update orb center on scroll/resize
     window.addEventListener('scroll', updateOrbCenter);
     window.addEventListener('resize', updateOrbCenter);
-
-    // Initialize
     updateOrbCenter();
     animate();
 
-    // Clean up on page unload
     window.addEventListener('beforeunload', () => {
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-        }
+        if (animationId) cancelAnimationFrame(animationId);
     });
 }
 
-// Update orb mode (chat/agent)
-function updateOrbMode(mode) {
+// Update orb mode — smooth 3D color transition + fallback CSS class
+function updateOrbMode(newMode) {
+    // Update hidden orb div for backward compat
     const orb = document.getElementById('orb');
-    if (!orb) return;
+    if (orb) {
+        orb.classList.remove('chat-mode', 'agent-mode');
+        orb.classList.add(`${newMode}-mode`);
+    }
 
-    // Remove existing mode classes
-    orb.classList.remove('chat-mode', 'agent-mode');
-
-    // Add new mode class
-    orb.classList.add(`${mode}-mode`);
-
-    // Update status indicator color
+    // Status indicator color
     const status = document.querySelector('.orb-status');
     if (status) {
-        if (mode === 'agent') {
-            status.style.background = 'var(--green)';
-        } else {
-            status.style.background = 'var(--accent)';
-        }
+        status.style.background = newMode === 'agent' ? 'var(--green)' : 'var(--accent)';
+    }
+
+    // 3D Orb: smooth color transition via lerp in animation loop
+    if (ORB_COLORS[newMode]) {
+        orbTargetColors = ORB_COLORS[newMode];
+        orbCurrentMode = newMode;
     }
 }
 
-// Enhanced blink with random intervals
+// Enhanced blink with random intervals — B7 FIX: uses global isHovering
 function scheduleProfessionalBlink() {
     const baseDelay = 3000 + Math.random() * 5000;
     const nextDelay = isHovering ? baseDelay * 0.7 : baseDelay;
@@ -410,46 +443,24 @@ function scheduleProfessionalBlink() {
     setTimeout(() => {
         const eyes = document.querySelectorAll('.orb-eye');
         eyes.forEach(eye => {
-            eye.classList.add('blink');
-            setTimeout(() => eye.classList.remove('blink'), 160);
+            eye.style.transition = 'transform 0.08s';
+            eye.style.transform = 'scaleY(0.1)';
+            setTimeout(() => { eye.style.transform = 'scaleY(1)'; }, 160);
         });
         scheduleProfessionalBlink();
     }, nextDelay);
 }
 
-// Add breathing animation when idle
+// Breathing animation — now handled inside Three.js animate loop
+// This function is kept as a no-op for backward compat (called in DOMContentLoaded)
 function initBreathingAnimation() {
-    const orb = document.getElementById('orb');
-    if (!orb) return;
-
-    let breathPhase = 0;
-    const breathSpeed = 0.02;
-
-    function breathe() {
-        if (!isHovering && !isNearOrb) {
-            breathPhase += breathSpeed;
-            const scale = 1 + Math.sin(breathPhase) * 0.02;
-            const opacity = 0.5 + Math.sin(breathPhase * 0.5) * 0.1;
-
-            orb.style.transform = `scale(${scale})`;
-
-            const glow = orb.querySelector('#orbShine');
-            if (glow) {
-                glow.style.opacity = opacity;
-            }
-        } else {
-            orb.style.transform = '';
-        }
-
-        requestAnimationFrame(breathe);
-    }
-
-    breathe();
+    // Breathing is now integrated into the Three.js animation loop
+    // inside initOrb3DLight() → animate() → step 2 (breathing scale)
+    // No separate requestAnimationFrame needed
 }
 
 // Initialize all professional orb features
 document.addEventListener('DOMContentLoaded', () => {
-    // Wait for basic orb initialization
     setTimeout(() => {
         initProfessionalOrb();
         scheduleProfessionalBlink();
@@ -457,6 +468,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
+// ═══════════════════════════════════════════════
+// MODE (Chat / Agent) — B1 FIX: SATU definisi saja + updateOrbMode()
+// ═══════════════════════════════════════════════
 function setMode(m) {
     mode = m;
     document.getElementById('btnChat')?.classList.toggle('active', m === 'chat');
@@ -474,163 +488,8 @@ function setMode(m) {
 
     updateFeatureCards(m);
 
-    // NEW: Update orb appearance based on mode
+    // B1 FIX: updateOrbMode() sekarang SELALU dipanggil
     updateOrbMode(m);
-
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const targetNav = m === 'agent'
-        ? document.getElementById('navAgent')
-        : document.getElementById('navChat');
-    targetNav?.classList.add('active');
-}
-
-// ═══════════════════════════════════════════════
-// ORB 3D LIGHT ANIMATION
-// ═══════════════════════════════════════════════
-function initOrb3DLight() {
-    const orb = document.getElementById('orb');
-    if (!orb) return;
-
-    let angle = 0;
-    let speed = 0.004;
-    let rx = 0.38, ry = 0.32;
-    const radiusX = 0.28, radiusY = 0.22;
-
-    // Secondary highlight
-    const shine = document.createElement('div');
-    shine.id = 'orbShine';
-    shine.style.cssText = `
-        position:absolute;
-        border-radius:50%;
-        pointer-events:none;
-        z-index:2;
-        transition:none;
-        mix-blend-mode:screen;
-    `;
-    orb.appendChild(shine);
-
-    // Rim light
-    const rim = document.createElement('div');
-    rim.id = 'orbRim';
-    rim.style.cssText = `
-        position:absolute;
-        inset:0;
-        border-radius:50%;
-        pointer-events:none;
-        z-index:1;
-    `;
-    orb.appendChild(rim);
-
-    function tick() {
-        angle += speed;
-
-        // Light source position (circular orbit)
-        rx = 0.30 + Math.cos(angle) * radiusX;
-        ry = 0.22 + Math.sin(angle * 0.7) * radiusY;
-
-        // Opposite side dim
-        const dx = 1 - rx;
-        const dy = 1 - ry;
-
-        // Update main orb background — realistic 3D sphere shading
-        const lightPct = Math.round(rx * 100);
-        const lightPctY = Math.round(ry * 100);
-
-        orb.style.background = `
-            radial-gradient(
-                circle at ${lightPct}% ${lightPctY}%,
-                #ffffff    0%,
-                #f5f5f5    4%,
-                #e0e0e0   10%,
-                #c0c0c0   22%,
-                #909090   40%,
-                #505050   62%,
-                #141414  100%
-            )
-        `;
-
-        // Primary specular highlight — small bright spot
-        const hSize = 28 + Math.sin(angle * 1.3) * 6;
-        const hLeft = (rx * 130) - hSize / 2;
-        const hTop = (ry * 130) - hSize / 2;
-        shine.style.cssText = `
-            position:absolute;
-            width:${hSize}px;
-            height:${hSize * 0.75}px;
-            left:${hLeft}px;
-            top:${hTop}px;
-            border-radius:50%;
-            pointer-events:none;
-            z-index:9;
-            background: radial-gradient(ellipse,
-                rgba(255,255,255,0.9) 0%,
-                rgba(255,255,255,0.4) 40%,
-                transparent 70%
-            );
-            transform: rotate(${-30 + Math.sin(angle) * 15}deg);
-        `;
-
-        // Rim light — opposite side of light source
-        const rimAngle = angle + Math.PI;
-        const rimX = 50 + Math.cos(rimAngle) * 40;
-        const rimY = 50 + Math.sin(rimAngle * 0.7) * 35;
-        rim.style.background = `
-            radial-gradient(
-                circle at ${rimX}% ${rimY}%,
-                rgba(255,255,255,0.08) 0%,
-                transparent 55%
-            )
-        `;
-
-        // Subtle box-shadow glow follows light
-        const glowX = (rx - 0.5) * 20;
-        const glowY = (ry - 0.5) * 20;
-        orb.style.boxShadow = `
-            ${glowX}px ${glowY}px 40px rgba(255,255,255,0.15),
-            0 0 80px rgba(180,180,180,0.08),
-            inset 0 2px 4px rgba(255,255,255,0.5),
-            inset 0 0 40px rgba(0,0,0,0.45)
-        `;
-
-        requestAnimationFrame(tick);
-    }
-
-    tick();
-}
-
-// ═══════════════════════════════════════════════
-// EXTENDED THINKING
-// ═══════════════════════════════════════════════
-function toggleExtended() {
-    extended = !extended;
-    const pill = document.getElementById('extPill');
-    if (pill) pill.classList.toggle('on', extended);
-    const hint = document.getElementById('extHint');
-    if (hint) {
-        hint.textContent = extended ? 'Extended ON ✦' : 'Extended Off';
-        hint.style.color = extended ? 'var(--accent)' : 'var(--text-3)';
-    }
-}
-
-// ═══════════════════════════════════════════════
-// MODE (Chat / Agent)
-// ═══════════════════════════════════════════════
-function setMode(m) {
-    mode = m;
-    document.getElementById('btnChat')?.classList.toggle('active', m === 'chat');
-    document.getElementById('btnAgent')?.classList.toggle('active', m === 'agent');
-
-    const modeHint = document.getElementById('modeHint');
-    if (modeHint) modeHint.textContent = m === 'agent' ? 'Agent 🤖' : 'Chat 💬';
-
-    const input = document.getElementById('userInput');
-    if (input) input.placeholder =
-        m === 'agent' ? 'Describe your task for the agent...' : 'Message AI Chat...';
-
-    const slider = document.getElementById('agentSlider');
-    if (slider) slider.style.display = m === 'agent' ? 'flex' : 'none';
-
-    updateFeatureCards(m);
 
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     const targetNav = m === 'agent'
@@ -680,6 +539,279 @@ function updateFeatureCards(m) {
 }
 
 // ═══════════════════════════════════════════════
+// 3D ORB — Three.js Scene (replaces old CSS initOrb3DLight)
+// ═══════════════════════════════════════════════
+
+// Global Three.js orb state — accessible by other functions
+let orbScene = null;
+let orbCamera = null;
+let orbRenderer = null;
+let orbSphere = null;
+let orbPointLight = null;
+let orbAmbientLight = null;
+let orbGlowMesh = null;
+let orbAnimationId = null;
+
+// Color palettes for mode switching
+const ORB_COLORS = {
+    chat: {
+        base: new THREE.Color(0.85, 0.85, 0.90),   // cool white-blue
+        emissive: new THREE.Color(0.15, 0.18, 0.25),   // subtle blue glow
+        light: new THREE.Color(1.0, 1.0, 1.0),      // white light
+        glow: new THREE.Color(0.6, 0.7, 1.0),      // blue-ish glow
+        ambient: new THREE.Color(0.12, 0.12, 0.18),   // dark blue ambient
+    },
+    agent: {
+        base: new THREE.Color(0.55, 0.95, 0.65),   // vibrant green
+        emissive: new THREE.Color(0.08, 0.25, 0.12),   // green glow
+        light: new THREE.Color(0.7, 1.0, 0.8),      // green-white light
+        glow: new THREE.Color(0.3, 1.0, 0.5),      // green glow
+        ambient: new THREE.Color(0.08, 0.18, 0.10),   // dark green ambient
+    }
+};
+
+// Target colors for smooth transitions
+let orbTargetColors = ORB_COLORS.chat;
+let orbCurrentMode = 'chat';
+
+function initOrb3DLight() {
+    const canvas = document.getElementById('orbCanvas');
+    if (!canvas || typeof THREE === 'undefined') {
+        console.warn('[3D Orb] Three.js not loaded or canvas missing, skipping');
+        // Fallback: show the old CSS orb
+        const oldOrb = document.getElementById('orb');
+        if (oldOrb) oldOrb.style.display = '';
+        return;
+    }
+
+    const container = document.getElementById('orbWrap');
+    if (!container) return;
+
+    const size = container.offsetWidth || 130;
+
+    // ── Scene ──
+    orbScene = new THREE.Scene();
+
+    // ── Camera ──
+    orbCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    orbCamera.position.z = 3.2;
+
+    // ── Renderer ──
+    orbRenderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance',
+    });
+    orbRenderer.setSize(size, size);
+    orbRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    orbRenderer.setClearColor(0x000000, 0);
+    orbRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    orbRenderer.toneMappingExposure = 1.2;
+
+    // ── Sphere geometry — high segment count for smoothness ──
+    const geometry = new THREE.SphereGeometry(1, 128, 128);
+
+    // ── Material — glass-like with subsurface scattering feel ──
+    const material = new THREE.MeshPhysicalMaterial({
+        color: orbTargetColors.base,
+        emissive: orbTargetColors.emissive,
+        emissiveIntensity: 0.4,
+        metalness: 0.1,
+        roughness: 0.15,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.05,
+        reflectivity: 0.9,
+        transparent: true,
+        opacity: 0.92,
+        envMapIntensity: 1.0,
+    });
+
+    orbSphere = new THREE.Mesh(geometry, material);
+    orbScene.add(orbSphere);
+
+    // ── Inner glow sphere (subsurface scattering simulation) ──
+    const glowGeometry = new THREE.SphereGeometry(0.75, 64, 64);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: orbTargetColors.glow,
+        transparent: true,
+        opacity: 0.12,
+    });
+    orbGlowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+    orbScene.add(orbGlowMesh);
+
+    // ── Lights ──
+    // Main point light — follows cursor for specular highlights
+    orbPointLight = new THREE.PointLight(orbTargetColors.light, 2.5, 10);
+    orbPointLight.position.set(1.5, 1.5, 2.5);
+    orbScene.add(orbPointLight);
+
+    // Secondary fill light — opposite side for rim lighting
+    const fillLight = new THREE.PointLight(new THREE.Color(0.4, 0.4, 0.6), 0.8, 8);
+    fillLight.position.set(-2, -1, 1);
+    orbScene.add(fillLight);
+
+    // Ambient light — base illumination
+    orbAmbientLight = new THREE.AmbientLight(orbTargetColors.ambient, 0.6);
+    orbScene.add(orbAmbientLight);
+
+    // ── Fake environment map for reflections ──
+    const envScene = new THREE.Scene();
+    const envGeo = new THREE.SphereGeometry(5, 32, 32);
+    const envMat = new THREE.MeshBasicMaterial({
+        color: 0x111122,
+        side: THREE.BackSide,
+    });
+    const envMesh = new THREE.Mesh(envGeo, envMat);
+    envScene.add(envMesh);
+
+    // Add some bright spots to env for reflections
+    for (let i = 0; i < 6; i++) {
+        const spotGeo = new THREE.SphereGeometry(0.3, 8, 8);
+        const spotMat = new THREE.MeshBasicMaterial({
+            color: new THREE.Color(0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5),
+        });
+        const spot = new THREE.Mesh(spotGeo, spotMat);
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        spot.position.set(
+            4 * Math.sin(phi) * Math.cos(theta),
+            4 * Math.sin(phi) * Math.sin(theta),
+            4 * Math.cos(phi)
+        );
+        envScene.add(spot);
+    }
+
+    const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(128);
+    const cubeCamera = new THREE.CubeCamera(0.1, 10, cubeRenderTarget);
+    cubeCamera.update(orbRenderer, envScene);
+    material.envMap = cubeRenderTarget.texture;
+
+    // ── Animation state ──
+    let time = 0;
+    let shockwave = 0; // For click distortion
+    const clock = new THREE.Clock();
+
+    // ── Animation loop ──
+    function animate() {
+        orbAnimationId = requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        time += delta;
+
+        // 1. Floating motion — sine/cosine on X, Y, Z + slight rotation
+        orbSphere.position.x = Math.sin(time * 0.6) * 0.04;
+        orbSphere.position.y = Math.cos(time * 0.8) * 0.06 + Math.sin(time * 0.3) * 0.02;
+        orbSphere.position.z = Math.sin(time * 0.4) * 0.02;
+        orbSphere.rotation.y = time * 0.15;
+        orbSphere.rotation.x = Math.sin(time * 0.2) * 0.05;
+
+        // 2. Breathing scale when idle (not hovering)
+        if (!isHovering && !isNearOrb) {
+            const breathScale = 1.0 + Math.sin(time * 1.2) * 0.018;
+            orbSphere.scale.setScalar(breathScale);
+        } else {
+            // Slightly larger when hovered
+            orbSphere.scale.lerp(new THREE.Vector3(1.05, 1.05, 1.05), 0.1);
+        }
+
+        // 3. Inner glow pulsing
+        orbGlowMesh.position.copy(orbSphere.position);
+        const glowPulse = 0.10 + Math.sin(time * 1.5) * 0.05;
+        orbGlowMesh.material.opacity = glowPulse;
+        const glowScale = 0.75 + Math.sin(time * 1.0) * 0.03;
+        orbGlowMesh.scale.setScalar(glowScale);
+
+        // 4. Shockwave decay (click distortion)
+        // Uses cached original positions to avoid cloning geometry every frame
+        if (shockwave > 0.01) {
+            shockwave *= 0.92; // decay
+            const positions = orbSphere.geometry.attributes.position;
+
+            // Cache original positions on first shockwave frame
+            if (!orbSphere._originalPositions) {
+                orbSphere._originalPositions = new Float32Array(positions.array);
+            }
+            const orig = orbSphere._originalPositions;
+
+            for (let i = 0; i < positions.count; i++) {
+                const i3 = i * 3;
+                const ox = orig[i3];
+                const oy = orig[i3 + 1];
+                const oz = orig[i3 + 2];
+                const dist = Math.sqrt(ox * ox + oy * oy + oz * oz);
+                const displacement = shockwave * Math.sin(dist * 12 - time * 8) * 0.08;
+                positions.array[i3] = ox * (1 + displacement);
+                positions.array[i3 + 1] = oy * (1 + displacement);
+                positions.array[i3 + 2] = oz * (1 + displacement);
+            }
+            positions.needsUpdate = true;
+        } else if (shockwave > 0) {
+            // Reset geometry from cached original
+            shockwave = 0;
+            if (orbSphere._originalPositions) {
+                const positions = orbSphere.geometry.attributes.position;
+                positions.array.set(orbSphere._originalPositions);
+                positions.needsUpdate = true;
+                orbSphere._originalPositions = null;
+            }
+        }
+
+        // 5. Smooth color transitions (mode switching)
+        orbSphere.material.color.lerp(orbTargetColors.base, 0.03);
+        orbSphere.material.emissive.lerp(orbTargetColors.emissive, 0.03);
+        orbPointLight.color.lerp(orbTargetColors.light, 0.03);
+        orbGlowMesh.material.color.lerp(orbTargetColors.glow, 0.03);
+        orbAmbientLight.color.lerp(orbTargetColors.ambient, 0.03);
+
+        // 6. Orbiting light source (automatic when cursor not near)
+        if (!isNearOrb) {
+            const lightOrbitSpeed = 0.5;
+            orbPointLight.position.x = Math.cos(time * lightOrbitSpeed) * 2.0;
+            orbPointLight.position.y = Math.sin(time * lightOrbitSpeed * 0.7) * 1.8;
+            orbPointLight.position.z = 2.0 + Math.sin(time * lightOrbitSpeed * 0.3) * 0.5;
+        }
+
+        // 7. Render
+        orbRenderer.render(orbScene, orbCamera);
+    }
+
+    animate();
+
+    // ── Expose shockwave trigger for click handler ──
+    canvas._triggerShockwave = function () {
+        shockwave = 1.0;
+    };
+
+    // ── Handle resize ──
+    function handleResize() {
+        const newSize = container.offsetWidth || 130;
+        orbRenderer.setSize(newSize, newSize);
+        orbRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+    window.addEventListener('resize', handleResize);
+
+    // ── Cleanup on page unload ──
+    window.addEventListener('beforeunload', () => {
+        if (orbAnimationId) cancelAnimationFrame(orbAnimationId);
+        if (orbRenderer) orbRenderer.dispose();
+    });
+}
+
+// ═══════════════════════════════════════════════
+// EXTENDED THINKING
+// ═══════════════════════════════════════════════
+function toggleExtended() {
+    extended = !extended;
+    const pill = document.getElementById('extPill');
+    if (pill) pill.classList.toggle('on', extended);
+    const hint = document.getElementById('extHint');
+    if (hint) {
+        hint.textContent = extended ? 'Extended ON ✦' : 'Extended Off';
+        hint.style.color = extended ? 'var(--accent)' : 'var(--text-3)';
+    }
+}
+
+// ═══════════════════════════════════════════════
 // TEXTAREA
 // ═══════════════════════════════════════════════
 function autoResize(el) {
@@ -713,7 +845,7 @@ function parseMarkdown(raw) {
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.+?)\*/g, '<em>$1</em>')
         .replace(/`([^`\n]+)`/g, '<code>$1</code>')
-        .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        .replace(/\$(.+?)\$\$(.+?)\$/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
     // Tables
     text = text.replace(/((?:^\|.+\|\n?)+)/gm, tbl => {
@@ -898,30 +1030,6 @@ function appendMsg(role, content, thinkingText) {
     box.scrollTop = box.scrollHeight;
 }
 
-function showTyping(withThink) {
-    const box = showContent();
-    const row = document.createElement('div');
-    row.className = 'msg-row ai';
-    row.id = 'typingRow';
-
-    const av = document.createElement('div');
-    av.className = 'avatar ai';
-    av.innerHTML = '<i class="bi bi-stars"></i>';
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble ai';
-    if (withThink) bubble.appendChild(buildThinkingLoading());
-    const dots = document.createElement('div');
-    dots.innerHTML = '<div class="typing-dot"><span></span><span></span><span></span></div>';
-    bubble.appendChild(dots);
-
-    row.appendChild(av);
-    row.appendChild(bubble);
-    box.appendChild(row);
-    box.scrollTop = box.scrollHeight;
-}
-
-// ── Typing indicator dengan counter waktu ──────
 function showTypingWithTimer() {
     const box = showContent();
     const row = document.createElement('div');
@@ -945,7 +1053,6 @@ function showTypingWithTimer() {
     box.appendChild(row);
     box.scrollTop = box.scrollHeight;
 
-    // Update status tiap detik
     let secs = 0;
     const timer = setInterval(() => {
         secs++;
@@ -957,7 +1064,6 @@ function showTypingWithTimer() {
         else el.textContent = `Almost done... (${secs}s)`;
     }, 1000);
 
-    // Simpan timer id di row agar bisa di-clear
     row._typingTimer = timer;
 }
 
@@ -973,11 +1079,10 @@ function removeTyping() {
 // SEND — CHAT mode (streaming)
 // ═══════════════════════════════════════════════
 async function sendChat(text, model) {
-    // Tampilkan typing indicator dengan timer — tetap sampai chunk pertama tiba
     showTypingWithTimer();
 
     const bubbleId = 'bubble-' + Date.now();
-    let firstChunk = true;  // flag: typing belum dihapus
+    let firstChunk = true;
 
     try {
         const res = await fetch('/chat/stream', {
@@ -994,10 +1099,7 @@ async function sendChat(text, model) {
             throw new Error(err.detail || `HTTP ${res.status}`);
         }
 
-        // JANGAN removeTyping() di sini — tunggu chunk pertama dulu
-
         let fullReply = '';
-
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -1019,7 +1121,6 @@ async function sendChat(text, model) {
                     const parsed = JSON.parse(raw);
                     if (parsed.error) throw new Error(parsed.error);
                     if (parsed.chunk) {
-                        // Chunk pertama tiba → baru hapus typing dan buat bubble
                         if (firstChunk) {
                             firstChunk = false;
                             removeTyping();
@@ -1034,9 +1135,36 @@ async function sendChat(text, model) {
             }
         }
 
-        // Kalau stream selesai tapi tidak ada chunk (reply kosong)
         if (firstChunk) {
             removeTyping();
+            // B19 FIX: Jika tidak ada chunk sama sekali, tampilkan pesan
+            if (fullReply) {
+                appendMsg('ai', fullReply);
+            }
+        }
+
+        // B19 FIX: Tambah actions ke streaming bubble setelah selesai
+        const streamBubble = document.getElementById(bubbleId);
+        if (streamBubble) {
+            const bubble = streamBubble.closest('.bubble');
+            if (bubble && !bubble.querySelector('.msg-actions')) {
+                const actions = document.createElement('div');
+                actions.className = 'msg-actions';
+                actions.innerHTML = `
+                <button class="msg-action-btn" title="Copy" onclick="copyBubble(this)">
+                    <i class="bi bi-copy"></i>
+                </button>
+                <button class="msg-action-btn" title="Good response" onclick="this.classList.toggle('active')">
+                    <i class="bi bi-hand-thumbs-up"></i>
+                </button>
+                <button class="msg-action-btn" title="Bad response" onclick="this.classList.toggle('active')">
+                    <i class="bi bi-hand-thumbs-down"></i>
+                </button>
+                <button class="msg-action-btn" title="Regenerate" onclick="regenMsg(this)">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>`;
+                bubble.appendChild(actions);
+            }
         }
 
         const reply = fullReply || 'Tidak ada respons.';
@@ -1075,7 +1203,6 @@ async function sendChat(text, model) {
     }
 }
 
-// ── Helper: buat bubble streaming kosong ──────────
 function appendMsgStreaming(role, text, id) {
     const wrap = document.createElement('div');
     wrap.className = `msg-row ${role}`;
@@ -1098,7 +1225,6 @@ function appendMsgStreaming(role, text, id) {
     wrap.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
-// ── Helper: update bubble dengan teks terbaru ─────
 function updateStreamingBubble(id, text) {
     const mdBody = document.getElementById(id);
     if (!mdBody) return;
@@ -1123,7 +1249,6 @@ async function sendAgent(text, model) {
     statusBanner.className = 'agent-status';
     statusBanner.innerHTML = `<div class="spinner"></div><span id="agentStatusText">Connecting... (0s)</span>`;
 
-    // Timer untuk agent
     let agentSecs = 0;
     const agentTimer = setInterval(() => {
         agentSecs++;
@@ -1167,7 +1292,6 @@ async function sendAgent(text, model) {
                 if (!line.startsWith('data: ')) continue;
                 try {
                     const event = JSON.parse(line.slice(6));
-                    // Clear timer saat event pertama datang
                     if (statusBanner._timer) {
                         clearInterval(statusBanner._timer);
                         statusBanner._timer = null;
@@ -1252,11 +1376,12 @@ function handleAgentEvent(ev, block, statusBanner, taskText) {
 }
 
 // ═══════════════════════════════════════════════
-// MAIN SEND DISPATCH
+// MAIN SEND DISPATCH — B6 FIX: terima parameter opsional
 // ═══════════════════════════════════════════════
-async function sendMessage() {
+async function sendMessage(overrideText) {
     const input = document.getElementById('userInput');
-    const text = input.value.trim();
+    // B6 FIX: gunakan overrideText jika ada, fallback ke input.value
+    const text = overrideText || input.value.trim();
     if (!text || isLoading) return;
 
     showContent();
@@ -1348,10 +1473,18 @@ function copyBubble(btn) {
     });
 }
 
+// B6 FIX: regenMsg sekarang bekerja karena sendMessage() terima parameter
 function regenMsg(btn) {
     const lastUser = [...history].reverse().find(m => m.role === 'user');
     if (!lastUser) return;
-    history = history.slice(0, -1);
+    // Hapus response terakhir dari history
+    if (history.length >= 2 && history[history.length - 1].role === 'assistant') {
+        history.pop(); // hapus assistant
+    }
+    // Hapus bubble AI terakhir dari DOM
+    const allRows = document.querySelectorAll('#chatBox .msg-row.ai');
+    if (allRows.length) allRows[allRows.length - 1].remove();
+    // Kirim ulang dengan teks user terakhir
     sendMessage(lastUser.content);
 }
 
@@ -1384,7 +1517,7 @@ document.addEventListener('keydown', (e) => {
         sidebar?.classList.toggle('open');
         document.getElementById('sidebarOverlay')?.classList.toggle('open');
     }
-    if (mod && e.key === 'm') { e.preventDefault(); const current = document.getElementById('btnChat')?.classList.contains('active'); setMode(current ? 'agent' : 'chat'); }
+    if (mod && e.key === 'm') { e.preventDefault(); setMode(mode === 'chat' ? 'agent' : 'chat'); }
     if (mod && e.key === 'e') { e.preventDefault(); toggleExtended(); }
     if (mod && e.key === 'Enter') { e.preventDefault(); sendMessage(); }
     if (mod && e.shiftKey && e.key === 'C') {
@@ -1394,6 +1527,10 @@ document.addEventListener('keydown', (e) => {
     }
     if (e.key === 'Escape') {
         closePreview();
+        closeHistoryModal();
+        closeSettings();
+        closeHelp();
+        closeProfileDropdown();
         document.getElementById('sidebar')?.classList.remove('open');
         document.getElementById('sidebarOverlay')?.classList.remove('open');
         document.activeElement?.blur();
@@ -1471,31 +1608,21 @@ function renderHistoryModal(query = '') {
         items.forEach(chat => {
             const d = new Date(chat.updatedAt || chat.createdAt);
             const timeStr = d.toLocaleString('id-ID', {
-                day: 'numeric', month: 'short', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
+                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
             });
             const msgCount = chat.messages?.length || 0;
 
             const item = document.createElement('div');
-            item.className = 'hmodal-item';
+            item.className = 'hmodal-item' + (chat.id === currentChatId ? ' active' : '');
             item.innerHTML = `
-                <div class="hmodal-item-icon"><i class="bi bi-chat-dots"></i></div>
-                <div class="hmodal-item-body">
-                    <div class="hmodal-item-title">${escHtml(chat.title)}</div>
-                    <div class="hmodal-item-meta">
-                        <i class="bi bi-calendar3"></i> ${timeStr}
-                        &nbsp;·&nbsp;
-                        <i class="bi bi-chat-text"></i> ${Math.floor(msgCount / 2)} pesan
-                    </div>
-                </div>
-                <button class="hmodal-item-del" title="Hapus"
-                    onclick="deleteFromModal('${chat.id}', event)">
-                    <i class="bi bi-trash3"></i>
-                </button>`;
-            item.addEventListener('click', (e) => {
-                if (e.target.closest('.hmodal-item-del')) return;
-                restoreChat(chat.id);
+                <div class="hmodal-item-title">${escHtml(chat.title)}</div>
+                <div class="hmodal-item-meta">
+                    <span>${timeStr}</span>
+                    <span>${msgCount} pesan</span>
+                </div>`;
+            item.addEventListener('click', () => {
                 closeHistoryModal();
+                restoreChat(chat.id);
             });
             groupEl.appendChild(item);
         });
@@ -1504,213 +1631,311 @@ function renderHistoryModal(query = '') {
     });
 }
 
-function deleteFromModal(id, e) {
-    e.stopPropagation();
-    deleteChatFromHistory(id, e);
-    renderHistoryModal(document.getElementById('hmSearch')?.value || '');
-}
-
-// Close on backdrop click
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('historyModal')?.addEventListener('click', e => {
-        if (e.target === document.getElementById('historyModal')) closeHistoryModal();
-    });
-});
-
-// Keyboard shortcut — Escape
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeHistoryModal();
-});
-
 // ═══════════════════════════════════════════════
-// PROFILE SYSTEM
+// SETTINGS MODAL
 // ═══════════════════════════════════════════════
-const USER_KEY = 'hams_user';
-
-function loadUser() {
-    try {
-        return JSON.parse(localStorage.getItem(USER_KEY) || '{}');
-    } catch { return {}; }
-}
-
-function saveUser(data) {
-    localStorage.setItem(USER_KEY, JSON.stringify(data));
-}
-
-function initProfile() {
-    const user = loadUser();
-    const name = user.name || 'HAMS User';
-    const email = user.email || 'hams@user.local';
-    const uname = user.username || '';
-    document.getElementById('profileName').textContent = name;
-    document.getElementById('profileAvatar').textContent = name.slice(0, 2).toUpperCase();
-    document.getElementById('pdropEmail').textContent = uname ? `@${uname}` : email;
-}
-
-// ── Profile Dropdown ──
-let profileDropOpen = false;
-
-function toggleProfileDropdown(e) {
-    e.stopPropagation();
-    profileDropOpen = !profileDropOpen;
-    document.getElementById('profileDropdown').classList.toggle('open', profileDropOpen);
-}
-
-function closeProfileDropdown() {
-    profileDropOpen = false;
-    document.getElementById('profileDropdown').classList.remove('open');
-}
-
-document.addEventListener('click', e => {
-    if (!document.getElementById('profileDropdown')?.contains(e.target)) {
-        closeProfileDropdown();
-    }
-});
-
-// ── Settings Modal ──
 function openSettings() {
-    const user = loadUser();
-    const input = document.getElementById('settingsName');
-    if (input) input.value = user.name || '';
-    const theme = localStorage.getItem('hams_theme') || 'dark';
-    setThemeOpt(theme, false);
     document.getElementById('settingsModal').classList.add('open');
+    closeSidebar();
 }
-
 function closeSettings() {
     document.getElementById('settingsModal').classList.remove('open');
 }
 
-function setThemeOpt(t, apply = true) {
-    document.getElementById('themeOptDark')?.classList.toggle('active', t === 'dark');
-    document.getElementById('themeOptLight')?.classList.toggle('active', t === 'light');
-    if (apply) applyTheme(t);
-}
-
-async function saveSettings() {
-    const name = document.getElementById('settingsName').value.trim() || 'HAMS User';
-    const token = localStorage.getItem('hams_token');
-
-    try {
-        if (token) {
-            await fetch('/auth/me', {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ name })
-            });
-        }
-    } catch { }
-
-    const user = loadUser();
-    user.name = name;
-    saveUser(user);
-    initProfile();
-    closeSettings();
-    showToast('✅ Settings saved!');
-}
-
-// ── Get Help / FAQ ──
-const FAQ_DATA = [
-    {
-        q: 'Bagaimana cara menggunakan HAMS CLI?',
-        a: 'Install dengan <code>npm install -g @hams-ai/cli</code>, lalu jalankan <code>hams</code> dari terminal. Pastikan Python 3.14+ dan repository hams-ai sudah ter-clone. Lihat halaman <b>Code</b> untuk panduan lengkap.'
-    },
-    {
-        q: 'Model AI apa saja yang tersedia?',
-        a: 'HAMS AI mendukung 12+ model: HAMS-MAX (Groq + NVIDIA), Gemini 2.5 Flash/Pro, LLaMA 3.3 70B, DeepSeek V3, Qwen, Mistral, Kimi, dan lainnya. Pilih dari dropdown model di topbar.'
-    },
-    {
-        q: 'Apa itu Agent mode?',
-        a: 'Agent mode memungkinkan HAMS AI bekerja secara otonom — mencari informasi, menjalankan kode, membuat file, dan menyelesaikan task kompleks langkah demi langkah. Aktifkan via tombol <b>Agent</b> di topbar.'
-    },
-    {
-        q: 'Bagaimana cara menggunakan Extended Thinking?',
-        a: 'Klik toggle <b>Extended</b> di topbar sebelum mengirim pesan. AI akan menampilkan proses berpikirnya sebelum memberikan jawaban final. Cocok untuk soal logika kompleks dan debugging.'
-    },
-    {
-        q: 'Data chat saya disimpan di mana?',
-        a: 'Semua riwayat chat disimpan secara lokal di <code>localStorage</code> browser kamu. Data tidak dikirim ke server eksternal. Maksimal 50 percakapan tersimpan secara otomatis.'
-    },
-    {
-        q: 'Bagaimana cara menghapus riwayat chat?',
-        a: 'Buka History (sidebar atau nav item), lalu klik ikon <b>trash</b> di sebelah kanan setiap item chat. Atau buka DevTools browser → Application → Local Storage → hapus key <code>hams_chat_history</code>.'
-    },
-    {
-        q: 'Apakah HAMS AI bisa membaca file atau gambar?',
-        a: 'Fitur upload file dan analisis gambar sedang dalam pengembangan. Untuk saat ini, kamu bisa paste konten teks langsung ke input chat, atau gunakan Agent mode untuk task yang melibatkan file sistem lokal.'
-    },
-    {
-        q: 'Kenapa response AI lambat?',
-        a: 'Kecepatan response bergantung pada model yang dipilih dan koneksi internet. Model NVIDIA cenderung lebih lambat dari Groq. Coba pilih <b>HAMS-MAX</b> atau <b>Gemini 2.5 Flash-Lite</b> untuk response tercepat.'
-    },
-    {
-        q: 'Bagaimana cara menggunakan Live Preview?',
-        a: 'Saat AI menghasilkan kode HTML/CSS/JS, klik tombol <b>Preview</b> di pojok kanan code block. Kode akan langsung dirender di iframe preview. Cocok untuk melihat hasil website atau animasi secara real-time.'
-    },
-    {
-        q: 'Apa perbedaan Free plan dan Pro plan?',
-        a: 'Free plan memberikan akses ke semua model dasar dengan batas penggunaan harian. Pro plan memberikan akses prioritas, model premium (Gemini 2.5 Pro, NVIDIA Nemotron), dan batas yang lebih tinggi. Upgrade plan segera hadir.'
-    },
-];
-
+// ═══════════════════════════════════════════════
+// HELP MODAL
+// ═══════════════════════════════════════════════
 function openHelp() {
-    renderFAQ('');
     document.getElementById('helpModal').classList.add('open');
+    closeSidebar();
 }
-
 function closeHelp() {
     document.getElementById('helpModal').classList.remove('open');
 }
 
-function filterFAQ(q) {
-    renderFAQ(q.toLowerCase());
-}
+// ═══════════════════════════════════════════════
+// PROFILE DROPDOWN
+// ═══════════════════════════════════════════════
+function initProfile() {
+    const user = JSON.parse(localStorage.getItem('hams_user') || '{}');
+    const nameEl = document.getElementById('profileName');
+    const emailEl = document.getElementById('profileEmail');
+    const avatarEl = document.getElementById('profileAvatar');
 
-function renderFAQ(query = '') {
-    const container = document.getElementById('faqList');
-    if (!container) return;
-    const filtered = FAQ_DATA.filter(f =>
-        !query || f.q.toLowerCase().includes(query) || f.a.toLowerCase().includes(query)
-    );
-    if (!filtered.length) {
-        container.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-3);font-size:0.82rem;">
-            <i class="bi bi-search" style="font-size:1.5rem;display:block;margin-bottom:8px;opacity:0.4"></i>
-            Tidak ada hasil untuk "${query}"
-        </div>`;
-        return;
+    if (nameEl) nameEl.textContent = user.name || 'User';
+    if (emailEl) emailEl.textContent = user.email || '';
+
+    if (avatarEl) {
+        if (user.avatar_url) {
+            // Google avatar — show image instead of initial
+            avatarEl.innerHTML = `<img src="${user.avatar_url}" alt="${user.name || 'User'}" 
+                style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+        } else {
+            // Default — show initial letter
+            avatarEl.textContent = (user.name || 'U')[0].toUpperCase();
+        }
     }
-    container.innerHTML = filtered.map((f, i) => `
-        <div class="faq-item" id="faq-${i}">
-            <div class="faq-q" onclick="toggleFAQ(${i})">
-                <span>${f.q}</span>
-                <i class="bi bi-chevron-down faq-chevron"></i>
-            </div>
-            <div class="faq-a">${f.a}</div>
-        </div>
-    `).join('');
+
+    // Sync profile from server (background, non-blocking)
+    syncProfileFromServer();
 }
 
-function toggleFAQ(i) {
-    const item = document.getElementById('faq-' + i);
-    const isOpen = item.classList.contains('open');
-    document.querySelectorAll('.faq-item').forEach(f => f.classList.remove('open'));
-    if (!isOpen) item.classList.add('open');
+async function syncProfileFromServer() {
+    const token = localStorage.getItem('hams_token');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+            if (res.status === 401) {
+                // Token expired — force re-login
+                localStorage.removeItem('hams_token');
+                localStorage.removeItem('hams_user');
+                window.location.href = '/login';
+            }
+            return;
+        }
+
+        const serverUser = await res.json();
+
+        // Update localStorage with latest server data
+        const currentUser = JSON.parse(localStorage.getItem('hams_user') || '{}');
+        const updatedUser = {
+            ...currentUser,
+            id: serverUser.user_id,
+            name: serverUser.name,
+            username: serverUser.username,
+            email: serverUser.email,
+            avatar_url: serverUser.avatar_url || currentUser.avatar_url || '',
+        };
+
+        localStorage.setItem('hams_user', JSON.stringify(updatedUser));
+
+        // Update UI if data changed
+        const nameEl = document.getElementById('profileName');
+        const emailEl = document.getElementById('profileEmail');
+        const avatarEl = document.getElementById('profileAvatar');
+
+        if (nameEl && nameEl.textContent !== updatedUser.name) {
+            nameEl.textContent = updatedUser.name;
+        }
+        if (emailEl && emailEl.textContent !== updatedUser.email) {
+            emailEl.textContent = updatedUser.email;
+        }
+        if (avatarEl && updatedUser.avatar_url) {
+            avatarEl.innerHTML = `<img src="${updatedUser.avatar_url}" alt="${updatedUser.name}" 
+                style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+        }
+    } catch (e) {
+        // Network error — silently ignore, use cached data
+        console.warn('[Profile] Sync failed:', e.message);
+    }
 }
 
-// ── Log out placeholder ──
-function confirmLogout() {
-    closeProfileDropdown();
+function toggleProfileDropdown() {
+    const dd = document.getElementById('profileDropdown');
+    if (dd) dd.classList.toggle('open');
+}
+
+function closeProfileDropdown() {
+    const dd = document.getElementById('profileDropdown');
+    if (dd) dd.classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+    const profileArea = document.querySelector('.profile-section');
+    const dd = document.getElementById('profileDropdown');
+    if (profileArea && dd && !profileArea.contains(e.target)) {
+        dd.classList.remove('open');
+    }
+});
+
+function logout() {
     localStorage.removeItem('hams_token');
     localStorage.removeItem('hams_user');
+    localStorage.removeItem(HISTORY_KEY);
+    sessionId = null;
+    currentChatId = null;
+    history = [];
     window.location.href = '/login';
 }
 
-// ── Keyboard shortcuts ──
-document.addEventListener('keydown', e => {
-    const mod = navigator.platform.toUpperCase().includes('MAC') ? e.metaKey : e.ctrlKey;
-    if (mod && e.shiftKey && e.key === ',') { e.preventDefault(); openSettings(); }
-    if (e.key === 'Escape') { closeSettings(); closeHelp(); closeProfileDropdown(); }
-});
+// ═══════════════════════════════════════════════
+// FILE UPLOAD (placeholder)
+// ═══════════════════════════════════════════════
+function triggerFileUpload() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.txt,.py,.js,.html,.css,.json,.md,.csv';
+    fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const content = ev.target.result;
+            const input = document.getElementById('userInput');
+            input.value += `\n\n📎 File: ${file.name}\n\`\`\`\n${content}\n\`\`\``;
+            autoResize(input);
+            input.focus();
+            showToast(`📎 ${file.name} attached`);
+        };
+        reader.readAsText(file);
+    };
+    fileInput.click();
+}
+
+// ═══════════════════════════════════════════════
+// IMAGE UPLOAD (placeholder)
+// ═══════════════════════════════════════════════
+function triggerImageUpload() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showToast(`🖼️ Image upload coming soon: ${file.name}`);
+    };
+    fileInput.click();
+}
+
+// ═══════════════════════════════════════════════
+// AGENT SLIDER (max steps)
+// ═══════════════════════════════════════════════
+function updateStepsLabel(val) {
+    const label = document.getElementById('stepsLabel');
+    if (label) label.textContent = val;
+}
+
+// ═══════════════════════════════════════════════
+// AURORA BACKGROUND (WebGL)
+// ═══════════════════════════════════════════════
+(function initAurora() {
+    const canvas = document.getElementById('auroraCanvas');
+    if (!canvas) return;
+
+    const gl = canvas.getContext('webgl');
+    if (!gl) return;
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const vs = `attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
+    const fs = `
+    precision mediump float;
+    uniform float t;
+    uniform vec2 r;
+    void main(){
+        vec2 u=gl_FragCoord.xy/r;
+        float f=sin(u.x*3.0+t)*0.5+sin(u.y*2.0+t*0.7)*0.5;
+        f=smoothstep(0.0,1.0,f*0.5+0.5);
+        vec3 c=mix(vec3(0.02,0.02,0.04),vec3(0.06,0.04,0.12),f);
+        c+=0.015*sin(vec3(t*0.3,t*0.5+2.0,t*0.4+4.0));
+        gl_FragColor=vec4(c,1);
+    }`;
+
+    function compile(src, type) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+    }
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, compile(vs, gl.VERTEX_SHADER));
+    gl.attachShader(prog, compile(fs, gl.FRAGMENT_SHADER));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+    const pLoc = gl.getAttribLocation(prog, 'p');
+    gl.enableVertexAttribArray(pLoc);
+    gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+
+    const tLoc = gl.getUniformLocation(prog, 't');
+    const rLoc = gl.getUniformLocation(prog, 'r');
+
+    function frame(now) {
+        gl.uniform1f(tLoc, now * 0.001);
+        gl.uniform2f(rLoc, canvas.width, canvas.height);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+})();
+
+// ═══════════════════════════════════════════════
+// NAV ITEMS
+// ═══════════════════════════════════════════════
+function navTo(section) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    if (section === 'home') {
+        document.getElementById('navHome')?.classList.add('active');
+        clearChat();
+    } else if (section === 'chat') {
+        document.getElementById('navChat')?.classList.add('active');
+        setMode('chat');
+        document.getElementById('userInput')?.focus();
+    } else if (section === 'agent') {
+        document.getElementById('navAgent')?.classList.add('active');
+        setMode('agent');
+        document.getElementById('userInput')?.focus();
+    } else if (section === 'history') {
+        document.getElementById('navHistory')?.classList.add('active');
+        openHistoryModal();
+    } else if (section === 'settings') {
+        document.getElementById('navSettings')?.classList.add('active');
+        openSettings();
+    }
+
+    closeSidebar();
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT / DOWNLOAD CHAT
+// ═══════════════════════════════════════════════
+function exportChat() {
+    if (!history.length) {
+        showToast('Tidak ada chat untuk di-export');
+        return;
+    }
+
+    let text = `HAMS.AI Chat Export\n${'='.repeat(40)}\n\n`;
+    history.forEach(msg => {
+        const role = msg.role === 'user' ? '👤 You' : '🤖 HAMS AI';
+        text += `${role}:\n${msg.content}\n\n${'─'.repeat(40)}\n\n`;
+    });
+
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hams-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📥 Chat exported!');
+}
+
+// ═══════════════════════════════════════════════
+// DELETE ALL HISTORY
+// ═══════════════════════════════════════════════
+function deleteAllHistory() {
+    if (!confirm('Hapus semua riwayat chat? Tindakan ini tidak bisa dibatalkan.')) return;
+    localStorage.removeItem(HISTORY_KEY);
+    currentChatId = null;
+    renderHistoryList();
+    renderHistoryModal('');
+    showToast('🗑️ Semua riwayat dihapus');
+}

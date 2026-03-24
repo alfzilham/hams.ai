@@ -10,31 +10,64 @@
         href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
+        /* ══════════════════════════════════════════
+           VARIABLES
+        ══════════════════════════════════════════ */
         :root {
             --bg: #07070d;
-            --surface: #0c0c0c;
-            --border: rgba(255, 255, 255, 0.08);
-            --border2: rgba(255, 255, 255, 0.12);
+            --bg-2: #0a0a12;
+            --surface: rgba(255, 255, 255, 0.03);
+            --surface-2: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-2: rgba(255, 255, 255, 0.10);
+            --border-focus: rgba(255, 255, 255, 0.22);
             --text: #f3f3f3;
-            --text-2: #909090;
+            --text-2: #8a8a8a;
             --text-3: #444;
-            --accent: #f3f3f3;
+            --accent: #818cf8;
+            --accent-2: #6366f1;
+            --accent-glow: rgba(129, 140, 248, 0.15);
+            --accent-glow-2: rgba(129, 140, 248, 0.08);
             --red: #f87171;
+            --red-bg: rgba(248, 113, 113, 0.08);
+            --red-border: rgba(248, 113, 113, 0.25);
             --green: #4ade80;
+            --green-bg: rgba(74, 222, 128, 0.08);
+            --green-border: rgba(74, 222, 128, 0.25);
+            --glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
         }
 
         [data-theme="light"] {
-            --bg: #e8e8e8;
-            --surface: rgba(255, 255, 255, 0.9);
-            --border: rgba(0, 0, 0, 0.08);
-            --border2: rgba(0, 0, 0, 0.14);
-            --text: #1a1a1a;
-            --text-2: #606060;
-            --text-3: #aaa;
-            --accent: #1a1a1a;
+            --bg: #f0f0f5;
+            --bg-2: #e8e8f0;
+            --surface: rgba(255, 255, 255, 0.8);
+            --surface-2: rgba(255, 255, 255, 0.9);
+            --border: rgba(0, 0, 0, 0.06);
+            --border-2: rgba(0, 0, 0, 0.10);
+            --border-focus: rgba(99, 102, 241, 0.4);
+            --text: #1a1a2e;
+            --text-2: #606080;
+            --text-3: #9090a0;
+            --accent: #6366f1;
+            --accent-2: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --accent-glow-2: rgba(99, 102, 241, 0.08);
+            --red-bg: rgba(248, 113, 113, 0.06);
+            --red-border: rgba(248, 113, 113, 0.2);
+            --green-bg: rgba(74, 222, 128, 0.06);
+            --green-border: rgba(74, 222, 128, 0.2);
+            --glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --glass-shadow: 0 24px 80px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
         }
 
+        /* ══════════════════════════════════════════
+           RESET & BASE
+        ══════════════════════════════════════════ */
         *,
         *::before,
         *::after {
@@ -43,100 +76,303 @@
             padding: 0;
         }
 
+        html,
         body {
+            height: 100%;
             font-family: 'Sora', sans-serif;
             background: var(--bg);
             color: var(--text);
-            min-height: 100dvh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            overflow: hidden;
         }
 
-        .auth-wrap {
+        /* ══════════════════════════════════════════
+           SPLIT SCREEN LAYOUT
+        ══════════════════════════════════════════ */
+        .auth-split {
+            display: flex;
+            height: 100dvh;
             width: 100%;
-            max-width: 400px;
         }
 
-        .auth-logo {
+        /* ── Left: 3D Orb Visual ── */
+        .auth-visual {
+            flex: 1;
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            margin-bottom: 32px;
+            background: var(--bg-2);
+            overflow: hidden;
+            min-width: 0;
         }
 
-        .auth-logo img {
-            width: 36px;
-            height: 36px;
-            border-radius: 9px;
+        .auth-visual::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 30% 50%, rgba(129, 140, 248, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        #orbCanvas3D {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Visual branding overlay */
+        .visual-brand {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .visual-brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .visual-brand-logo img {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
             object-fit: cover;
         }
 
-        .auth-logo span {
-            font-size: 1.3rem;
+        .visual-brand-logo span {
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text);
+        }
+
+        .visual-brand-logo .brand-dot {
+            opacity: 0.4;
+        }
+
+        .visual-tagline {
+            font-size: 0.72rem;
+            color: var(--text-2);
+            max-width: 260px;
+            line-height: 1.6;
+        }
+
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleFloat 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes particleFloat {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: translateY(0) scale(0.5);
+            }
+
+            20% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 0.3;
+                transform: translateY(-120px) scale(1);
+            }
+
+            80% {
+                opacity: 0.1;
+            }
+        }
+
+        /* ── Right: Form ── */
+        .auth-form-side {
+            width: 520px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            background: var(--bg);
+            border-left: 1px solid var(--border);
+        }
+
+        .auth-form-inner {
+            width: 100%;
+            max-width: 380px;
+        }
+
+        /* ══════════════════════════════════════════
+           THEME TOGGLE
+        ══════════════════════════════════════════ */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border-2);
+            background: var(--surface);
+            color: var(--text-2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.88rem;
+            transition: all 0.2s;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .theme-toggle:hover {
+            color: var(--text);
+            border-color: var(--border-focus);
+            background: var(--surface-2);
+        }
+
+        /* ══════════════════════════════════════════
+           LOGO & HEADINGS
+        ══════════════════════════════════════════ */
+        .auth-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 36px;
+        }
+
+        .auth-logo img {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .auth-logo-text {
+            font-size: 1.1rem;
             font-weight: 800;
             letter-spacing: -0.03em;
         }
 
-        .auth-card {
-            background: var(--surface);
-            border: 1px solid var(--border2);
-            border-radius: 20px;
-            padding: 32px;
-            backdrop-filter: blur(24px);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        .auth-logo-dot {
+            opacity: 0.4;
         }
 
         .auth-title {
-            font-size: 1.4rem;
+            font-size: 1.6rem;
             font-weight: 800;
-            letter-spacing: -0.03em;
+            letter-spacing: -0.04em;
             margin-bottom: 6px;
+            line-height: 1.2;
         }
 
         .auth-sub {
             font-size: 0.82rem;
             color: var(--text-2);
-            margin-bottom: 28px;
+            margin-bottom: 32px;
+            line-height: 1.5;
         }
 
+        /* ══════════════════════════════════════════
+           GLOBAL ERROR
+        ══════════════════════════════════════════ */
+        .auth-global-error {
+            display: none;
+            background: var(--red-bg);
+            border: 1px solid var(--red-border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.78rem;
+            color: var(--red);
+            margin-bottom: 20px;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.5;
+        }
+
+        .auth-global-error.show {
+            display: flex;
+        }
+
+        .auth-global-error i {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        /* ══════════════════════════════════════════
+           FORM FIELDS
+        ══════════════════════════════════════════ */
         .auth-field {
-            margin-bottom: 16px;
+            margin-bottom: 18px;
         }
 
         .auth-label {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             font-size: 0.76rem;
             font-weight: 600;
             color: var(--text-2);
-            margin-bottom: 6px;
+            margin-bottom: 7px;
+        }
+
+        .auth-label-link {
+            font-size: 0.72rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: opacity 0.15s;
+        }
+
+        .auth-label-link:hover {
+            opacity: 0.8;
         }
 
         .auth-input-wrap {
             display: flex;
             align-items: center;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border2);
-            border-radius: 11px;
-            padding: 11px 14px;
-            transition: border-color 0.15s, box-shadow 0.15s;
+            gap: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border-2);
+            border-radius: 12px;
+            padding: 12px 14px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .auth-input-wrap:focus-within {
-            border-color: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow-2);
+            background: var(--surface-2);
         }
 
         .auth-input-wrap.error {
-            border-color: rgba(248, 113, 113, 0.5);
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px var(--red-bg);
         }
 
         .auth-input-wrap i {
             color: var(--text-3);
             font-size: 0.88rem;
+            flex-shrink: 0;
+            transition: color 0.2s;
+        }
+
+        .auth-input-wrap:focus-within i {
+            color: var(--accent);
         }
 
         .auth-input-wrap input {
@@ -147,6 +383,7 @@
             font-family: 'Sora', sans-serif;
             font-size: 0.85rem;
             flex: 1;
+            min-width: 0;
         }
 
         .auth-input-wrap input::placeholder {
@@ -161,6 +398,7 @@
             font-size: 0.88rem;
             padding: 0;
             transition: color 0.15s;
+            flex-shrink: 0;
         }
 
         .auth-pw-toggle:hover {
@@ -169,62 +407,91 @@
 
         .auth-error {
             display: none;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: var(--red);
-            margin-top: 5px;
+            margin-top: 6px;
             padding-left: 2px;
+            line-height: 1.4;
         }
 
         .auth-error.show {
             display: block;
         }
 
+        /* ══════════════════════════════════════════
+           SUBMIT BUTTON
+        ══════════════════════════════════════════ */
         .auth-submit {
             width: 100%;
-            padding: 13px;
+            padding: 14px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
-            color: var(--accent);
+            border: none;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+            color: #fff;
             font-family: 'Sora', sans-serif;
             font-size: 0.88rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.15s;
-            margin-top: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-submit::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
+            pointer-events: none;
         }
 
         .auth-submit:hover {
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.10) 100%);
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--accent-glow), 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .auth-submit:active {
+            transform: translateY(0);
         }
 
         .auth-submit:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
 
         .auth-submit .spinner {
-            width: 14px;
-            height: 14px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-top-color: var(--accent);
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
         }
 
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ══════════════════════════════════════════
+           DIVIDER
+        ══════════════════════════════════════════ */
         .auth-divider {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin: 20px 0;
+            gap: 14px;
+            margin: 24px 0;
             font-size: 0.72rem;
             color: var(--text-3);
+            font-weight: 500;
         }
 
         .auth-divider::before,
@@ -235,128 +502,231 @@
             background: var(--border);
         }
 
-        .auth-link {
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--text-2);
-        }
-
-        .auth-link a {
-            color: var(--text);
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-        .auth-link a:hover {
-            text-decoration: underline;
-        }
-
-        .auth-global-error {
-            display: none;
-            background: rgba(248, 113, 113, 0.08);
-            border: 1px solid rgba(248, 113, 113, 0.25);
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-size: 0.8rem;
-            color: var(--red);
-            margin-bottom: 16px;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .auth-global-error.show {
-            display: flex;
-        }
-
-        .theme-toggle {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 1px solid var(--border2);
+        /* ══════════════════════════════════════════
+           SOCIAL BUTTON
+        ══════════════════════════════════════════ */
+        .auth-social {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-2);
             background: var(--surface);
-            color: var(--text-2);
+            color: var(--text);
+            font-family: 'Sora', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.88rem;
-            transition: all 0.15s;
+            gap: 10px;
+            backdrop-filter: blur(8px);
         }
 
-        .theme-toggle:hover {
-            color: var(--text);
+        .auth-social:hover {
+            border-color: var(--border-focus);
+            background: var(--surface-2);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
+        .auth-social svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        /* ══════════════════════════════════════════
+           FOOTER LINK
+        ══════════════════════════════════════════ */
+        .auth-footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-2);
+            margin-top: 28px;
+        }
+
+        .auth-footer a {
+            color: var(--accent);
+            font-weight: 600;
+            text-decoration: none;
+            transition: opacity 0.15s;
+        }
+
+        .auth-footer a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        /* ══════════════════════════════════════════
+           RESPONSIVE — MOBILE
+        ══════════════════════════════════════════ */
+        @media (max-width: 960px) {
+            .auth-form-side {
+                width: 460px;
+                padding: 32px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .auth-visual {
+                display: none;
+            }
+
+            .auth-form-side {
+                width: 100%;
+                border-left: none;
+                padding: 24px;
+            }
+
+            .auth-form-inner {
+                max-width: 400px;
+            }
+
+            .auth-title {
+                font-size: 1.4rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .auth-form-side {
+                padding: 20px 16px;
+            }
+
+            .auth-title {
+                font-size: 1.25rem;
             }
         }
     </style>
 </head>
 
 <body>
-    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" aria-label="Toggle theme">
         <i class="bi bi-sun" id="themeIcon"></i>
     </button>
 
-    <div class="auth-wrap">
-        <div class="auth-logo">
-            <img src="/static/image/logo.png" alt="HAMS.AI" />
-            <span>HAMS<span style="opacity:0.5">AI</span></span>
+    <div class="auth-split">
+        <!-- ══════════════════════════════════════
+             LEFT: 3D Orb Visual
+        ══════════════════════════════════════ -->
+        <div class="auth-visual" id="authVisual">
+            <canvas id="orbCanvas3D"></canvas>
+
+            <!-- Floating particles -->
+            <div class="particle" style="left:15%;top:20%;animation-delay:0s;"></div>
+            <div class="particle" style="left:70%;top:30%;animation-delay:1.5s;"></div>
+            <div class="particle" style="left:40%;top:70%;animation-delay:3s;"></div>
+            <div class="particle" style="left:80%;top:60%;animation-delay:4.5s;"></div>
+            <div class="particle" style="left:25%;top:85%;animation-delay:2s;"></div>
+            <div class="particle" style="left:60%;top:15%;animation-delay:5.5s;"></div>
+            <div class="particle" style="left:90%;top:80%;animation-delay:1s;"></div>
+            <div class="particle" style="left:10%;top:55%;animation-delay:6s;"></div>
+
+            <!-- Brand overlay -->
+            <div class="visual-brand">
+                <div class="visual-brand-logo">
+                    <img src="/static/image/logo.png" alt="HAMS.AI" />
+                    <span>HAMS<span class="brand-dot">AI</span></span>
+                </div>
+                <div class="visual-tagline">
+                    Autonomous AI Assistant powered by multi-model intelligence.
+                    Chat, code, analyze — all in one place.
+                </div>
+            </div>
         </div>
 
-        <div class="auth-card">
-            <div class="auth-title">Welcome back</div>
-            <div class="auth-sub">Login ke akun HAMS AI kamu</div>
-
-            <div class="auth-global-error" id="globalError">
-                <i class="bi bi-exclamation-circle"></i>
-                <span id="globalErrorMsg"></span>
-            </div>
-
-            <div class="auth-field">
-                <label class="auth-label">Email</label>
-                <div class="auth-input-wrap" id="wrapEmail">
-                    <i class="bi bi-envelope"></i>
-                    <input type="email" id="inputEmail" placeholder="nama@email.com" autocomplete="email" />
+        <!-- ══════════════════════════════════════
+             RIGHT: Login Form
+        ══════════════════════════════════════ -->
+        <div class="auth-form-side">
+            <div class="auth-form-inner">
+                <!-- Logo -->
+                <div class="auth-logo">
+                    <img src="/static/image/logo.png" alt="HAMS.AI" />
+                    <span class="auth-logo-text">HAMS<span class="auth-logo-dot">AI</span></span>
                 </div>
-                <div class="auth-error" id="errEmail"></div>
-            </div>
 
-            <div class="auth-field">
-                <label class="auth-label">Password</label>
-                <div class="auth-input-wrap" id="wrapPassword">
-                    <i class="bi bi-lock"></i>
-                    <input type="password" id="inputPassword" placeholder="••••••••" autocomplete="current-password"
-                        onkeydown="if(event.key==='Enter') doLogin()" />
-                    <button class="auth-pw-toggle" onclick="togglePw('inputPassword', this)">
-                        <i class="bi bi-eye"></i>
-                    </button>
+                <h1 class="auth-title">Welcome back</h1>
+                <p class="auth-sub">Login to your HAMS AI account</p>
+
+                <!-- Global error -->
+                <div class="auth-global-error" id="globalError" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span id="globalErrorMsg"></span>
                 </div>
-                <div class="auth-error" id="errPassword"></div>
-            </div>
 
-            <button class="auth-submit" id="submitBtn" onclick="doLogin()">
-                <span>Login</span>
-            </button>
+                <!-- Email -->
+                <div class="auth-field">
+                    <label class="auth-label" for="inputEmail">Email</label>
+                    <div class="auth-input-wrap" id="wrapEmail">
+                        <i class="bi bi-envelope"></i>
+                        <input type="email" id="inputEmail" placeholder="name@email.com" autocomplete="email"
+                            aria-describedby="errEmail" />
+                    </div>
+                    <div class="auth-error" id="errEmail" role="alert"></div>
+                </div>
 
-            <div class="auth-divider">atau</div>
+                <!-- Password -->
+                <div class="auth-field">
+                    <label class="auth-label" for="inputPassword">
+                        Password
+                        <a href="/forgot-password" class="auth-label-link">Forgot password?</a>
+                    </label>
+                    <div class="auth-input-wrap" id="wrapPassword">
+                        <i class="bi bi-lock"></i>
+                        <input type="password" id="inputPassword" placeholder="••••••••" autocomplete="current-password"
+                            aria-describedby="errPassword" onkeydown="if(event.key==='Enter') doLogin()" />
+                        <button class="auth-pw-toggle" onclick="togglePw('inputPassword', this)" type="button"
+                            aria-label="Toggle password visibility">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <div class="auth-error" id="errPassword" role="alert"></div>
+                </div>
 
-            <div class="auth-link">
-                Belum punya akun? <a href="/register">Daftar sekarang</a>
+                <!-- Submit -->
+                <button class="auth-submit" id="submitBtn" onclick="doLogin()" type="button">
+                    <span>Login</span>
+                </button>
+
+                <!-- Divider -->
+                <div class="auth-divider">or</div>
+
+                <!-- Google Sign In -->
+                <button class="auth-social" onclick="googleLogin()" type="button">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                            fill="#4285F4" />
+                        <path
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            fill="#34A853" />
+                        <path
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                            fill="#FBBC05" />
+                        <path
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                            fill="#EA4335" />
+                    </svg>
+                    Sign in with Google
+                </button>
+
+                <!-- Footer -->
+                <div class="auth-footer">
+                    Don't have an account? <a href="/register">Sign up now</a>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Theme
-        const saved = localStorage.getItem('hams_theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', saved);
-        document.getElementById('themeIcon').className = saved === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+        // ═══════════════════════════════════════
+        // THEME
+        // ═══════════════════════════════════════
+        const savedTheme = localStorage.getItem('hams_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
 
         function toggleTheme() {
             const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -365,6 +735,9 @@
             document.getElementById('themeIcon').className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
         }
 
+        // ═══════════════════════════════════════
+        // PASSWORD TOGGLE
+        // ═══════════════════════════════════════
         function togglePw(id, btn) {
             const input = document.getElementById(id);
             const isText = input.type === 'text';
@@ -372,6 +745,9 @@
             btn.querySelector('i').className = isText ? 'bi bi-eye' : 'bi bi-eye-slash';
         }
 
+        // ═══════════════════════════════════════
+        // VALIDATION HELPERS
+        // ═══════════════════════════════════════
         function setError(id, wrapId, msg) {
             const el = document.getElementById(id);
             const wrap = document.getElementById(wrapId);
@@ -389,6 +765,9 @@
             document.getElementById('globalError').classList.remove('show');
         }
 
+        // ═══════════════════════════════════════
+        // LOGIN
+        // ═══════════════════════════════════════
         async function doLogin() {
             hideGlobalError();
             setError('errEmail', 'wrapEmail', '');
@@ -398,14 +777,25 @@
             const password = document.getElementById('inputPassword').value;
 
             let valid = true;
-            if (!email) { setError('errEmail', 'wrapEmail', 'Email tidak boleh kosong'); valid = false; }
-            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('errEmail', 'wrapEmail', 'Format email tidak valid'); valid = false; }
-            if (!password) { setError('errPassword', 'wrapPassword', 'Password tidak boleh kosong'); valid = false; }
+            if (!email) {
+                setError('errEmail', 'wrapEmail', 'Email is required');
+                valid = false;
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                setError('errEmail', 'wrapEmail', 'Invalid email format');
+                valid = false;
+            }
+            if (!password) {
+                setError('errPassword', 'wrapPassword', 'Password is required');
+                valid = false;
+            } else if (password.length < 6) {
+                setError('errPassword', 'wrapPassword', 'Password must be at least 6 characters');
+                valid = false;
+            }
             if (!valid) return;
 
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div>';
+            btn.innerHTML = '<div class="spinner"></div><span>Logging in...</span>';
 
             try {
                 const res = await fetch('/auth/login', {
@@ -414,24 +804,248 @@
                     body: JSON.stringify({ email, password })
                 });
                 const data = await res.json();
-                if (!res.ok) { showGlobalError(data.detail || 'Login gagal'); return; }
 
-                localStorage.setItem('hams_token', data.token);
+                if (!res.ok) {
+                    showGlobalError(data.detail || 'Login failed. Please check your credentials.');
+                    return;
+                }
+
                 localStorage.setItem('hams_user', JSON.stringify({
-                    id: data.user_id, name: data.name,
-                    username: data.username, email: data.email
+                    id: data.user_id,
+                    name: data.name,
+                    username: data.username,
+                    email: data.email
                 }));
                 window.location.href = '/chat-ui';
-            } catch {
-                showGlobalError('Koneksi gagal. Coba lagi.');
+            } catch (err) {
+                showGlobalError('Connection failed. Please try again.');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span>Login</span>';
             }
         }
 
-        // Redirect kalau sudah login
+        // ═══════════════════════════════════════
+        // GOOGLE LOGIN (scaffold)
+        // ═══════════════════════════════════════
+        function googleLogin() {
+            // Redirect to backend Google OAuth endpoint
+            window.location.href = '/auth/google';
+        }
+
+        // ═══════════════════════════════════════
+        // REDIRECT IF ALREADY LOGGED IN
+        // ═══════════════════════════════════════
+        // Handle Google OAuth errors
+        const urlParams = new URLSearchParams(window.location.search);
+        const oauthError = urlParams.get('error');
+        if (oauthError) {
+            const errorMessages = {
+                'oauth_not_configured': 'Google login is not configured yet.',
+                'token_exchange_failed': 'Google authentication failed. Please try again.',
+                'userinfo_failed': 'Could not retrieve Google account info.',
+                'missing_google_data': 'Google account data is incomplete.',
+                'httpx_not_installed': 'Server configuration error. Contact support.',
+                'oauth_failed': 'Google login failed. Please try again.',
+                'no_code': 'Google authentication was cancelled.',
+            };
+            showGlobalError(errorMessages[oauthError] || `Login error: ${oauthError}`);
+            // Clean URL
+            window.history.replaceState({}, '', '/login');
+        }
+
+        // Redirect if already logged in
         if (localStorage.getItem('hams_token')) window.location.href = '/chat-ui';
+
+        // ═══════════════════════════════════════
+        // 3D ORB — Three.js (Login Visual)
+        // ═══════════════════════════════════════
+        (function initLoginOrb() {
+            const canvas = document.getElementById('orbCanvas3D');
+            const container = document.getElementById('authVisual');
+            if (!canvas || !container || typeof THREE === 'undefined') return;
+
+            // Check mobile — skip 3D on small screens
+            if (window.innerWidth < 768) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, container.offsetWidth / container.offsetHeight, 0.1, 100);
+            camera.position.z = 4.5;
+
+            const renderer = new THREE.WebGLRenderer({
+                canvas,
+                alpha: true,
+                antialias: true,
+                powerPreference: 'high-performance'
+            });
+            renderer.setSize(container.offsetWidth, container.offsetHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000, 0);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.3;
+
+            // ── Main sphere ──
+            const geometry = new THREE.SphereGeometry(1.2, 128, 128);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: new THREE.Color(0.55, 0.58, 0.95),
+                emissive: new THREE.Color(0.08, 0.08, 0.25),
+                emissiveIntensity: 0.5,
+                metalness: 0.1,
+                roughness: 0.12,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.05,
+                reflectivity: 0.95,
+                transparent: true,
+                opacity: 0.88,
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            scene.add(sphere);
+
+            // ── Inner glow ──
+            const glowGeo = new THREE.SphereGeometry(0.9, 64, 64);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(0.5, 0.55, 1.0),
+                transparent: true,
+                opacity: 0.1,
+            });
+            const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+            scene.add(glowMesh);
+
+            // ── Outer glow ring ──
+            const ringGeo = new THREE.TorusGeometry(1.6, 0.015, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(0.5, 0.55, 0.95),
+                transparent: true,
+                opacity: 0.15,
+            });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2.5;
+            scene.add(ring);
+
+            // Second ring
+            const ring2Geo = new THREE.TorusGeometry(1.9, 0.008, 16, 100);
+            const ring2Mat = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(0.4, 0.45, 0.85),
+                transparent: true,
+                opacity: 0.08,
+            });
+            const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+            ring2.rotation.x = Math.PI / 3;
+            ring2.rotation.z = Math.PI / 6;
+            scene.add(ring2);
+
+            // ── Lights ──
+            const pointLight = new THREE.PointLight(new THREE.Color(0.7, 0.75, 1.0), 3.0, 12);
+            pointLight.position.set(2, 2, 3);
+            scene.add(pointLight);
+
+            const fillLight = new THREE.PointLight(new THREE.Color(0.4, 0.3, 0.8), 1.0, 10);
+            fillLight.position.set(-2, -1, 2);
+            scene.add(fillLight);
+
+            const ambientLight = new THREE.AmbientLight(new THREE.Color(0.1, 0.1, 0.2), 0.5);
+            scene.add(ambientLight);
+
+            // ── Environment map ──
+            const envScene = new THREE.Scene();
+            const envGeo = new THREE.SphereGeometry(5, 32, 32);
+            const envMat = new THREE.MeshBasicMaterial({ color: 0x0a0a1a, side: THREE.BackSide });
+            envScene.add(new THREE.Mesh(envGeo, envMat));
+
+            for (let i = 0; i < 8; i++) {
+                const spotGeo = new THREE.SphereGeometry(0.25, 8, 8);
+                const spotMat = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color(
+                        0.3 + Math.random() * 0.5,
+                        0.3 + Math.random() * 0.4,
+                        0.5 + Math.random() * 0.5
+                    )
+                });
+                const spot = new THREE.Mesh(spotGeo, spotMat);
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                spot.position.set(
+                    4 * Math.sin(phi) * Math.cos(theta),
+                    4 * Math.sin(phi) * Math.sin(theta),
+                    4 * Math.cos(phi)
+                );
+                envScene.add(spot);
+            }
+
+            const cubeRT = new THREE.WebGLCubeRenderTarget(128);
+            const cubeCam = new THREE.CubeCamera(0.1, 10, cubeRT);
+            cubeCam.update(renderer, envScene);
+            material.envMap = cubeRT.texture;
+
+            // ── Mouse tracking ──
+            let mouseX = 0, mouseY = 0;
+            let targetLightX = 2, targetLightY = 2;
+
+            container.addEventListener('mousemove', (e) => {
+                const rect = container.getBoundingClientRect();
+                mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+                targetLightX = mouseX * 3;
+                targetLightY = mouseY * 2.5;
+            });
+
+            // ── Animation ──
+            const clock = new THREE.Clock();
+            let time = 0;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                const delta = clock.getDelta();
+                time += delta;
+
+                // Floating motion
+                sphere.position.x = Math.sin(time * 0.5) * 0.08;
+                sphere.position.y = Math.cos(time * 0.7) * 0.12 + Math.sin(time * 0.3) * 0.04;
+                sphere.position.z = Math.sin(time * 0.4) * 0.03;
+                sphere.rotation.y = time * 0.12;
+                sphere.rotation.x = Math.sin(time * 0.2) * 0.06;
+
+                // Breathing
+                const breathScale = 1.0 + Math.sin(time * 1.0) * 0.025;
+                sphere.scale.setScalar(breathScale);
+
+                // Inner glow
+                glowMesh.position.copy(sphere.position);
+                glowMesh.material.opacity = 0.08 + Math.sin(time * 1.5) * 0.04;
+                glowMesh.scale.setScalar(0.9 + Math.sin(time * 0.8) * 0.03);
+
+                // Rings rotation
+                ring.rotation.z = time * 0.15;
+                ring.material.opacity = 0.12 + Math.sin(time * 0.6) * 0.04;
+                ring2.rotation.y = time * 0.1;
+                ring2.rotation.z = Math.PI / 6 + time * 0.08;
+
+                // Light follows mouse (smooth)
+                pointLight.position.x += (targetLightX - pointLight.position.x) * 0.05;
+                pointLight.position.y += (targetLightY - pointLight.position.y) * 0.05;
+                pointLight.position.z = 3.0;
+
+                // Auto orbit when no mouse
+                if (Math.abs(targetLightX) < 0.01 && Math.abs(targetLightY) < 0.01) {
+                    pointLight.position.x = Math.cos(time * 0.4) * 2.5;
+                    pointLight.position.y = Math.sin(time * 0.3) * 2.0;
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // ── Resize ──
+            window.addEventListener('resize', () => {
+                if (window.innerWidth < 768) return;
+                const w = container.offsetWidth;
+                const h = container.offsetHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+        })();
     </script>
 </body>
 

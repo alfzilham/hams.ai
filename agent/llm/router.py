@@ -63,45 +63,85 @@ class LLMRouter(BaseLLM):
     def from_env(cls) -> "LLMRouter":
         """
         Build a router from environment variables.
-        Automatically enables whichever providers have API keys set.
+
+        B4 FIX: Menggunakan if (bukan elif) untuk setiap provider,
+        sehingga semua provider yang tersedia bisa masuk ke fallback chain.
+        Provider yang dipilih via AGENT_LLM_PROVIDER jadi primary.
         """
         from agent.llm.ollama_provider import OllamaLLM
 
         provider_name = os.environ.get("AGENT_LLM_PROVIDER", "ollama").lower()
         model = os.environ.get("AGENT_MODEL")
 
-        providers: list[BaseLLM] = []
+        primary: BaseLLM | None = None
+        fallbacks: list[BaseLLM] = []
 
-        if provider_name == "ollama":
-            providers.append(OllamaLLM(model=model or "deepseek-coder"))
-
-        elif provider_name == "groq" or os.environ.get("GROQ_API_KEY"):
-            try:
-                from agent.llm.groq_provider import GroqLLM
-                providers.append(GroqLLM(model=model or "llama3-70b-8192"))
-            except ImportError:
-                pass
-
-        elif provider_name == "google" or os.environ.get("GOOGLE_API_KEY"):
-            try:
-                from agent.llm.google_provider import GoogleLLM
-                providers.append(GoogleLLM(model=model or "gemini-1.5-flash"))
-            except ImportError:
-                pass
-
-        elif provider_name == "hams-max" or os.environ.get("HAMS_MAX_API_KEY"):
+        # ── 1. Tentukan primary berdasarkan AGENT_LLM_PROVIDER ──
+        if provider_name == "hams-max":
             try:
                 from agent.llm.hams_max_provider import HamsMaxLLM
-                providers.append(HamsMaxLLM(model=model or "groq"))
+                primary = HamsMaxLLM(model=model or "groq")
             except (ImportError, RuntimeError) as e:
-                logger.warning(f"[router] HamsMaxLLM not available: {e}")        
+                logger.warning(f"[router] HamsMaxLLM not available: {e}")
 
-        # Ollama selalu jadi fallback terakhir
-        if not any(isinstance(p, OllamaLLM) for p in providers):
-            providers.append(OllamaLLM(model="deepseek-coder"))
+        elif provider_name == "groq":
+            try:
+                from agent.llm.groq_provider import GroqLLM
+                primary = GroqLLM(model=model or "llama-3.3-70b-versatile")
+            except ImportError:
+                pass
 
-        primary = providers[0]
-        fallbacks = providers[1:]
+        elif provider_name == "google":
+            try:
+                from agent.llm.google_provider import GoogleLLM
+                primary = GoogleLLM(model=model or "gemini-1.5-flash")
+            except ImportError:
+                pass
+
+        elif provider_name == "ollama":
+            primary = OllamaLLM(model=model or "deepseek-coder")
+
+        # ── 2. Tambahkan semua provider lain sebagai fallback ──
+        # B4 FIX: Setiap provider dicek INDEPENDEN (if, bukan elif)
+
+        if os.environ.get("HAMS_MAX_API_KEY"):
+            try:
+                from agent.llm.hams_max_provider import HamsMaxLLM
+                if primary is None or not isinstance(primary, HamsMaxLLM):
+                    fallbacks.append(HamsMaxLLM(model="groq"))
+            except (ImportError, RuntimeError):
+                pass
+
+        if os.environ.get("GROQ_API_KEY"):
+            try:
+                from agent.llm.groq_provider import GroqLLM
+                if primary is None or not isinstance(primary, GroqLLM):
+                    fallbacks.append(GroqLLM(model="llama-3.3-70b-versatile"))
+            except ImportError:
+                pass
+
+        if os.environ.get("GOOGLE_API_KEY"):
+            try:
+                from agent.llm.google_provider import GoogleLLM
+                if primary is None or not isinstance(primary, GoogleLLM):
+                    fallbacks.append(GoogleLLM(model="gemini-1.5-flash"))
+            except ImportError:
+                pass
+
+        # ── 3. Ollama selalu jadi fallback terakhir ──
+        has_ollama = isinstance(primary, OllamaLLM) or any(
+            isinstance(f, OllamaLLM) for f in fallbacks
+        )
+        if not has_ollama:
+            fallbacks.append(OllamaLLM(model="deepseek-coder"))
+
+        # ── 4. Jika tidak ada primary, ambil dari fallbacks ──
+        if primary is None:
+            if fallbacks:
+                primary = fallbacks.pop(0)
+            else:
+                primary = OllamaLLM(model="deepseek-coder")
+
         logger.info(
             f"[router] Primary: {primary} | Fallbacks: {[str(f) for f in fallbacks]}"
         )

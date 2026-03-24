@@ -28,14 +28,10 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from agent.auth import (
-    init_db, create_user, get_user_by_email,
-    get_user_by_id, verify_password, create_token, decode_token,
-    update_user_name
-)
+from agent.auth import router as auth_router, decode_token, get_user_by_id
 
 # ---------------------------------------------------------------------------
-# App setup — urutan PENTING: buat app → middleware → mount static
+# App setup
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="Hams AI", version="0.3.0")
@@ -52,7 +48,7 @@ _STATIC_DIR    = os.path.join(os.path.dirname(__file__), "static")
 _TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
-init_db()
+app.include_router(auth_router)
 
 # ---------------------------------------------------------------------------
 
@@ -80,7 +76,7 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     message: str
     history: list[ChatMessage] | None = []
-    model: str | None = Field(default="nvidia/nemotron-super-3")  # fix: was nvidia/nemotron-super-3
+    model: str | None = Field(default="hams-max")  # B3 FIX
     extended: bool = Field(
         default=False,
         description="Aktifkan Extended Thinking — AI menampilkan proses berpikirnya sebelum menjawab"
@@ -97,7 +93,7 @@ class ChatResponse(BaseModel):
 
 class AgentRunRequest(BaseModel):
     task: str = Field(..., min_length=1)
-    model: str | None = Field(default="nvidia/nemotron-super-3")  # fix: was nvidia/nemotron-super-3
+    model: str | None = Field(default="hams-max")  # B3 FIX
     max_steps: int = Field(15, ge=1, le=50)
     extended: bool = Field(default=False)
 
@@ -139,27 +135,6 @@ class RunResponse(BaseModel):
     started_at: str = ""
     completed_at: str | None = None
 
-# ← LETAKKAN 4 CLASS BARU INI DI SINI
-class RegisterRequest(BaseModel):
-    name:     str = Field(..., min_length=2, max_length=50)
-    username: str = Field(..., min_length=3, max_length=30, pattern=r'^[a-zA-Z0-9_]+$')
-    email:    str = Field(..., min_length=5)
-    password: str = Field(..., min_length=8)
-
-class LoginRequest(BaseModel):
-    email:    str
-    password: str
-
-class AuthResponse(BaseModel):
-    token:    str
-    user_id:  int
-    name:     str
-    username: str
-    email:    str
-
-class UpdateNameRequest(BaseModel):
-    name: str = Field(..., min_length=2, max_length=50)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -181,43 +156,58 @@ _MULTITASK_SYSTEM = """Kamu adalah HAMS.AI — asisten AI serba bisa yang powerf
 - Langsung berikan hasilnya"""
 
 
-def _build_llm(model: str, extended: bool = False) -> Any:
-    # Gemini → Google langsung
+def _build_llm(model: str = "hams-max", extended: bool = False):
+    """
+    Build LLM instance berdasarkan model string dari frontend.
+
+    B3 FIX: Default model = "hams-max" agar konsisten dengan:
+    - Frontend modelSelect default = "hams-max"
+    - _FRONTEND_TO_HAMSMAX["hams-max"] = ("llama-3.3-70b-versatile", "groq")
+    """
+    # Gemini models → langsung pakai GoogleLLM
     if model.startswith("gemini-"):
-        google_key = os.environ.get("GOOGLE_API_KEY")
-        if google_key:
-            try:
-                from agent.llm.google_provider import GoogleLLM
-                return GoogleLLM(model=model)
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Gemini error: {e}")
+        from agent.llm.google_provider import GoogleLLM
+        return GoogleLLM(model=model)
 
-    # Semua lainnya → HAMS-MAX
-    hams_key = os.environ.get("HAMS_MAX_API_KEY")
-    if hams_key:
-        from agent.llm.hams_max_provider import HamsMaxLLM
-        return HamsMaxLLM(model=model, extended=extended)
-
-    from agent.llm.router import LLMRouter
-    return LLMRouter.from_env()
+    # Semua model lain → HamsMax routing
+    if extended:
+        from agent.llm.hams_max_thinking import HamsMaxThinkingLLM
+        return HamsMaxThinkingLLM(model=model)
+    else:
+        from agent.llm.hams_max_chat import HamsMaxChatLLM
+        return HamsMaxChatLLM(model=model)
 
 
-def _build_agent(model: str, max_steps: int, step_callback=None, extended: bool = False) -> Any:
+def _build_agent(
+    model: str = "hams-max",
+    max_steps: int = 15,
+    step_callback=None,
+    extended: bool = False,
+):
+    """
+    Build Agent instance untuk agent mode.
+
+    B3  FIX: Default model = "hams-max"
+    B11 FIX: step_callback passed via Agent.__init__() parameter,
+             not via agent._loop.step_callback (private attribute access).
+    """
+    from agent.llm.hams_max_agent import HamsMaxAgentLLM
     from agent.tools.registry import ToolRegistry
     from agent.core.agent import Agent
 
-    llm      = _build_llm(model, extended=extended)
+    llm = HamsMaxAgentLLM(model=model)
     registry = ToolRegistry.default()
 
+    # B11 FIX: step_callback sebagai parameter resmi
     agent = Agent(
         llm=llm,
         tool_registry=registry,
         max_steps=max_steps,
         use_planner=True,
         verbose=False,
+        step_callback=step_callback,  # ✅ Proper parameter, bukan _loop access
     )
-    if step_callback:
-        agent._loop.step_callback = step_callback
+
     return agent
 
 
@@ -240,6 +230,7 @@ def _serialize_step(step: Any) -> AgentStepInfo:
         ],
         is_final=bool(step.final_answer),
     )
+
 
 def _get_current_user(request: Request) -> dict:
     auth = request.headers.get("Authorization", "")
@@ -277,56 +268,16 @@ async def chat_ui() -> FileResponse:
     html_path = os.path.join(_TEMPLATES_DIR, "chat.html")
     return FileResponse(html_path, media_type="text/html")
 
+
 @app.get("/login", include_in_schema=False)
 async def login_page() -> FileResponse:
     return FileResponse(os.path.join(_TEMPLATES_DIR, "login.html"), media_type="text/html")
+
 
 @app.get("/register", include_in_schema=False)
 async def register_page() -> FileResponse:
     return FileResponse(os.path.join(_TEMPLATES_DIR, "register.html"), media_type="text/html")
 
-@app.post("/auth/register", response_model=AuthResponse, tags=["auth"])
-async def auth_register(req: RegisterRequest):
-    try:
-        user = create_user(req.name, req.username, req.email, req.password)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    token = create_token(user["id"], user["username"])
-    return AuthResponse(
-        token=token, user_id=user["id"],
-        name=user["name"], username=user["username"], email=user["email"]
-    )
-
-@app.post("/auth/login", response_model=AuthResponse, tags=["auth"])
-async def auth_login(req: LoginRequest):
-    user = get_user_by_email(req.email)
-    if not user or not verify_password(req.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Email atau password salah")
-    token = create_token(user["id"], user["username"])
-    return AuthResponse(
-        token=token, user_id=user["id"],
-        name=user["name"], username=user["username"], email=user["email"]
-    )
-
-@app.get("/auth/me", tags=["auth"])
-async def auth_me(request: Request):
-    user = _get_current_user(request)
-    return {
-        "user_id":  user["id"],
-        "name":     user["name"],
-        "username": user["username"],
-        "email":    user["email"],
-    }
-
-@app.patch("/auth/me", tags=["auth"])
-async def auth_update_name(req: UpdateNameRequest, request: Request):
-    user = _get_current_user(request)
-    update_user_name(user["id"], req.name)
-    return {"message": "Name updated", "name": req.name}
-
-@app.post("/auth/logout", tags=["auth"])
-async def auth_logout():
-    return {"message": "Logged out"}
 
 # ---------------------------------------------------------------------------
 # /chat — multitask dengan Extended Thinking
@@ -335,22 +286,33 @@ async def auth_logout():
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
 async def chat(req: ChatRequest) -> ChatResponse:
     session_id = req.session_id or str(uuid.uuid4())
-    model      = req.model or "nvidia/nemotron-super-3"  # fix: was nvidia/nemotron-super-3
+    model      = req.model or "hams-max"
 
-    context = ""
+    # A2 FIX: Build proper message list instead of manual prompt string.
+    # This lets HamsMaxBase._build_payload() handle system prompt as
+    # separate system message (consistent with B20 fix).
+    messages: list[dict[str, str]] = []
     for msg in (req.history or []):
-        prefix = "User" if msg.role == "user" else "Assistant"
-        context += f"{prefix}: {msg.content}\n"
-
-    full_prompt = f"{_MULTITASK_SYSTEM}\n\n{context}User: {req.message}\nAssistant:"
+        messages.append({"role": msg.role, "content": msg.content})
+    messages.append({"role": "user", "content": req.message})
 
     try:
         llm = _build_llm(model, extended=req.extended)
-        raw = await llm.generate_text(
-            messages=[{"role": "user", "content": full_prompt}],
-            max_tokens=4096,
-            extended=req.extended,
-        )
+
+        if req.extended:
+            # Extended thinking — use generate_text with system prompt
+            raw = await llm.generate_text(
+                messages=messages,
+                system=_MULTITASK_SYSTEM,
+                max_tokens=4096,
+            )
+        else:
+            # Normal chat — use generate_text with system prompt
+            raw = await llm.generate_text(
+                messages=messages,
+                system=_MULTITASK_SYSTEM,
+                max_tokens=4096,
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -368,34 +330,34 @@ async def chat(req: ChatRequest) -> ChatResponse:
         response_text = raw
 
     return ChatResponse(
-            session_id=session_id,
-            response=response_text.strip(),
-            thinking=thinking,
-            model_used=model,
-            extended=req.extended,
-        )
+        session_id=session_id,
+        response=response_text.strip(),
+        thinking=thinking,
+        model_used=model,
+        extended=req.extended,
+    )
 
 
-# ---------------------------------------------------------------------------
-# /chat/stream — streaming SSE
-# ---------------------------------------------------------------------------
+# ══════════════════════════════════════════════════════════════
+# /chat/stream juga perlu A2 FIX yang sama
+# ══════════════════════════════════════════════════════════════
 
 @app.post("/chat/stream", tags=["chat"])
 async def chat_stream(req: ChatRequest) -> StreamingResponse:
-    model = req.model or "nvidia/nemotron-super-3"  # fix: was nvidia/nemotron-super-3
+    model = req.model or "hams-max"
 
-    context = ""
+    # A2 FIX: Proper message list
+    messages: list[dict[str, str]] = []
     for msg in (req.history or []):
-        prefix = "User" if msg.role == "user" else "Assistant"
-        context += f"{prefix}: {msg.content}\n"
-
-    full_prompt = f"{_MULTITASK_SYSTEM}\n\n{context}User: {req.message}\nAssistant:"
+        messages.append({"role": msg.role, "content": msg.content})
+    messages.append({"role": "user", "content": req.message})
 
     async def event_stream() -> AsyncIterator[str]:
         try:
             llm = _build_llm(model)
             async for chunk in llm.stream(
-                messages=[{"role": "user", "content": full_prompt}]
+                messages=messages,
+                system=_MULTITASK_SYSTEM,
             ):
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
         except Exception as e:
@@ -409,17 +371,22 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
+
 # ---------------------------------------------------------------------------
 # /agent/run — agentic blocking
 # ---------------------------------------------------------------------------
 
 @app.post("/agent/run", response_model=AgentRunResponse, tags=["agent"])
 async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
-    model = req.model or "nvidia/nemotron-super-3"  # fix: was nvidia/nemotron-super-3
+    model = req.model or "hams-max"  # B3 FIX
     t0    = time.perf_counter()
 
     try:
-        agent    = _build_agent(model=model, max_steps=req.max_steps, extended=req.extended)
+        agent    = _build_agent(
+                        model=model,
+            max_steps=req.max_steps,
+            extended=req.extended,
+        )
         response = await agent.run(req.task)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -445,7 +412,7 @@ async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
 
 @app.post("/agent/stream", tags=["agent"])
 async def agent_stream(req: AgentRunRequest) -> StreamingResponse:
-    model = req.model or "nvidia/nemotron-super-3"  # fix: was nvidia/nemotron-super-3
+    model = req.model or "hams-max"  # B3 FIX
 
     async def event_stream() -> AsyncIterator[str]:
         queue: asyncio.Queue[dict] = asyncio.Queue()
@@ -474,8 +441,10 @@ async def agent_stream(req: AgentRunRequest) -> StreamingResponse:
         async def run_agent():
             try:
                 agent    = _build_agent(
-                    model=model, max_steps=req.max_steps,
-                    step_callback=on_step, extended=req.extended,
+                    model=model,
+                    max_steps=req.max_steps,
+                    step_callback=on_step,
+                    extended=req.extended,
                 )
                 response = await agent.run(req.task)
                 elapsed  = round(time.perf_counter() - t0, 2)
@@ -577,6 +546,7 @@ async def get_status(run_id: str) -> dict[str, Any]:
     if run_id not in _tasks:
         raise HTTPException(status_code=404, detail=f"Run ID '{run_id}' not found.")
     return _tasks[run_id]
+
 
 @app.get("/cli", include_in_schema=False)
 async def cli_page() -> FileResponse:

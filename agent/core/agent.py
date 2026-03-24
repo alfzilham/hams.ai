@@ -7,6 +7,11 @@ The Agent class is the public entry point. It:
   3. Runs the ReasoningLoop until completion
   4. Returns a structured AgentResponse
 
+Fixes applied:
+  B11 — step_callback as proper __init__ parameter
+  B13 — Failed runs saved to memory for learning
+  B17 — run_sync() handles nested event loops
+
 Usage::
 
     from agent.core.agent import Agent
@@ -22,13 +27,13 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from loguru import logger
 
 from agent.core.memory import MemoryManager
 from agent.core.reasoning_loop import ReasoningLoop
-from agent.core.state import AgentState, AgentStatus, TaskPlan
+from agent.core.state import AgentState, AgentStatus, ReasoningStep, TaskPlan
 from agent.core.task_planner import TaskPlanner
 
 
@@ -89,6 +94,8 @@ class Agent:
         max_steps:      Hard cap on reasoning iterations (default 30)
         use_planner:    Whether to run task decomposition before the loop (default True)
         verbose:        Stream step-by-step logs to stdout (default True)
+        step_callback:  B11 FIX — Optional async callback for real-time step streaming.
+                        Signature: async def callback(step: ReasoningStep) -> None
     """
 
     def __init__(
@@ -99,6 +106,7 @@ class Agent:
         max_steps: int = 30,
         use_planner: bool = True,
         verbose: bool = True,
+        step_callback: Callable[[ReasoningStep], Awaitable[None]] | None = None,
     ) -> None:
         self.llm = llm
         self.tool_registry = tool_registry
@@ -107,11 +115,14 @@ class Agent:
         self.use_planner = use_planner
         self.verbose = verbose
 
+        # B11 FIX: step_callback passed properly through __init__
+        # instead of being set via agent._loop.step_callback
         self._loop = ReasoningLoop(
             llm=llm,
             tool_registry=tool_registry,
             max_steps=max_steps,
             verbose=verbose,
+            step_callback=step_callback,
         )
         self._planner = TaskPlanner(llm=llm)
 
@@ -123,10 +134,8 @@ class Agent:
         """
         Execute a task end-to-end and return an AgentResponse.
 
-        This is the main entry point. Call it with any coding task:
-          - "Write a binary search implementation with tests"
-          - "Fix the failing tests in auth.py"
-          - "Add type hints to all functions in utils.py"
+        B13 FIX: Both successful AND failed runs are saved to memory,
+        so the agent can learn from failures in future runs.
         """
         rid = run_id or str(uuid.uuid4())[:12]
         logger.info(f"[agent:{rid}] ▶ Task: {task!r}")
@@ -152,15 +161,8 @@ class Agent:
         state = await self._loop.run(state)
 
         # Phase 3: Persist to long-term memory
-        if state.final_answer:
-            self.memory.memorize(
-                content=f"Task: {task}\nResult: {state.final_answer}",
-                metadata={
-                    "run_id": rid,
-                    "steps": state.current_step,
-                    "status": state.status.value,
-                },
-            )
+        # B13 FIX: Save ALL runs (success + failure) to memory
+        self._save_to_memory(state, rid, task)
 
         self.memory.clear_session()
         response = AgentResponse(state)
@@ -172,10 +174,105 @@ class Agent:
     # -----------------------------------------------------------------------
 
     def run_sync(self, task: str, run_id: str | None = None) -> AgentResponse:
-        """Synchronous wrapper around `run()` for non-async callers."""
+        """
+        Synchronous wrapper around `run()` for non-async callers.
+
+        B17 FIX: Handles nested event loops gracefully.
+        Uses nest_asyncio if available, falls back to new thread if needed.
+        """
         import asyncio
 
-        return asyncio.run(self.run(task, run_id=run_id))
+        # Check if there's already a running event loop
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is None:
+            # No running loop — safe to use asyncio.run()
+            return asyncio.run(self.run(task, run_id=run_id))
+
+        # Running inside an existing event loop (e.g., Jupyter, FastAPI)
+        # Try nest_asyncio first
+        try:
+            import nest_asyncio  # type: ignore[import]
+            nest_asyncio.apply()
+            return asyncio.run(self.run(task, run_id=run_id))
+        except ImportError:
+            pass
+
+        # Fallback: run in a separate thread with its own event loop
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(asyncio.run, self.run(task, run_id=run_id))
+            return future.result(timeout=600)  # 10 minute timeout
+
+    # -----------------------------------------------------------------------
+    # Private: Memory persistence (B13 FIX)
+    # -----------------------------------------------------------------------
+
+    def _save_to_memory(self, state: AgentState, rid: str, task: str) -> None:
+        """
+        B13 FIX: Save both successful and failed runs to long-term memory.
+
+        For successful runs: save task + result (as before).
+        For failed runs: save task + error + steps taken, so the agent
+        can learn from failures and avoid repeating mistakes.
+        """
+        if state.status == AgentStatus.COMPLETE and state.final_answer:
+            # Success — save task + result
+            self.memory.memorize(
+                content=f"Task: {task}\nResult: {state.final_answer}",
+                metadata={
+                    "run_id": rid,
+                    "steps": state.current_step,
+                    "status": state.status.value,
+                    "type": "success",
+                },
+            )
+        elif state.status in (AgentStatus.FAILED, AgentStatus.MAX_STEPS_REACHED):
+            # B13 FIX: Failed run — save task + error + what was tried
+            error_summary = state.error or "Unknown error"
+
+            # Collect what tools were attempted
+            tools_tried: list[str] = []
+            for step in state.steps:
+                for tc in step.tool_calls:
+                    tools_tried.append(tc.tool_name)
+                if step.reflection:
+                    tools_tried.append(f"reflection: {step.reflection[:80]}")
+
+            # Collect last few thoughts for context
+            last_thoughts: list[str] = []
+            for step in state.steps[-3:]:
+                if step.thought:
+                    last_thoughts.append(
+                        f"Step {step.step_number}: {step.thought[:150]}"
+                    )
+
+            failure_content = (
+                f"Task: {task}\n"
+                f"Status: {state.status.value}\n"
+                f"Error: {error_summary}\n"
+                f"Steps taken: {state.current_step}\n"
+                f"Tools tried: {', '.join(tools_tried[:10])}\n"
+                f"Last thoughts:\n" + "\n".join(last_thoughts)
+            )
+
+            self.memory.memorize(
+                content=failure_content,
+                metadata={
+                    "run_id": rid,
+                    "steps": state.current_step,
+                    "status": state.status.value,
+                    "type": "failure",
+                    "error": error_summary[:200],
+                },
+            )
+            logger.info(
+                f"[agent:{rid}] 📝 Failed run saved to memory for future learning."
+            )
 
     # -----------------------------------------------------------------------
     # Private helpers
@@ -193,12 +290,18 @@ class Agent:
         if not self.verbose:
             return
         icon = "✅" if resp.success else "❌"
-        logger.info(
-            f"[agent:{resp.run_id}] {icon} Done — "
-            f"status={resp.status.value}, "
-            f"steps={resp.steps_taken}, "
-            f"tokens={resp.total_input_tokens + resp.total_output_tokens}, "
-            f"time={resp.duration_seconds:.1f}s"
-            if resp.duration_seconds
-            else f"[agent:{resp.run_id}] {icon} Done — status={resp.status.value}"
-        )
+        if resp.duration_seconds:
+            logger.info(
+                f"[agent:{resp.run_id}] {icon} Done — "
+                f"status={resp.status.value}, "
+                f"steps={resp.steps_taken}, "
+                f"tokens={resp.total_input_tokens + resp.total_output_tokens}, "
+                f"time={resp.duration_seconds:.1f}s"
+            )
+        else:
+            logger.info(
+                f"[agent:{resp.run_id}] {icon} Done — "
+                f"status={resp.status.value}, "
+                f"steps={resp.steps_taken}, "
+                f"tokens={resp.total_input_tokens + resp.total_output_tokens}"
+            )

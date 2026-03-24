@@ -21,6 +21,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
     <!-- Styles -->
     <link rel="stylesheet" href="/static/chat.css" />
+
+    <!-- THREE.JS CDN — untuk 3D Orb -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 
 <body>
@@ -132,7 +135,7 @@
                 <div class="model-panel" id="modelPanel">
                     <div class="model-group">
                         <div class="model-group-label">HAMS-MAX — Powered by 12 Models</div>
-                        <div class="model-option" data-value="hams-max" onclick="selectModel(this)">
+                        <div class="model-option selected" data-value="hams-max" onclick="selectModel(this)">
                             <span class="model-badge hams">H</span>HAMS-MAX
                         </div>
                     </div>
@@ -153,7 +156,7 @@
                 </div>
             </div>
             <!-- Hidden input untuk value -->
-            <input type="hidden" id="modelSelect" value="llama3-70b-8192" />
+            <input type="hidden" id="modelSelect" value="hams-max" />
 
             <div class="topbar-spacer"></div>
 
@@ -188,23 +191,27 @@
             <!-- Welcome screen -->
             <div id="welcome">
 
-                <!-- Interactive Orb -->
+                <!-- Interactive 3D Orb (Three.js) -->
                 <div class="orb-wrap" id="orbWrap">
-                    <div class="orb chat-mode" id="orb">
-                        <div class="orb-highlight"></div>
-                        <div class="orb-eyes">
-                            <div class="orb-eye" id="eyeLeft">
-                                <div class="orb-pupil" id="pupilLeft">
-                                    <div class="orb-pupil-shine"></div>
-                                </div>
+                    <!-- Three.js WebGL canvas -->
+                    <canvas id="orbCanvas"></canvas>
+
+                    <!-- Eyes overlay — layered on top of 3D canvas -->
+                    <div class="orb-eyes-overlay" id="orbEyesOverlay">
+                        <div class="orb-eye" id="eyeLeft">
+                            <div class="orb-pupil" id="pupilLeft">
+                                <div class="orb-pupil-shine"></div>
                             </div>
-                            <div class="orb-eye" id="eyeRight">
-                                <div class="orb-pupil" id="pupilRight">
-                                    <div class="orb-pupil-shine"></div>
-                                </div>
+                        </div>
+                        <div class="orb-eye" id="eyeRight">
+                            <div class="orb-pupil" id="pupilRight">
+                                <div class="orb-pupil-shine"></div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Hidden: kept for backward compat with updateOrbMode() -->
+                    <div class="orb chat-mode" id="orb" style="display:none;"></div>
                 </div>
 
                 <div class="welcome-greeting">

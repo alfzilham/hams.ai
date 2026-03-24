@@ -2,6 +2,9 @@
 HAMS-MAX Agent Mode — ReAct tool calling via prompt engineering.
 TIDAK ada extended thinking di sini — fokus ke format XML saja.
 Dipakai oleh reasoning_loop.py saat agent berjalan.
+
+Fixes applied:
+  B18 — Token tracking via track_tokens=True
 """
 
 from __future__ import annotations
@@ -76,15 +79,14 @@ def _parse_react_response(text: str) -> tuple[str, str, str | None, dict | None]
         return thought, "tool_call", tool_name, tool_args
 
     raw_answer = (answer_m.group(1).strip() if answer_m else None) or text.strip()
-    answer = re.sub(r'\[Tool[^\]]*\][^\n]*\n?', '', raw_answer).strip()
+    answer = re.sub(r'\$Tool[^\$]*\$[^\n]*\n?', '', raw_answer).strip()
     return thought, "final_answer", answer or raw_answer, None
 
 
 class HamsMaxAgentLLM(HamsMaxBase):
     """
     Mode agent — ReAct tool calling murni.
-    Extended thinking TIDAK diaktifkan di sini untuk mencegah
-    payload overflow dan konflik format XML.
+    B18 FIX: token tracking terintegrasi.
     """
 
     async def generate(
@@ -97,24 +99,31 @@ class HamsMaxAgentLLM(HamsMaxBase):
         from agent.core.state import ToolCall, ActionType
 
         if not tools:
-            # Fallback ke simple generate kalau tidak ada tools
-            payload  = self._build_payload(messages, system=system)
-            raw_text = await self._call_api_with_fallback(payload)
+            payload = self._build_payload(messages, system=system)
+            # B18 FIX: track tokens
+            raw_text, input_tokens, output_tokens = await self._call_api_with_fallback(
+                payload, track_tokens=True
+            )
             return LLMResponse(
                 thought=raw_text,
-                action_type=ActionType.FINAL_ANSWER if hasattr(ActionType, 'FINAL_ANSWER') else "final_answer",
+                action_type=ActionType.FINAL_ANSWER,
                 tool_calls=[],
                 final_answer=raw_text,
                 raw=raw_text,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
             )
 
-        # Build ReAct system prompt — tanpa extended thinking
+        # Build ReAct system prompt
         react_system = _REACT_SYSTEM.format(
             tools_text=_format_tools_text(tools),
         )
 
-        payload  = self._build_payload(messages, system=react_system)
-        raw_text = await self._call_api_with_fallback(payload)
+        payload = self._build_payload(messages, system=react_system)
+        # B18 FIX: track tokens
+        raw_text, input_tokens, output_tokens = await self._call_api_with_fallback(
+            payload, track_tokens=True
+        )
 
         logger.debug(f"[hams-max/agent] Raw (first 300): {raw_text[:300]}")
 
@@ -129,20 +138,24 @@ class HamsMaxAgentLLM(HamsMaxBase):
             logger.debug(f"[hams-max/agent] → tool_call: {tool_or_answer}")
             return LLMResponse(
                 thought=thought,
-                action_type=ActionType.TOOL_CALL if hasattr(ActionType, 'TOOL_CALL') else "tool_call",
+                action_type=ActionType.TOOL_CALL,
                 tool_calls=[tc],
                 final_answer=None,
                 raw=raw_text,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
             )
 
         answer = tool_or_answer or thought or raw_text
         logger.debug(f"[hams-max/agent] → final_answer: {answer[:200]}")
         return LLMResponse(
             thought=thought,
-            action_type=ActionType.FINAL_ANSWER if hasattr(ActionType, 'FINAL_ANSWER') else "final_answer",
+            action_type=ActionType.FINAL_ANSWER,
             tool_calls=[],
             final_answer=answer,
             raw=raw_text,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
         )
 
     async def generate_text(
@@ -152,7 +165,7 @@ class HamsMaxAgentLLM(HamsMaxBase):
         **kwargs: Any,
     ) -> str:
         payload = self._build_payload(messages, system=system)
-        return await self._call_api_with_fallback(payload)  # fix: was _call_api
+        return await self._call_api_with_fallback(payload)
 
     async def stream(
         self,

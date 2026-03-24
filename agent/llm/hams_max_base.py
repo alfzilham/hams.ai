@@ -1,6 +1,10 @@
 """
 HAMS-MAX Base — shared constants, helpers, dan base class.
 Di-import oleh hams_max_chat.py, hams_max_agent.py, hams_max_thinking.py.
+
+Fixes applied:
+  B18 — Token tracking via _call_api_tracked()
+  B20 — System prompt sebagai role "system" terpisah di _build_payload()
 """
 
 from __future__ import annotations
@@ -109,6 +113,13 @@ class HamsMaxBase(BaseLLM):
         }
 
     def _build_payload(self, messages: list[dict], system: str | None = None) -> dict:
+        """
+        Build payload untuk hams-max-api.
+
+        B20 FIX: System prompt di-inject sebagai pesan system terpisah
+        di awal history, bukan di-prepend ke content user/assistant.
+        Ini mencegah prompt leaking jika model echo back content.
+        """
         history: list[dict] = []
         user_message = ""
 
@@ -135,10 +146,10 @@ class HamsMaxBase(BaseLLM):
             user_message = history[-1]["content"]
             history = history[:-1]
 
-        if system and history:
-            history[0]["content"] = f"{system}\n\n{history[0]['content']}"
-        elif system:
-            user_message = f"{system}\n\n{user_message}"
+        # B20 FIX: System prompt sebagai system message terpisah
+        # Tidak lagi di-prepend ke history[0] atau user_message
+        if system:
+            history.insert(0, {"role": "system", "content": system})
 
         return {
             "message":    user_message,
@@ -149,6 +160,7 @@ class HamsMaxBase(BaseLLM):
         }
 
     async def _call_api(self, payload: dict) -> str:
+        """Call hams-max-api dan return reply text."""
         async with httpx.AsyncClient(timeout=180.0) as client:
             resp = await client.post(
                 f"{HAMS_MAX_BASE_URL}/v1/chat",
@@ -160,6 +172,40 @@ class HamsMaxBase(BaseLLM):
             resp.raise_for_status()
             return resp.json().get("reply", "")
 
+    async def _call_api_tracked(self, payload: dict) -> tuple[str, int, int]:
+        """
+        B18 FIX: Call API dan return (reply, input_tokens, output_tokens).
+
+        Estimasi token count berdasarkan karakter jika API tidak return usage.
+        Ratio ~4 chars per token (English average).
+        """
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            resp = await client.post(
+                f"{HAMS_MAX_BASE_URL}/v1/chat",
+                headers=self._headers(),
+                json=payload,
+            )
+            if resp.status_code != 200:
+                logger.error(f"[hams-max] {resp.status_code} — body: {resp.text[:1000]}")
+            resp.raise_for_status()
+
+            data = resp.json()
+            reply = data.get("reply", "")
+
+            # Coba ambil token usage dari response API
+            usage = data.get("usage", {})
+            input_tokens = usage.get("prompt_tokens", 0) or usage.get("input_tokens", 0)
+            output_tokens = usage.get("completion_tokens", 0) or usage.get("output_tokens", 0)
+
+            # Fallback: estimasi dari karakter jika API tidak return usage
+            if not input_tokens:
+                input_text = payload.get("message", "") + str(payload.get("history", []))
+                input_tokens = max(1, len(input_text) // 4)
+            if not output_tokens:
+                output_tokens = max(1, len(reply) // 4)
+
+            return reply, input_tokens, output_tokens
+
     def _is_rate_limit_error(self, exc: Exception) -> bool:
         msg = str(exc).lower()
         return any(k in msg for k in [
@@ -168,7 +214,16 @@ class HamsMaxBase(BaseLLM):
             "tpd", "tpm", "capacity", "overloaded", "503",
         ])
 
-    async def _call_api_with_fallback(self, payload: dict, per_model_timeout: float = 15.0) -> str:
+    async def _call_api_with_fallback(
+        self, payload: dict, per_model_timeout: float = 15.0, track_tokens: bool = False
+    ) -> str | tuple[str, int, int]:
+        """
+        Call API dengan fallback chain.
+
+        B18 FIX: Tambah parameter track_tokens.
+        Jika True, return (reply, input_tokens, output_tokens).
+        Jika False, return reply string saja (backward compatible).
+        """
         # Tentukan starting point di chain
         if self._active_model in FALLBACK_CHAIN:
             start_idx = FALLBACK_CHAIN.index(self._active_model)
@@ -183,26 +238,34 @@ class HamsMaxBase(BaseLLM):
             patched = {**payload, "model": model_id, "provider": provider}
             try:
                 logger.info(f"[hams-max] trying: {frontend_key}")
-                result = await asyncio.wait_for(
-                    self._call_api(patched),
-                    timeout=per_model_timeout,
-                )
+
+                if track_tokens:
+                    result = await asyncio.wait_for(
+                        self._call_api_tracked(patched),
+                        timeout=per_model_timeout,
+                    )
+                else:
+                    result = await asyncio.wait_for(
+                        self._call_api(patched),
+                        timeout=per_model_timeout,
+                    )
+
                 if frontend_key != self._active_model:
                     logger.warning(f"[hams-max] fallback: {self._active_model} → {frontend_key}")
                     self._active_model = frontend_key
                 return result
+
             except asyncio.TimeoutError as exc:
                 last_error = exc
                 logger.warning(
                     f"[hams-max] timeout on {frontend_key} after {per_model_timeout}s, next..."
                 )
-                # Timeout diperlakukan seperti fallback trigger (mirip rate limit).
                 continue
             except Exception as exc:
                 last_error = exc
                 if self._is_rate_limit_error(exc):
                     logger.warning(f"[hams-max] rate limit on {frontend_key}, next...")
                     continue
-                raise   # error bukan rate limit → langsung raise, jangan lanjut
+                raise
 
         raise RuntimeError(f"Semua model fallback gagal. Error terakhir: {last_error}")
