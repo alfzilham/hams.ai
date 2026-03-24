@@ -2305,7 +2305,6 @@ async function processDOCX(file) {
 async function processImage(file) {
     const idx = attachedFiles.length;
 
-    // Tampilkan loading state dulu
     attachedFiles.push({
         type: 'image',
         name: file.name,
@@ -2322,7 +2321,7 @@ async function processImage(file) {
                 type: 'image',
                 name: file.name,
                 size: file.size,
-                base64: e.target.result   // base64 string
+                base64: e.target.result   // base64 untuk preview + kirim nanti
             };
             renderAttachmentChips();
             showToast(`🖼️ ${file.name} berhasil di-attach`);
@@ -2335,7 +2334,7 @@ async function processImage(file) {
             showToast(`❌ Gagal memproses gambar: ${file.name}`);
             resolve();
         };
-        reader.readAsDataURL(file);   // penting untuk preview
+        reader.readAsDataURL(file);
     });
 }
 
@@ -2572,9 +2571,9 @@ window.removeAttachment = function (index) {
             showToast(`❌ File terlalu besar: ${file.name} (max 10MB)`);
             return;
         }
-
+    
         const ext = file.name.split('.').pop().toLowerCase();
-
+    
         // Text files
         if (['txt', 'js', 'py', 'html', 'css', 'json', 'md'].includes(ext)) {
             await processTextFile(file);
@@ -2587,11 +2586,11 @@ window.removeAttachment = function (index) {
         else if (ext === 'docx' || ext === 'doc') {
             await processDOCX(file);
         }
-        // IMAGE (Phase 2)
+        // IMAGE — Phase 2
         else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
             await processImage(file);
         }
-        // Video (belum diimplementasikan)
+        // Video (nanti)
         else if (['mp4', 'mov', 'webm'].includes(ext)) {
             showToast(`🎥 Video support akan ditambahkan di tahap berikutnya`);
         }
@@ -2699,38 +2698,48 @@ window.removeAttachment = function (index) {
 
     // Render chips
     function renderAttachmentChips() {
-        const container = document.getElementById('attachmentArea');
+        const area = document.getElementById('attachmentArea');
         const chipsContainer = document.getElementById('attachmentChips');
-
-        if (!container || !chipsContainer) return;
-
+        if (!area || !chipsContainer) return;
+    
         chipsContainer.innerHTML = '';
-
         if (attachedFiles.length === 0) {
-            container.classList.remove('has-files');
+            area.classList.remove('has-files');
             return;
         }
-
-        container.classList.add('has-files');
-
-        attachedFiles.forEach((file, index) => {
+        area.classList.add('has-files');
+    
+        attachedFiles.forEach((f, i) => {
             const chip = document.createElement('div');
-            chip.className = `attachment-chip chip-${file.type} ${file.loading ? 'loading' : ''} ${file.error ? 'error' : ''}`;
-
+            chip.className = `attachment-chip chip-${f.type} ${f.loading ? 'loading' : ''} ${f.error ? 'error' : ''}`;
+    
             let iconHTML = '';
-            if (file.type === 'pdf') iconHTML = `<i class="bi bi-file-earmark-pdf chip-icon"></i>`;
-            else if (file.type === 'docx') iconHTML = `<i class="bi bi-file-earmark-word chip-icon"></i>`;
-            else iconHTML = `<i class="bi bi-file-earmark-text chip-icon"></i>`;
-
+    
+            if (f.type === 'image' && f.base64) {
+                iconHTML = `
+                    <div class="chip-icon" style="width:32px;height:32px;overflow:hidden;border-radius:6px;border:1px solid rgba(255,255,255,0.15);">
+                        <img src="${f.base64}" alt="${f.name}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>`;
+            } 
+            else if (f.type === 'pdf') {
+                iconHTML = `<i class="bi bi-file-earmark-pdf chip-icon"></i>`;
+            } 
+            else if (f.type === 'docx') {
+                iconHTML = `<i class="bi bi-file-earmark-word chip-icon"></i>`;
+            } 
+            else {
+                iconHTML = `<i class="bi bi-file-earmark-text chip-icon"></i>`;
+            }
+    
             chip.innerHTML = `
-            ${iconHTML}
-            <div class="chip-content">
-                <div class="chip-name">${file.name}</div>
-                <div class="chip-size">${(file.size / 1024).toFixed(1)} KB</div>
-            </div>
-            <button class="chip-remove" onclick="removeAttachment(${index}); event.stopImmediatePropagation();">×</button>
-        `;
-
+                ${iconHTML}
+                <div class="chip-content">
+                    <div class="chip-name">${f.name}</div>
+                    <div class="chip-size">${(f.size / 1024).toFixed(1)} KB</div>
+                </div>
+                <button class="chip-remove" onclick="removeAttachment(${i}); event.stopImmediatePropagation();">×</button>
+            `;
+    
             chipsContainer.appendChild(chip);
         });
     }
