@@ -38,7 +38,16 @@ BCRYPT_ROUNDS = 12
 # Google OAuth (scaffold — set via environment)
 GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI  = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+_RAILWAY_URL = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+_BASE_URL = (
+    os.environ.get("APP_BASE_URL")
+    or (f"https://{_RAILWAY_URL}" if _RAILWAY_URL else "")
+    or "http://localhost:8000"
+)
+GOOGLE_REDIRECT_URI = os.environ.get(
+    "GOOGLE_REDIRECT_URI",
+    f"{_BASE_URL}/auth/google/callback"
+)
 
 # Rate limiting: max attempts per IP
 RATE_LIMIT_MAX    = 10      # max attempts
@@ -555,11 +564,11 @@ async def update_profile(req: UpdateProfileRequest, request: Request):
 @router.get("/google")
 async def google_login_redirect():
     """Redirect to Google OAuth consent screen."""
-    if not GOOGLE_CLIENT_ID:
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="Google OAuth is not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.",
-        )
+            )
 
     import urllib.parse
 
@@ -671,9 +680,13 @@ async def google_callback(code: str = "", error: str = ""):
         # Frontend will extract token from URL and store in localStorage
         import urllib.parse
 
-        user_data = urllib.parse.quote(
-            f'{{"user_id":{user["id"]},"name":"{user["name"]}","username":"{user["username"]}","email":"{user["email"]}"}}'
-        )
+        import json
+        user_data = urllib.parse.quote(json.dumps({
+            "user_id": user["id"],
+            "name": user["name"],
+            "username": user["username"],
+            "email": user["email"],
+        }))
 
         return RedirectResponse(
             url=f"/chat-ui?token={token}&user={user_data}"
