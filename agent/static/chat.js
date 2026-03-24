@@ -374,19 +374,27 @@ function handleKey(e) {
 // MARKDOWN PARSER
 // ═══════════════════════════════════════════════
 function parseMarkdown(raw) {
+    if (!raw) return '';
     const codeBlocks = [];
+    
+    // 1. Extract Code blocks BEFORE marked.js processes them 
+    // This preserves HAMS's custom UI (Copy, Preview, etc.)
     let text = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
         codeBlocks.push({ lang: lang.trim() || 'text', code: code.trim() });
         return `\n\n%%CB${codeBlocks.length - 1}%%\n\n`;
     });
 
+    // 2. Parse using robust Marked.js library (supports perfect lists, breaks, and tables)
     if (typeof marked !== 'undefined') {
         text = marked.parse(text, { breaks: true, gfm: true });
+        // Restore custom section dividers for H2 and H3 to match original design
+        text = text.replace(/<h([2-3])([^>]*)>/g, '<hr class="section-divider"><h$1$2>');
     } else {
-        text = text.replace(/\n/g, '<br>');
+        text = `<p>${text.replace(/\n/g, '<br>')}</p>`;
     }
 
-    return text.replace(/<p>%%CB(\d+)%%<\/p>|%%CB(\d+)%%/g, (_, i1, i2) => buildCodeBlock(codeBlocks[i1 || i2]));
+    // 3. Re-inject Custom Code Blocks (removing any stray <p> tags marked.js might have wrapped around the placeholder)
+    return text.replace(/(?:<p>)?%%CB(\d+)%%(?:<\/p>)?/g, (_, i) => buildCodeBlock(codeBlocks[i]));
 }
 
 function buildCodeBlock({ lang, code }) {
