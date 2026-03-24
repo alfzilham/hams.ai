@@ -278,6 +278,14 @@ async def login_page() -> FileResponse:
 async def register_page() -> FileResponse:
     return FileResponse(os.path.join(_TEMPLATES_DIR, "register.html"), media_type="text/html")
 
+@app.get("/onboarding/topics", include_in_schema=False)
+async def onboarding_topics_page() -> FileResponse:
+    return FileResponse(os.path.join(_TEMPLATES_DIR, "onboarding_topics.html"), media_type="text/html")
+
+@app.get("/onboarding/suggestions", include_in_schema=False)
+async def onboarding_suggestions_page() -> FileResponse:
+    return FileResponse(os.path.join(_TEMPLATES_DIR, "onboarding_suggestions.html"), media_type="text/html")
+
 
 # ---------------------------------------------------------------------------
 # /chat — multitask dengan Extended Thinking

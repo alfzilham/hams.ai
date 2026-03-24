@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HAMS.AI — Let's Get Started</title>
+    <link rel="icon" type="image/png" href="/static/favicon/apple-icon.png" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+    <style>
+        /* ══════════════════════════════════════════
+           VARIABLES
+        ══════════════════════════════════════════ */
+        :root {
+            --bg: #07070d;
+            --bg-2: #0a0a12;
+            --surface: rgba(255, 255, 255, 0.03);
+            --surface-2: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-2: rgba(255, 255, 255, 0.10);
+            --border-focus: rgba(255, 255, 255, 0.22);
+            --text: #f3f3f3;
+            --text-2: #8a8a8a;
+            --text-3: #444;
+            --accent: #818cf8;
+            --accent-2: #6366f1;
+            --accent-glow: rgba(129, 140, 248, 0.15);
+            --accent-glow-2: rgba(129, 140, 248, 0.08);
+            --orange: #f97316;
+            --orange-glow: rgba(249, 115, 22, 0.2);
+        }
+
+        [data-theme="light"] {
+            --bg: #f0f0f5;
+            --bg-2: #e8e8f0;
+            --surface: rgba(255, 255, 255, 0.8);
+            --surface-2: rgba(255, 255, 255, 0.9);
+            --border: rgba(0, 0, 0, 0.06);
+            --border-2: rgba(0, 0, 0, 0.10);
+            --border-focus: rgba(99, 102, 241, 0.4);
+            --text: #1a1a2e;
+            --text-2: #606080;
+            --text-3: #9090a0;
+            --accent: #6366f1;
+            --accent-2: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --accent-glow-2: rgba(99, 102, 241, 0.08);
+            --orange: #ea580c;
+            --orange-glow: rgba(234, 88, 12, 0.15);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: 'Sora', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        /* ══════════════════════════════════════════
+           AURORA BACKGROUND
+        ══════════════════════════════════════════ */
+        #auroraBg {
+            position: fixed;
+            inset: 0;
+            z-index: -10;
+            pointer-events: none;
+            opacity: 0.6;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ══════════════════════════════════════════
+           MAIN CONTAINER
+        ══════════════════════════════════════════ */
+        .onboarding-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 60px 24px;
+            position: relative;
+        }
+
+        /* ══════════════════════════════════════════
+           THEME TOGGLE
+        ══════════════════════════════════════════ */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border-2);
+            background: var(--surface);
+            color: var(--text-2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.25s;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .theme-toggle:hover {
+            color: var(--text);
+            border-color: var(--border-focus);
+            background: var(--surface-2);
+            transform: scale(1.05);
+        }
+
+        /* ══════════════════════════════════════════
+           HEADER
+        ══════════════════════════════════════════ */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #fff;
+            box-shadow: 0 8px 32px var(--accent-glow);
+            animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes successPop {
+            0% {
+                transform: scale(0);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.3;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-2);
+        }
+
+        /* ══════════════════════════════════════════
+           SUGGESTIONS GRID
+        ══════════════════════════════════════════ */
+        .suggestions-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 480px;
+            width: 100%;
+            margin-bottom: 32px;
+        }
+
+        .suggestion-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            padding: 20px 24px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardSlideIn 0.5s forwards;
+        }
+
+        [data-theme="light"] .suggestion-card {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .suggestion-card:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .suggestion-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .suggestion-card:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes cardSlideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .suggestion-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-glow) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .suggestion-card:hover {
+            border-color: var(--accent);
+            transform: translateX(8px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .suggestion-card:hover::before {
+            opacity: 1;
+        }
+
+        .suggestion-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: var(--accent);
+            flex-shrink: 0;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+
+        [data-theme="light"] .suggestion-icon {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .suggestion-card:hover .suggestion-icon {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+
+        .suggestion-content {
+            flex: 1;
+            min-width: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .suggestion-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .suggestion-desc {
+            font-size: 0.78rem;
+            color: var(--text-2);
+        }
+
+        .suggestion-arrow {
+            color: var(--text-3);
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+
+        .suggestion-card:hover .suggestion-arrow {
+            color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        /* ══════════════════════════════════════════
+           CUSTOM TOPIC
+        ══════════════════════════════════════════ */
+        .custom-topic {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+            cursor: pointer;
+            color: var(--text-2);
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .custom-topic:hover {
+            color: var(--accent);
+        }
+
+        /* ══════════════════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════════════════ */
+        @media (max-width: 640px) {
+            .title {
+                font-size: 1.25rem;
+            }
+
+            .suggestion-card {
+                padding: 16px 20px;
+            }
+
+            .suggestion-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="auroraBg"></canvas>
+
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <i class="bi bi-sun" id="themeIcon"></i>
+    </button>
+
+    <div class="onboarding-container">
+        <div class="header">
+            <div class="success-icon">
+                <i class="bi bi-check-lg"></i>
+            </div>
+            <h1 class="title">All set! Here are a few ideas<br>just for you.</h1>
+            <p class="subtitle">Where should we start?</p>
+        </div>
+
+        <div class="suggestions-grid" id="suggestionsGrid">
+            <!-- Cards will be generated by JS -->
+        </div>
+
+        <div class="custom-topic" onclick="goToChat()">
+            <span>I have my own topic</span>
+            <i class="bi bi-arrow-right"></i>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════
+        // THEME
+        // ═══════════════════════════════════════
+        const savedTheme = localStorage.getItem('hams_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+
+        function toggleTheme() {
+            const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+            localStorage.setItem('hams_theme', t);
+            document.getElementById('themeIcon').className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+        }
+
+        // ═══════════════════════════════════════
+        // SUGGESTIONS DATA
+        // ═══════════════════════════════════════
+        const suggestionsData = {
+            coding: [
+                {
+                    title: "Build a web application",
+                    desc: "Create a full-stack app from scratch",
+                    icon: "bi-code-slash",
+                    prompt: "Help me build a web application"
+                },
+                {
+                    title: "Debug & optimize code",
+                    desc: "Find and fix issues in your codebase",
+                    icon: "bi-bug",
+                    prompt: "Help me debug and optimize my code"
+                },
+                {
+                    title: "Create technical specifications",
+                    desc: "Design architecture & documentation",
+                    icon: "bi-file-earmark-code",
+                    prompt: "Help me create technical specifications"
+                }
+            ],
+            learning: [
+                {
+                    title: "Learn a new programming language",
+                    desc: "Get started with Python, JS, or others",
+                    icon: "bi-mortarboard",
+                    prompt: "Help me learn a new programming language"
+                },
+                {
+                    title: "Develop critical analyses",
+                    desc: "Analyze topics and build understanding",
+                    icon: "bi-bar-chart",
+                    prompt: "Help me develop critical analyses"
+                },
+                {
+                    title: "Create study materials",
+                    desc: "Flashcards, summaries, and quizzes",
+                    icon: "bi-journal-text",
+                    prompt: "Help me create study materials"
+                }
+            ],
+            writing: [
+                {
+                    title: "Research topics for my writing",
+                    desc: "Gather information and insights",
+                    icon: "bi-pencil",
+                    prompt: "Help me research topics for my writing"
+                },
+                {
+                    title: "Draft blog posts & articles",
+                    desc: "Create engaging content from scratch",
+                    icon: "bi-newspaper",
+                    prompt: "Help me draft blog posts and articles"
+                },
+                {
+                    title: "Edit & polish content",
+                    desc: "Improve clarity and style",
+                    icon: "bi-spell-check",
+                    prompt: "Help me edit and polish my content"
+                }
+            ],
+            business: [
+                {
+                    title: "Create a business plan",
+                    desc: "Strategy, metrics, and roadmap",
+                    icon: "bi-graph-up-arrow",
+                    prompt: "Help me create a business plan"
+                },
+                {
+                    title: "Analyze market opportunities",
+                    desc: "Research competitors and trends",
+                    icon: "bi-search",
+                    prompt: "Help me analyze market opportunities"
+                },
+                {
+                    title: "Draft proposals & presentations",
+                    desc: "Professional documents for stakeholders",
+                    icon: "bi-file-earmark-slides",
+                    prompt: "Help me draft proposals and presentations"
+                }
+            ],
+            design: [
+                {
+                    title: "Design a user interface",
+                    desc: "Wireframes and UI concepts",
+                    icon: "bi-layout-text-window",
+                    prompt: "Help me design a user interface"
+                },
+                {
+                    title: "Create brand guidelines",
+                    desc: "Colors, typography, and visual identity",
+                    icon: "bi-palette",
+                    prompt: "Help me create brand guidelines"
+                },
+                {
+                    title: "Generate creative concepts",
+                    desc: "Brainstorm ideas and directions",
+                    icon: "bi-lightbulb",
+                    prompt: "Help me generate creative concepts"
+                }
+            ],
+            life: [
+                {
+                    title: "Plan personal projects",
+                    desc: "Organize goals and next steps",
+                    icon: "bi-calendar-check",
+                    prompt: "Help me plan personal projects"
+                },
+                {
+                    title: "Create daily routines",
+                    desc: "Build habits and productivity systems",
+                    icon: "bi-clock",
+                    prompt: "Help me create daily routines"
+                },
+                {
+                    title: "Make difficult decisions",
+                    desc: "Weigh options and think through choices",
+                    icon: "bi-signpost-split",
+                    prompt: "Help me make a difficult decision"
+                }
+            ],
+            random: [
+                {
+                    title: "Explore something new",
+                    desc: "Random topic to spark curiosity",
+                    icon: "bi-magic",
+                    prompt: "Surprise me with something interesting to learn"
+                },
+                {
+                    title: "Start a creative project",
+                    desc: "Generate ideas for fun activities",
+                    icon: "bi-stars",
+                    prompt: "Help me start a creative project"
+                },
+                {
+                    title: "Learn a fun fact",
+                    desc: "Interesting knowledge in bite-sized form",
+                    icon: "bi-lightning",
+                    prompt: "Share an interesting fact with me"
+                }
+            ]
+        };
+
+        // ═══════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════
+        const selectedTopics = JSON.parse(localStorage.getItem('hams_topics') || '["coding", "learning", "writing"]');
+        const grid = document.getElementById('suggestionsGrid');
+
+        // Pick suggestions based on selected topics
+        let suggestions = [];
+        selectedTopics.forEach((topic, index) => {
+            if (suggestionsData[topic]) {
+                suggestions.push(suggestionsData[topic][index % 3]);
+            }
+        });
+
+        // Render cards
+        suggestions.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'suggestion-card';
+            card.style.animationDelay = `${index * 0.1 + 0.2}s`;
+            card.onclick = () => goToChat(item.prompt);
+            card.innerHTML = `
+                <div class="suggestion-icon">
+                    <i class="bi ${item.icon}"></i>
+                </div>
+                <div class="suggestion-content">
+                    <div class="suggestion-title">${item.title}</div>
+                    <div class="suggestion-desc">${item.desc}</div>
+                </div>
+                <i class="bi bi-chevron-right suggestion-arrow"></i>
+            `;
+            grid.appendChild(card);
+        });
+
+        // ═══════════════════════════════════════
+        // GO TO CHAT
+        // ═══════════════════════════════════════
+        function goToChat(initialPrompt = null) {
+            // Mark onboarding as complete
+            localStorage.setItem('hams_onboarded', 'true');
+
+            if (initialPrompt) {
+                // Store initial prompt for chat page
+                localStorage.setItem('hams_initial_prompt', initialPrompt);
+            }
+
+            window.location.href = '/chat-ui';
+        }
+
+        // ═══════════════════════════════════════
+        // AURORA BACKGROUND (WebGL)
+        // ═══════════════════════════════════════
+        (function initAurora() {
+            const canvas = document.getElementById('auroraBg');
+            if (!canvas) return;
+
+            const gl = canvas.getContext('webgl');
+            if (!gl) return;
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            const vs = `attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
+            const fs = `
+            precision mediump float;
+            uniform float t;
+            uniform vec2 r;
+            void main(){
+                vec2 u=gl_FragCoord.xy/r;
+                float f=sin(u.x*3.0+t)*0.5+sin(u.y*2.0+t*0.7)*0.5;
+                f=smoothstep(0.0,1.0,f*0.5+0.5);
+                vec3 c=mix(vec3(0.02,0.02,0.04),vec3(0.06,0.04,0.12),f);
+                c+=0.015*sin(vec3(t*0.3,t*0.5+2.0,t*0.4+4.0));
+                gl_FragColor=vec4(c,1);
+            }`;
+
+            function compile(src, type) {
+                const s = gl.createShader(type);
+                gl.shaderSource(s, src);
+                gl.compileShader(s);
+                return s;
+            }
+
+            const prog = gl.createProgram();
+            gl.attachShader(prog, compile(vs, gl.VERTEX_SHADER));
+            gl.attachShader(prog, compile(fs, gl.FRAGMENT_SHADER));
+            gl.linkProgram(prog);
+            gl.useProgram(prog);
+
+            const buf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+            const pLoc = gl.getAttribLocation(prog, 'p');
+            gl.enableVertexAttribArray(pLoc);
+            gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+
+            const tLoc = gl.getUniformLocation(prog, 't');
+            const rLoc = gl.getUniformLocation(prog, 'r');
+
+            function frame(now) {
+                gl.uniform1f(tLoc, now * 0.001);
+                gl.uniform2f(rLoc, canvas.width, canvas.height);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+        })();
+    </script>
+</body>
+
+</html>

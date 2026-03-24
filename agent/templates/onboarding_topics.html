@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HAMS.AI — Pick Your Topics</title>
+    <link rel="icon" type="image/png" href="/static/favicon/apple-icon.png" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+    <style>
+        /* ══════════════════════════════════════════
+           VARIABLES
+        ══════════════════════════════════════════ */
+        :root {
+            --bg: #07070d;
+            --bg-2: #0a0a12;
+            --surface: rgba(255, 255, 255, 0.03);
+            --surface-2: rgba(255, 255, 255, 0.06);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-2: rgba(255, 255, 255, 0.10);
+            --border-focus: rgba(255, 255, 255, 0.22);
+            --text: #f3f3f3;
+            --text-2: #8a8a8a;
+            --text-3: #444;
+            --accent: #818cf8;
+            --accent-2: #6366f1;
+            --accent-glow: rgba(129, 140, 248, 0.15);
+            --accent-glow-2: rgba(129, 140, 248, 0.08);
+            --orange: #f97316;
+            --orange-glow: rgba(249, 115, 22, 0.2);
+            --green: #4ade80;
+            --green-glow: rgba(74, 222, 128, 0.15);
+        }
+
+        [data-theme="light"] {
+            --bg: #f0f0f5;
+            --bg-2: #e8e8f0;
+            --surface: rgba(255, 255, 255, 0.8);
+            --surface-2: rgba(255, 255, 255, 0.9);
+            --border: rgba(0, 0, 0, 0.06);
+            --border-2: rgba(0, 0, 0, 0.10);
+            --border-focus: rgba(99, 102, 241, 0.4);
+            --text: #1a1a2e;
+            --text-2: #606080;
+            --text-3: #9090a0;
+            --accent: #6366f1;
+            --accent-2: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --accent-glow-2: rgba(99, 102, 241, 0.08);
+            --orange: #ea580c;
+            --orange-glow: rgba(234, 88, 12, 0.15);
+            --green-glow: rgba(34, 197, 94, 0.15);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: 'Sora', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        /* ══════════════════════════════════════════
+           AURORA BACKGROUND
+        ══════════════════════════════════════════ */
+        #auroraBg {
+            position: fixed;
+            inset: 0;
+            z-index: -10;
+            pointer-events: none;
+            opacity: 0.6;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ══════════════════════════════════════════
+           MAIN CONTAINER
+        ══════════════════════════════════════════ */
+        .onboarding-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 24px;
+            position: relative;
+        }
+
+        /* ══════════════════════════════════════════
+           THEME TOGGLE
+        ══════════════════════════════════════════ */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border-2);
+            background: var(--surface);
+            color: var(--text-2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.25s;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .theme-toggle:hover {
+            color: var(--text);
+            border-color: var(--border-focus);
+            background: var(--surface-2);
+            transform: scale(1.05);
+        }
+
+        /* ══════════════════════════════════════════
+           HEADER
+        ══════════════════════════════════════════ */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .star-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: var(--orange);
+            filter: drop-shadow(0 0 20px var(--orange-glow));
+            animation: starPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes starPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 20px var(--orange-glow));
+            }
+
+            50% {
+                transform: scale(1.1);
+                filter: drop-shadow(0 0 30px var(--orange-glow));
+            }
+        }
+
+        .title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.3;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-2);
+        }
+
+        .selected-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--accent-glow-2);
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-top: 12px;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.3s;
+        }
+
+        .selected-count.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .selected-count.complete {
+            background: var(--green-glow);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        /* ══════════════════════════════════════════
+           TOPICS GRID
+        ══════════════════════════════════════════ */
+        .topics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            max-width: 600px;
+            width: 100%;
+            margin-bottom: 32px;
+        }
+
+        .topic-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 24px 20px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        [data-theme="light"] .topic-card {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .topic-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-glow) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .topic-card:hover {
+            border-color: rgba(129, 140, 248, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .topic-card:hover::before {
+            opacity: 1;
+        }
+
+        .topic-card.selected {
+            border-color: var(--accent);
+            background: rgba(129, 140, 248, 0.08);
+            box-shadow: 0 0 0 3px var(--accent-glow-2);
+        }
+
+        .topic-card.selected::before {
+            opacity: 1;
+        }
+
+        .topic-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: var(--text-2);
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+
+        [data-theme="light"] .topic-icon {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .topic-card.selected .topic-icon {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+
+        .topic-label {
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .topic-check {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s;
+        }
+
+        .topic-card.selected .topic-check {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* ══════════════════════════════════════════
+           CONTINUE BUTTON
+        ══════════════════════════════════════════ */
+        .continue-btn {
+            padding: 14px 48px;
+            border-radius: 14px;
+            border: none;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-2);
+            font-family: 'Sora', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .continue-btn.active {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+            color: #fff;
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .continue-btn.active:hover {
+            transform: translateY(-2px);
+        }
+
+        .continue-btn:disabled {
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .continue-btn .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ══════════════════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════════════════ */
+        @media (max-width: 640px) {
+            .topics-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .topic-card {
+                padding: 20px 16px;
+                flex-direction: row;
+                justify-content: flex-start;
+            }
+
+            .topic-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.1rem;
+            }
+
+            .topic-label {
+                text-align: left;
+            }
+
+            .title {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="auroraBg"></canvas>
+
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <i class="bi bi-sun" id="themeIcon"></i>
+    </button>
+
+    <div class="onboarding-container">
+        <div class="header">
+            <div class="star-icon">
+                <i class="bi bi-star-fill"></i>
+            </div>
+            <h1 class="title">What are you into, <span id="userName">there</span>?</h1>
+            <p class="subtitle">Pick three topics to explore</p>
+            <div class="selected-count" id="selectedCount">
+                <i class="bi bi-check-circle-fill"></i>
+                <span id="countText">0 of 3 selected</span>
+            </div>
+        </div>
+
+        <div class="topics-grid" id="topicsGrid">
+            <div class="topic-card" data-topic="coding" onclick="toggleTopic(this)">
+                <div class="topic-icon">
+                    <i class="bi bi-code-slash"></i>
+                </div>
+                <span class="topic-label">Coding & developing</span>
+                <div class="topic-check">
+                    <i class="bi bi-check"></i>
+                </div>
+            </div>
+
+            <div class="topic-card" data-topic="learning" onclick="toggleTopic(this)">
+                <div class="topic-icon">
+                    <i class="bi bi-book"></i>
+                </div>
+                <span class="topic-label">Learning & studying</span>
+                <div class="topic-check">
+                    <i class="bi bi-check"></i>
+                </div>
+            </div>
+
+            <div class="topic-card" data-topic="writing" onclick="toggleTopic(this)">
+                <div class="topic-icon">
+                    <i class="bi bi-pen"></i>
+                </div>
+                <span class="topic-label">Writing & content creation</span>
+                <div class="topic-check">
+                    <i class="bi bi-check"></i>
+                </div>
+            </div>
+
+            <div class="topic-card" data-topic="business" onclick="toggleTopic(this)">
+                <div class="topic-icon">
+                    <i class="bi bi-briefcase"></i>
+                </div>
+                <span class="topic-label">Business & strategy</span>
+                <div class="topic-check">
+                    <i class="bi bi-check"></i>
+                </div>
+            </div>
+
+            <div class="topic-card" data-topic="design" onclick="toggleTopic(this)">
+                <div class="topic-icon">
+                    <i class="bi bi-palette"></i>
+                </div>
+                <span class="topic-label">Design & creativity</span>
+                <div class="topic-check">
+                    <i class="bi bi-check"></i>
+                </div>
+            </div>
+
+            <div class="topic-card" data-topic="life" onclick="toggleTopic(this)">
+                <div class="topic-icon">
+                    <i class="bi bi-heart"></i>
+                </div>
+                <span class="topic-label">Life stuff</span>
+                <div class="topic-check">
+                    <i class="bi bi-check"></i>
+                </div>
+            </div>
+
+            <div class="topic-card" data-topic="random" onclick="toggleTopic(this)" style="grid-column: span 2;">
+                <div class="topic-icon">
+                    <i class="bi bi-magic"></i>
+                </div>
+                <span class="topic-label">Let AI choose for me</span>
+                <div class="topic-check">
+                    <i class="bi bi-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <button class="continue-btn" id="continueBtn" onclick="continueNext()" disabled>
+            <span>Let's go</span>
+            <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════
+        // THEME
+        // ═══════════════════════════════════════
+        const savedTheme = localStorage.getItem('hams_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+
+        function toggleTheme() {
+            const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+            localStorage.setItem('hams_theme', t);
+            document.getElementById('themeIcon').className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+        }
+
+        // ═══════════════════════════════════════
+        // USER DATA
+        // ═══════════════════════════════════════
+        const userData = JSON.parse(localStorage.getItem('hams_user') || '{}');
+        const displayName = userData.display_name || userData.name || 'there';
+        document.getElementById('userName').textContent = displayName;
+
+        // ═══════════════════════════════════════
+        // TOPIC SELECTION
+        // ═══════════════════════════════════════
+        let selectedTopics = [];
+        const MAX_TOPICS = 3;
+
+        function toggleTopic(card) {
+            const topic = card.dataset.topic;
+
+            if (card.classList.contains('selected')) {
+                // Deselect
+                card.classList.remove('selected');
+                selectedTopics = selectedTopics.filter(t => t !== topic);
+            } else {
+                // Select (only if under limit)
+                if (selectedTopics.length < MAX_TOPICS) {
+                    card.classList.add('selected');
+                    selectedTopics.push(topic);
+                } else {
+                    // Shake animation for limit
+                    card.style.animation = 'shake 0.4s ease';
+                    setTimeout(() => card.style.animation = '', 400);
+                    return;
+                }
+            }
+
+            updateUI();
+        }
+
+        function updateUI() {
+            const count = selectedTopics.length;
+            const countEl = document.getElementById('selectedCount');
+            const countText = document.getElementById('countText');
+            const btn = document.getElementById('continueBtn');
+
+            // Update count badge
+            if (count > 0) {
+                countEl.classList.add('show');
+                countText.textContent = `${count} of ${MAX_TOPICS} selected`;
+
+                if (count === MAX_TOPICS) {
+                    countEl.classList.add('complete');
+                } else {
+                    countEl.classList.remove('complete');
+                }
+            } else {
+                countEl.classList.remove('show', 'complete');
+            }
+
+            // Update button
+            if (count === MAX_TOPICS) {
+                btn.classList.add('active');
+                btn.disabled = false;
+            } else {
+                btn.classList.remove('active');
+                btn.disabled = true;
+            }
+        }
+
+        // ═══════════════════════════════════════
+        // CONTINUE
+        // ═══════════════════════════════════════
+        async function continueNext() {
+            if (selectedTopics.length !== MAX_TOPICS) return;
+
+            const btn = document.getElementById('continueBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div>';
+
+            // Save topics
+            localStorage.setItem('hams_topics', JSON.stringify(selectedTopics));
+
+            // Update user data
+            userData.topics = selectedTopics;
+            localStorage.setItem('hams_user', JSON.stringify(userData));
+
+            window.location.href = '/onboarding/suggestions';
+        }
+
+        // Add shake animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                20% { transform: translateX(-8px); }
+                40% { transform: translateX(8px); }
+                60% { transform: translateX(-8px); }
+                80% { transform: translateX(8px); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ═══════════════════════════════════════
+        // AURORA BACKGROUND (WebGL)
+        // ═══════════════════════════════════════
+        (function initAurora() {
+            const canvas = document.getElementById('auroraBg');
+            if (!canvas) return;
+
+            const gl = canvas.getContext('webgl');
+            if (!gl) return;
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            const vs = `attribute vec2 p;void main(){gl_Position=vec4(p,0,1);}`;
+            const fs = `
+            precision mediump float;
+            uniform float t;
+            uniform vec2 r;
+            void main(){
+                vec2 u=gl_FragCoord.xy/r;
+                float f=sin(u.x*3.0+t)*0.5+sin(u.y*2.0+t*0.7)*0.5;
+                f=smoothstep(0.0,1.0,f*0.5+0.5);
+                vec3 c=mix(vec3(0.02,0.02,0.04),vec3(0.06,0.04,0.12),f);
+                c+=0.015*sin(vec3(t*0.3,t*0.5+2.0,t*0.4+4.0));
+                gl_FragColor=vec4(c,1);
+            }`;
+
+            function compile(src, type) {
+                const s = gl.createShader(type);
+                gl.shaderSource(s, src);
+                gl.compileShader(s);
+                return s;
+            }
+
+            const prog = gl.createProgram();
+            gl.attachShader(prog, compile(vs, gl.VERTEX_SHADER));
+            gl.attachShader(prog, compile(fs, gl.FRAGMENT_SHADER));
+            gl.linkProgram(prog);
+            gl.useProgram(prog);
+
+            const buf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+            const pLoc = gl.getAttribLocation(prog, 'p');
+            gl.enableVertexAttribArray(pLoc);
+            gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+
+            const tLoc = gl.getUniformLocation(prog, 't');
+            const rLoc = gl.getUniformLocation(prog, 'r');
+
+            function frame(now) {
+                gl.uniform1f(tLoc, now * 0.001);
+                gl.uniform2f(rLoc, canvas.width, canvas.height);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+        })();
+    </script>
+</body>
+
+</html>
