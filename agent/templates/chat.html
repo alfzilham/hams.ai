@@ -428,10 +428,24 @@
                     <i class="bi bi-x-lg"></i>
                 </button>
             </div>
+
+            <!-- Search -->
             <div class="hpmodal-search">
                 <i class="bi bi-search"></i>
-                <input type="text" placeholder="Cari pertanyaan..." oninput="filterFAQ(this.value)" />
+                <input type="text" id="helpSearchInput" placeholder="Cari pertanyaan..."
+                    oninput="filterFAQ(this.value)" />
             </div>
+
+            <!-- Category Tabs -->
+            <div class="help-tabs" id="helpTabs">
+                <button class="help-tab active" data-cat="all" onclick="switchHelpTab(this)">Semua</button>
+                <button class="help-tab" data-cat="general" onclick="switchHelpTab(this)">Umum</button>
+                <button class="help-tab" data-cat="features" onclick="switchHelpTab(this)">Fitur</button>
+                <button class="help-tab" data-cat="shortcuts" onclick="switchHelpTab(this)">Shortcuts</button>
+                <button class="help-tab" data-cat="troubleshoot" onclick="switchHelpTab(this)">Troubleshoot</button>
+            </div>
+
+            <!-- Body -->
             <div class="hpmodal-body" id="faqList"></div>
         </div>
     </div>

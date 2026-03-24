@@ -992,9 +992,9 @@ body>* {
 
     /* Efek Glow Putih di sekitar garis hitam */
     box-shadow:
-        0 0 4px rgba(255, 255, 255, 1.0),
-        0 0 8px rgba(255, 255, 255, 0.8),
-        0 0 16px rgba(255, 255, 255, 0.4);
+        0 0 4px rgb(121, 121, 121),
+        0 0 8px rgba(120, 120, 120, 0.8),
+        0 0 16px rgba(121, 121, 121, 0.4);
 }
 
 /* Posisi Default */
@@ -3100,111 +3100,127 @@ body>* {
 }
 
 /* ════════════════════════════════════
-   GET HELP / FAQ MODAL
+   HELP MODAL — TABS & SHORTCUTS
 ════════════════════════════════════ */
-.hpmodal-search {
+
+/* Category Tabs */
+.help-tabs {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
+    gap: 4px;
+    padding: 10px 12px;
     border-bottom: 1px solid var(--border);
     background: var(--surface2);
     flex-shrink: 0;
+    overflow-x: auto;
 }
 
-.hpmodal-search i {
-    color: var(--text-3);
-    font-size: 0.82rem;
+.help-tabs::-webkit-scrollbar {
+    display: none;
 }
 
-.hpmodal-search input {
+.help-tab {
+    padding: 5px 13px;
+    border-radius: 7px;
+    border: 1px solid transparent;
     background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text);
-    font-family: 'Sora', sans-serif;
-    font-size: 0.82rem;
-    flex: 1;
-}
-
-.hpmodal-search input::placeholder {
     color: var(--text-3);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
 }
 
-.hpmodal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
+.help-tab:hover {
+    color: var(--text-2);
+    background: var(--glass-bg);
 }
 
-.hpmodal-body::-webkit-scrollbar {
-    width: 3px;
-}
-
-.hpmodal-body::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
-}
-
-.faq-item {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 6px;
-    overflow: hidden;
-    transition: border-color 0.15s;
-}
-
-.faq-item:hover {
+.help-tab.active {
+    background: var(--glass-bg2);
     border-color: var(--border2);
+    color: var(--accent);
 }
 
-.faq-q {
+/* FAQ section label */
+.faq-section-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 14px 4px 6px;
+}
+
+.faq-section-label i {
+    font-size: 0.78rem;
+    color: var(--accent);
+}
+
+/* Keyboard shortcuts grid */
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.shortcut-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 13px 16px;
-    cursor: pointer;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--text);
-    user-select: none;
-    gap: 12px;
+    padding: 8px 12px;
+    background: var(--glass-bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    gap: 10px;
 }
 
-.faq-q i.faq-chevron {
-    font-size: 0.7rem;
-    color: var(--text-3);
-    flex-shrink: 0;
-    transition: transform 0.2s;
-}
-
-.faq-item.open .faq-q i.faq-chevron {
-    transform: rotate(180deg);
-}
-
-.faq-item.open {
-    border-color: var(--border2);
-}
-
-.faq-a {
-    display: none;
-    padding: 0 16px 13px;
-    font-size: 0.8rem;
+.shortcut-label {
+    font-size: 0.76rem;
     color: var(--text-2);
-    line-height: 1.7;
-    border-top: 1px solid var(--border);
+    flex: 1;
 }
 
-.faq-item.open .faq-a {
-    display: block;
+.shortcut-keys {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
 }
 
-.faq-a code {
+.kbd {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.75em;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text);
     background: var(--surface3);
     border: 1px solid var(--border2);
-    padding: 1px 5px;
-    border-radius: 4px;
-    color: var(--accent);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 2px 7px;
+}
+
+.kbd-plus {
+    font-size: 0.65rem;
+    color: var(--text-3);
+}
+
+/* Help empty state */
+.help-empty {
+    text-align: center;
+    padding: 36px 20px;
+    color: var(--text-3);
+    font-size: 0.82rem;
+}
+
+.help-empty i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 10px;
+    opacity: 0.35;
 }

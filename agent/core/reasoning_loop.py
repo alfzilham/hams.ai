@@ -15,10 +15,13 @@ Fixes applied:
   B5  — Smart context windowing (keep task + summarize old, trim tool outputs)
   B12 — Dynamic workspace path from env/config
   B16 — Enhanced _reflect() with output quality check
+  B20 — EpisodicMemory integration (lessons learned + episode recording)
+  B21 — Parallel tool execution via asyncio.gather
 """
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 import uuid
@@ -38,6 +41,7 @@ from agent.core.state import (
 
 if TYPE_CHECKING:
     from agent.llm.base import BaseLLM
+    from agent.memory.episodic_memory import Episode, EpisodicMemory
     from agent.tools.registry import ToolRegistry
 
 
@@ -61,45 +65,28 @@ class LLMResponse(Protocol):
 # B5 FIX: Smart Context Windowing Constants
 # ---------------------------------------------------------------------------
 
-# Maximum total characters for context (generous but safe)
-MAX_CONTEXT_CHARS = 48_000
-
-# Maximum characters per individual tool output
+MAX_CONTEXT_CHARS    = 48_000
 MAX_TOOL_OUTPUT_CHARS = 3_000
+MIN_RECENT_STEPS     = 4
+KEEP_FIRST_MESSAGES  = 2
+KEEP_LAST_MESSAGES   = 10
 
-# Always keep at least this many recent steps (verbatim)
-MIN_RECENT_STEPS = 4
-
-# When trimming, keep first N messages (task context) + last N messages
-KEEP_FIRST_MESSAGES = 2
-KEEP_LAST_MESSAGES = 10
+# How many past episodes to surface as "lessons learned"
+MAX_LESSONS          = 3
 
 
 # ---------------------------------------------------------------------------
 # B12 FIX: Dynamic workspace path
 # ---------------------------------------------------------------------------
 
-def _get_workspace_path() -> str:
-    """
-    B12 FIX: Resolve workspace path dynamically.
 
-    Priority:
-      1. AGENT_WORKSPACE env var
-      2. ./workspace (relative to cwd, for local dev)
-      3. /workspace (Docker default)
-    """
-    # Check env var first
+def _get_workspace_path() -> str:
     env_path = os.environ.get("AGENT_WORKSPACE")
     if env_path:
         return env_path
-
-    # Check if running in Docker (common indicator)
     if os.path.exists("/.dockerenv") or os.path.isdir("/workspace"):
         return "/workspace"
-
-    # Local development fallback
-    local_workspace = os.path.join(os.getcwd(), "workspace")
-    return local_workspace
+    return os.path.join(os.getcwd(), "workspace")
 
 
 # ---------------------------------------------------------------------------
@@ -112,17 +99,21 @@ class ReasoningLoop:
     Drives the agent through its Perceive → Reason → Act → Observe → Reflect cycle.
 
     Args:
-        llm:           LLM provider instance.
-        tool_registry: Registry of all available tools.
-        max_steps:     Hard cap on iterations.
-        verbose:       Log step-by-step to stdout.
-        step_callback: Optional async callback called after each step.
-                       Signature: async def callback(step: ReasoningStep) -> None
-                       Used for real-time streaming of agent progress.
+        llm:            LLM provider instance.
+        tool_registry:  Registry of all available tools.
+        max_steps:      Hard cap on iterations.
+        verbose:        Log step-by-step to stdout.
+        step_callback:  Optional async callback called after each step.
+        episodic_memory: Optional EpisodicMemory for lessons-learned injection
+                         and automatic episode recording.
 
     Usage::
 
-        loop = ReasoningLoop(llm=claude, tool_registry=registry)
+        loop = ReasoningLoop(
+            llm=claude,
+            tool_registry=registry,
+            episodic_memory=EpisodicMemory(),
+        )
         state = await loop.run(state)
     """
 
@@ -133,12 +124,17 @@ class ReasoningLoop:
         max_steps: int = 30,
         verbose: bool = True,
         step_callback: Callable[[ReasoningStep], Awaitable[None]] | None = None,
+        episodic_memory: "EpisodicMemory | None" = None,
     ) -> None:
-        self.llm = llm
-        self.tool_registry = tool_registry
-        self.max_steps = max_steps
-        self.verbose = verbose
-        self.step_callback = step_callback
+        self.llm             = llm
+        self.tool_registry   = tool_registry
+        self.max_steps       = max_steps
+        self.verbose         = verbose
+        self.step_callback   = step_callback
+        self.episodic_memory = episodic_memory
+
+        # Populated at start of run() — injected into every system prompt
+        self._lessons_prompt: str = ""
 
     # -----------------------------------------------------------------------
     # Public API
@@ -147,30 +143,53 @@ class ReasoningLoop:
     async def run(self, state: AgentState) -> AgentState:
         """
         Run the full reasoning loop until complete, final_answer, or max_steps.
+
+        B20: If episodic_memory is provided:
+          - Searches for similar past episodes at the start and injects
+            lessons into the system prompt.
+          - Records this run as a new episode at the end.
         """
         logger.info(f"[run:{state.run_id}] Starting reasoning loop — task: {state.task!r}")
         state.status = AgentStatus.RUNNING
+        run_start    = time.monotonic()
 
+        # ── B20: Load lessons from past episodes ──────────────────────────
+        self._lessons_prompt = ""
+        if self.episodic_memory is not None:
+            self._lessons_prompt = self._build_lessons_prompt(state.task)
+            if self._lessons_prompt and self.verbose:
+                logger.info(
+                    f"[run:{state.run_id}] Injecting lessons from "
+                    f"{len(self.episodic_memory.search(state.task, n=MAX_LESSONS))} past episodes"
+                )
+
+        # ── Main loop ─────────────────────────────────────────────────────
         while not state.is_done:
             if state.current_step >= self.max_steps:
                 logger.warning(f"[run:{state.run_id}] Max steps ({self.max_steps}) reached.")
                 state.status = AgentStatus.MAX_STEPS_REACHED
-                state.error = f"Stopped after {self.max_steps} steps without completing the task."
+                state.error  = f"Stopped after {self.max_steps} steps without completing the task."
                 break
 
             state = await self.run_step(state)
 
         if state.status == AgentStatus.RUNNING:
             state.status = AgentStatus.FAILED
-            state.error = "Loop exited in RUNNING state — unexpected."
+            state.error  = "Loop exited in RUNNING state — unexpected."
 
         logger.info(f"[run:{state.run_id}] Loop finished — status={state.status}")
+
+        # ── B20: Record this run as an episode ────────────────────────────
+        if self.episodic_memory is not None:
+            elapsed = time.monotonic() - run_start
+            self._record_episode(state, elapsed)
+
         return state
 
     async def run_step(self, state: AgentState) -> AgentState:
         """Execute one full Perceive → Reason → Act → Observe → Reflect iteration."""
         step_num = state.current_step + 1
-        step = ReasoningStep(step_number=step_num, status=StepStatus.RUNNING)
+        step     = ReasoningStep(step_number=step_num, status=StepStatus.RUNNING)
 
         if self.verbose:
             logger.info(f"  ── Step {step_num}/{self.max_steps} ──")
@@ -201,11 +220,10 @@ class ReasoningLoop:
                 step.mark_complete(StepStatus.SUCCESS)
                 state.add_step(step)
                 self._finish(state, step)
-
-                # Fire callback for final step
                 await self._fire_callback(step)
                 return state
 
+            # B21: parallel tool execution
             step.tool_results = await self._act_and_observe(step.tool_calls)
 
             # 5. REFLECT
@@ -219,15 +237,11 @@ class ReasoningLoop:
             state.add_step(step)
             state.status = AgentStatus.FAILED
             state.error  = str(exc)
-
             await self._fire_callback(step)
             return state
 
         state.add_step(step)
-
-        # ── Fire step callback (for streaming) ──
         await self._fire_callback(step)
-
         return state
 
     # -----------------------------------------------------------------------
@@ -235,7 +249,6 @@ class ReasoningLoop:
     # -----------------------------------------------------------------------
 
     async def _fire_callback(self, step: ReasoningStep) -> None:
-        """Invoke step_callback safely — never lets it break the reasoning loop."""
         if self.step_callback is None:
             return
         try:
@@ -248,62 +261,28 @@ class ReasoningLoop:
     # -----------------------------------------------------------------------
 
     def _perceive(self, state: AgentState) -> list[dict]:
-        """
-        Build the message list for the next LLM call.
-
-        B5 FIX: Smart context windowing strategy:
-          1. Always keep the original task message (first message)
-          2. Truncate individual tool outputs that are too long
-          3. If total context still exceeds budget:
-             - Keep first N messages (task context + early decisions)
-             - Keep last N messages (recent context)
-             - Drop middle messages with a [TRIMMED] marker
-          4. Much higher budget (48K chars vs old 8K)
-        """
-        # Start with task message
         messages: list[dict] = [{"role": "user", "content": state.task}]
-
-        # Get all context messages from history
-        all_context = state.context_messages()
-
-        # Step 1: Truncate individual tool outputs that are too long
+        all_context    = state.context_messages()
         trimmed_context = self._trim_tool_outputs(all_context)
-
-        # Step 2: Check total size
         total = sum(len(str(m.get("content", ""))) for m in trimmed_context)
 
         if total <= MAX_CONTEXT_CHARS:
-            # Fits within budget — use everything
             messages.extend(trimmed_context)
-            return messages
-
-        # Step 3: Smart trimming — keep first + last, drop middle
-        messages.extend(
-            self._smart_trim(trimmed_context, state)
-        )
+        else:
+            messages.extend(self._smart_trim(trimmed_context, state))
 
         return messages
 
     def _trim_tool_outputs(self, messages: list[dict]) -> list[dict]:
-        """
-        B5 FIX: Truncate individual tool outputs that are excessively long.
-
-        Tool outputs (file contents, terminal output, etc.) can be huge.
-        We truncate each one to MAX_TOOL_OUTPUT_CHARS while preserving
-        the beginning and end (most useful parts).
-        """
         result = []
         for msg in messages:
             content = msg.get("content", "")
-
             if isinstance(content, list):
-                # Tool result messages have list content
                 new_content = []
                 for block in content:
                     if isinstance(block, dict) and block.get("type") == "tool_result":
                         tool_content = block.get("content", "")
                         if isinstance(tool_content, str) and len(tool_content) > MAX_TOOL_OUTPUT_CHARS:
-                            # Keep first half + last half
                             half = MAX_TOOL_OUTPUT_CHARS // 2
                             truncated = (
                                 tool_content[:half]
@@ -316,7 +295,6 @@ class ReasoningLoop:
                     else:
                         new_content.append(block)
                 result.append({**msg, "content": new_content})
-
             elif isinstance(content, str) and len(content) > MAX_TOOL_OUTPUT_CHARS:
                 half = MAX_TOOL_OUTPUT_CHARS // 2
                 truncated = (
@@ -327,91 +305,74 @@ class ReasoningLoop:
                 result.append({**msg, "content": truncated})
             else:
                 result.append(msg)
-
         return result
 
     def _smart_trim(self, messages: list[dict], state: AgentState) -> list[dict]:
-        """
-        B5 FIX: Smart trimming that preserves important context.
-
-        Strategy:
-          - Keep first KEEP_FIRST_MESSAGES (early decisions, initial context)
-          - Keep last KEEP_LAST_MESSAGES (recent context for continuity)
-          - Insert a [CONTEXT TRIMMED] marker in between
-          - Include plan summary if available
-        """
         total_msgs = len(messages)
-
         if total_msgs <= KEEP_FIRST_MESSAGES + KEEP_LAST_MESSAGES:
-            # Not enough messages to trim meaningfully
             return messages
 
-        first_part = messages[:KEEP_FIRST_MESSAGES]
-        last_part = messages[-KEEP_LAST_MESSAGES:]
+        first_part   = messages[:KEEP_FIRST_MESSAGES]
+        last_part    = messages[-KEEP_LAST_MESSAGES:]
         dropped_count = total_msgs - KEEP_FIRST_MESSAGES - KEEP_LAST_MESSAGES
 
-        # Build a summary of what was trimmed
-        trim_summary_parts = [
+        trim_parts = [
             f"[CONTEXT TRIMMED: {dropped_count} messages removed to fit context window]",
         ]
-
-        # Include plan progress if available
         if state.plan:
             completed = len(state.plan.completed_subtasks)
-            total = len(state.plan.subtasks)
-            trim_summary_parts.append(
-                f"Plan progress: {completed}/{total} subtasks completed."
-            )
+            total     = len(state.plan.subtasks)
+            trim_parts.append(f"Plan progress: {completed}/{total} subtasks completed.")
 
-        # Include key facts from trimmed steps
-        trimmed_steps = state.steps[
-            KEEP_FIRST_MESSAGES // 2 : -(KEEP_LAST_MESSAGES // 2) or None
-        ]
-        if trimmed_steps:
+        # Use step-based index (not message-based) to avoid off-by-one
+        mid_steps = state.steps[1:-2] if len(state.steps) > 3 else []
+        if mid_steps:
             key_facts = []
-            for step in trimmed_steps[:5]:  # Max 5 key facts
+            for step in mid_steps[:5]:
                 if step.thought:
                     key_facts.append(f"  Step {step.step_number}: {step.thought[:100]}")
-                if step.tool_results:
-                    for tr in step.tool_results:
-                        status = "✅" if tr.success else "❌"
-                        key_facts.append(
-                            f"    {status} {tr.tool_name}: {(tr.output or tr.error or '')[:80]}"
-                        )
+                for tr in step.tool_results:
+                    icon = "✅" if tr.success else "❌"
+                    key_facts.append(
+                        f"    {icon} {tr.tool_name}: {(tr.output or tr.error or '')[:80]}"
+                    )
             if key_facts:
-                trim_summary_parts.append("Key actions from trimmed context:")
-                trim_summary_parts.extend(key_facts)
+                trim_parts.append("Key actions from trimmed context:")
+                trim_parts.extend(key_facts)
 
-        trim_marker = {
-            "role": "user",
-            "content": "\n".join(trim_summary_parts),
-        }
-
+        trim_marker = {"role": "user", "content": "\n".join(trim_parts)}
         logger.debug(
-            f"[loop] Smart trim: {total_msgs} messages → "
-            f"keep first {KEEP_FIRST_MESSAGES} + last {KEEP_LAST_MESSAGES}, "
+            f"[loop] Smart trim: {total_msgs} → keep {KEEP_FIRST_MESSAGES}+{KEEP_LAST_MESSAGES}, "
             f"dropped {dropped_count}"
         )
-
         return first_part + [trim_marker] + last_part
 
     # -----------------------------------------------------------------------
-    # Private: Act + Observe
+    # Private: Act + Observe  (B21 — Parallel execution)
     # -----------------------------------------------------------------------
 
     async def _act_and_observe(self, tool_calls: list[ToolCall]) -> list[ToolResult]:
-        """Execute all tool calls chosen by the LLM and collect outputs."""
-        results: list[ToolResult] = []
+        """
+        B21: Execute all tool calls IN PARALLEL via asyncio.gather.
 
-        for tc in tool_calls:
-            if self.verbose:
-                logger.info(f"  🔧 Tool: {tc.tool_name}({list(tc.tool_input.keys())})")
+        Previously sequential — if the agent called 3 tools, they ran one at a time.
+        Now they fire concurrently, which matters for file reads, web searches, etc.
 
+        Results are returned in the same order as tool_calls (gather preserves order).
+        """
+        if not tool_calls:
+            return []
+
+        if self.verbose:
+            names = [tc.tool_name for tc in tool_calls]
+            logger.info(f"  🔧 Dispatching {len(tool_calls)} tool(s) in parallel: {names}")
+
+        async def _dispatch_one(tc: ToolCall) -> ToolResult:
             t0 = time.perf_counter()
             try:
-                output = await self.tool_registry.dispatch(tc.tool_name, tc.tool_input)
+                output  = await self.tool_registry.dispatch(tc.tool_name, tc.tool_input)
                 elapsed = (time.perf_counter() - t0) * 1000
-                result = ToolResult(
+                result  = ToolResult(
                     tool_name=tc.tool_name,
                     tool_use_id=tc.tool_use_id,
                     output=str(output),
@@ -419,10 +380,9 @@ class ReasoningLoop:
                 )
                 if self.verbose:
                     logger.debug(f"  ✅ {tc.tool_name}: {str(output)[:120]}")
-
             except Exception as exc:
                 elapsed = (time.perf_counter() - t0) * 1000
-                result = ToolResult(
+                result  = ToolResult(
                     tool_name=tc.tool_name,
                     tool_use_id=tc.tool_use_id,
                     output="",
@@ -430,109 +390,81 @@ class ReasoningLoop:
                     elapsed_ms=round(elapsed, 2),
                 )
                 logger.warning(f"  ❌ {tc.tool_name} failed: {exc}")
+            return result
 
-            results.append(result)
-
-        return results
+        return list(await asyncio.gather(*[_dispatch_one(tc) for tc in tool_calls]))
 
     # -----------------------------------------------------------------------
     # Private: Reflect (B16 FIX — Enhanced with quality check)
     # -----------------------------------------------------------------------
 
     def _reflect(self, state: AgentState, step: ReasoningStep) -> None:
-        """
-        Post-observation reflection: check errors, analyze output quality,
-        and decide if the agent should adjust strategy.
-
-        B16 FIX: Enhanced reflection that checks:
-          1. Tool failures (original)
-          2. Empty/suspicious outputs
-          3. Repeated tool calls (possible loop)
-          4. Progress toward task completion
-        """
         reflections: list[str] = []
 
-        # 1. Check tool failures
         failed = [r for r in step.tool_results if not r.success]
         if failed:
-            names = [r.tool_name for r in failed]
             reflections.append(
-                f"⚠️ {len(failed)} tool(s) failed: {names}. "
+                f"⚠️ {len(failed)} tool(s) failed: {[r.tool_name for r in failed]}. "
                 "Will try to recover on the next step."
             )
 
-        # 2. Check empty outputs (tool succeeded but returned nothing useful)
         empty_outputs = [
             r for r in step.tool_results
             if r.success and (not r.output or r.output.strip() in ("", "None", "null"))
         ]
         if empty_outputs:
-            names = [r.tool_name for r in empty_outputs]
             reflections.append(
-                f"⚠️ {len(empty_outputs)} tool(s) returned empty output: {names}. "
+                f"⚠️ {len(empty_outputs)} tool(s) returned empty output: "
+                f"{[r.tool_name for r in empty_outputs]}. "
                 "May need different approach or parameters."
             )
 
-        # 3. Check for repeated tool calls (loop detection)
         if len(state.steps) >= 3:
-            recent_tools = []
-            for s in state.steps[-3:]:
-                for tc in s.tool_calls:
-                    recent_tools.append((tc.tool_name, str(tc.tool_input)[:100]))
-
-            # Check if same tool+input called 3+ times
             from collections import Counter
-            tool_counts = Counter(recent_tools)
-            repeated = [(t, c) for t, c in tool_counts.items() if c >= 3]
+            recent_tools = [
+                (tc.tool_name, str(tc.tool_input)[:100])
+                for s in state.steps[-3:]
+                for tc in s.tool_calls
+            ]
+            repeated = [(t, c) for t, c in Counter(recent_tools).items() if c >= 3]
             if repeated:
-                tool_names = [t[0] for t, _ in repeated]
                 reflections.append(
-                    f"🔄 Possible loop detected: {tool_names} called 3+ times "
-                    "with similar inputs. Consider a different approach."
+                    f"🔄 Possible loop: {[t[0] for t, _ in repeated]} called 3+ times. "
+                    "Consider a different approach."
                 )
 
-        # 4. Check progress toward plan (if plan exists)
         if state.plan and not state.plan.is_complete:
             completed = len(state.plan.completed_subtasks)
-            total = len(state.plan.subtasks)
-            steps_used = state.current_step
-            steps_remaining = state.steps_remaining
-
-            if steps_used > 0 and completed == 0 and steps_used >= 5:
+            total     = len(state.plan.subtasks)
+            if state.current_step >= 5 and completed == 0:
                 reflections.append(
-                    f"⚠️ {steps_used} steps used but 0/{total} subtasks completed. "
-                    "Consider simplifying approach or focusing on one subtask."
+                    f"⚠️ {state.current_step} steps used but 0/{total} subtasks complete. "
+                    "Consider simplifying approach."
                 )
 
-        # 5. Build final reflection
-        if not reflections:
-            step.reflection = "All tools executed successfully."
-        else:
-            step.reflection = " | ".join(reflections)
+        step.reflection = " | ".join(reflections) if reflections else "All tools executed successfully."
 
         if self.verbose and reflections:
             for r in reflections:
                 logger.warning(f"  {r}")
 
     def _finish(self, state: AgentState, step: ReasoningStep) -> None:
-        """Mark state as complete when final answer is produced."""
-        state.final_answer  = step.final_answer
-        state.status        = AgentStatus.COMPLETE
-        state.completed_at  = step.completed_at
+        state.final_answer = step.final_answer
+        state.status       = AgentStatus.COMPLETE
+        state.completed_at = step.completed_at
         if self.verbose:
             logger.success(f"  ✔ Task complete. Answer: {str(step.final_answer)[:200]}")
 
     # -----------------------------------------------------------------------
-    # Private: System prompt (B12 FIX — Dynamic workspace path)
+    # Private: System prompt (B12 + B20 — workspace path + lessons section)
     # -----------------------------------------------------------------------
 
     def _system_prompt(self, state: AgentState) -> str:
         """
-        B12 FIX: Workspace path resolved dynamically from env/config
-        instead of hardcoded /workspace.
+        B12: Workspace path resolved dynamically.
+        B20: Lessons-learned section injected from EpisodicMemory when available.
         """
-        workspace = _get_workspace_path()
-
+        workspace  = _get_workspace_path()
         tools_list = "\n".join(
             f"- {name}: {desc}"
             for name, desc in self.tool_registry.tool_descriptions().items()
@@ -548,6 +480,13 @@ class ReasoningLoop:
                     for s in state.plan.subtasks
                 )
             )
+
+        # B20: lessons section — only present when memory has relevant episodes
+        lessons_section = (
+            f"\n\n## Lessons from Past Similar Tasks\n{self._lessons_prompt}"
+            if self._lessons_prompt
+            else ""
+        )
 
         return f"""You are an expert AI coding agent. Complete the given task autonomously using tools.
 
@@ -578,4 +517,141 @@ When fully done:
 ## Available Tools
 {tools_list}
 
-## Steps remaining: {state.steps_remaining}{plan_section}"""
+## Steps remaining: {state.steps_remaining}{plan_section}{lessons_section}"""
+
+    # -----------------------------------------------------------------------
+    # Private: B20 — EpisodicMemory helpers
+    # -----------------------------------------------------------------------
+
+    def _build_lessons_prompt(self, task: str) -> str:
+        """
+        Search episodic memory for similar past tasks and format them
+        as a concise "lessons learned" block for the system prompt.
+
+        Only surfaces episodes with reward >= 0.5 (partial or full success).
+        Failures are shown separately as cautionary notes.
+        """
+        if self.episodic_memory is None:
+            return ""
+
+        similar = self.episodic_memory.search(task, n=MAX_LESSONS)
+        if not similar:
+            return ""
+
+        successes = [ep for ep in similar if ep.reward >= 0.5]
+        failures  = [ep for ep in similar if ep.reward < 0.5]
+
+        lines: list[str] = []
+
+        if successes:
+            lines.append("✅ What worked in similar past tasks:")
+            for ep in successes:
+                lines.append(f"  • Task: {ep.task[:80]}")
+                lines.append(f"    Outcome: {ep.outcome[:120]}")
+                if ep.actions:
+                    # Show the sequence of tools used — useful pattern hint
+                    tool_sequence = " → ".join(
+                        a.get("tools", ["?"])[0] if isinstance(a.get("tools"), list) else str(a.get("tools", "?"))
+                        for a in ep.actions[:6]
+                    )
+                    lines.append(f"    Tool sequence: {tool_sequence}")
+                lines.append(f"    Reward: {ep.reward:.2f} | Steps: {ep.steps_taken}")
+
+        if failures:
+            lines.append("\n⚠️ What did NOT work (avoid these approaches):")
+            for ep in failures:
+                lines.append(f"  • Task: {ep.task[:80]}")
+                lines.append(f"    Failed because: {ep.outcome[:120]}")
+
+        return "\n".join(lines)
+
+    def _calculate_reward(self, state: AgentState) -> float:
+        """
+        Calculate a partial reward (0.0–1.0) based on run outcome.
+
+        Better than binary 0/1 — gives signal about partial progress.
+
+        Scoring:
+          - COMPLETE with final_answer       → 1.0
+          - COMPLETE without final_answer    → 0.8
+          - MAX_STEPS_REACHED with plan progress → 0.3–0.5
+          - FAILED                           → 0.0–0.1
+        """
+        if state.status == AgentStatus.COMPLETE:
+            return 1.0 if state.final_answer else 0.8
+
+        if state.status == AgentStatus.MAX_STEPS_REACHED:
+            if state.plan:
+                completed = len(state.plan.completed_subtasks)
+                total     = len(state.plan.subtasks)
+                if total > 0:
+                    # Partial credit proportional to plan completion
+                    return round(0.3 + 0.2 * (completed / total), 2)
+            return 0.2
+
+        if state.status == AgentStatus.FAILED:
+            # Tiny reward if at least some steps succeeded
+            successful_steps = sum(
+                1 for s in state.steps if s.status == StepStatus.SUCCESS
+            )
+            return round(min(0.1, successful_steps * 0.02), 2)
+
+        return 0.0
+
+    def _record_episode(self, state: AgentState, elapsed_seconds: float) -> None:
+        """
+        B20: Save the completed run to EpisodicMemory.
+
+        Captures tool sequence, reward, and token usage so future runs
+        can learn from this episode.
+        """
+        if self.episodic_memory is None:
+            return
+
+        reward = self._calculate_reward(state)
+
+        # Build action list — one entry per step, recording tool names + brief input
+        actions: list[dict] = []
+        for step in state.steps:
+            if step.tool_calls:
+                actions.append({
+                    "step":   step.step_number,
+                    "tools":  [tc.tool_name for tc in step.tool_calls],
+                    "inputs": [
+                        {tc.tool_name: str(tc.tool_input)[:80]}
+                        for tc in step.tool_calls
+                    ],
+                    "success": all(tr.success for tr in step.tool_results),
+                })
+
+        outcome = (
+            state.final_answer
+            or state.error
+            or f"Status: {state.status.value}"
+        )
+
+        # Derive tags from status and plan
+        tags: list[str] = [state.status.value]
+        if state.plan:
+            tags.append("has_plan")
+        if reward >= 0.8:
+            tags.append("high_reward")
+
+        ep = self.episodic_memory.add_episode(
+            task=state.task,
+            actions=actions,
+            outcome=str(outcome)[:500],
+            reward=reward,
+            input_tokens=sum(s.input_tokens for s in state.steps),
+            output_tokens=sum(s.output_tokens for s in state.steps),
+            steps_taken=state.current_step,
+            elapsed_seconds=round(elapsed_seconds, 2),
+            tags=tags,
+        )
+
+        if self.verbose:
+            logger.info(
+                f"[episodic] Recorded episode {ep.episode_id[:8]} — "
+                f"reward={reward:.2f} steps={state.current_step} "
+                f"elapsed={elapsed_seconds:.1f}s"
+            )

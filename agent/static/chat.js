@@ -1170,14 +1170,225 @@ function closeSettings() {
 }
 
 // ═══════════════════════════════════════════════
-// HELP MODAL
+// GET HELP — FAQ DATA & LOGIC
 // ═══════════════════════════════════════════════
+
+const FAQ_DATA = [
+    // GENERAL
+    {
+        cat: 'general',
+        q: 'Apa perbedaan mode Chat dan Agent?',
+        a: 'Mode <code>Chat</code> adalah percakapan biasa — cepat dan ringan. Mode <code>Agent</code> menggunakan reasoning loop multi-step: agent bisa browsing, menulis file, menjalankan kode, dan mengeksekusi task kompleks secara otonom.'
+    },
+    {
+        cat: 'general',
+        q: 'Bagaimana cara memilih model AI?',
+        a: 'Klik dropdown <strong>HAMS-MAX</strong> di topbar. Tersedia HAMS-MAX (routing otomatis ke 12 model), Gemini Flash (cepat & murah), Gemini Pro (paling pintar). Untuk tugas umum, HAMS-MAX sudah optimal.'
+    },
+    {
+        cat: 'general',
+        q: 'Apakah riwayat chat tersimpan?',
+        a: 'Ya, riwayat disimpan di browser (<code>localStorage</code>). Klik ikon <strong>History</strong> di sidebar atau Ctrl+H untuk melihat semua chat. Riwayat akan hilang jika browser storage dibersihkan.'
+    },
+    {
+        cat: 'general',
+        q: 'Bisakah mengubah nama profil?',
+        a: 'Buka <strong>Profile → Settings</strong> lalu ubah Display Name. Perubahan langsung tersimpan ke akun dan muncul di greeting.'
+    },
+    // FEATURES
+    {
+        cat: 'features',
+        q: 'Apa itu Extended Thinking?',
+        a: 'Extended Thinking memberi model waktu lebih untuk berpikir sebelum menjawab — cocok untuk soal matematika, logika, coding kompleks, atau analisis mendalam. Toggle di topbar, atau tekan <code>Ctrl+E</code>.'
+    },
+    {
+        cat: 'features',
+        q: 'Bagaimana cara preview kode HTML?',
+        a: 'Saat AI menghasilkan kode HTML, akan muncul tombol <strong>Preview</strong> hijau di header code block. Klik untuk membuka live preview di iframe sandbox. Tekan Esc atau klik Tutup untuk menutup.'
+    },
+    {
+        cat: 'features',
+        q: 'Cara menggunakan Agent mode?',
+        a: 'Switch ke mode Agent, lalu ketik task secara deskriptif — misalnya <em>"Buat REST API FastAPI dengan CRUD dan auth JWT"</em>. Agent akan merencanakan, menulis kode, dan mengeksekusi step by step. Atur max steps via slider di bawah input.'
+    },
+    {
+        cat: 'features',
+        q: 'Bisakah upload file ke chat?',
+        a: 'Klik ikon <strong>paperclip</strong> di input area untuk melampirkan file teks (.py, .js, .html, .json, dll). Konten file akan dimasukkan ke konteks percakapan.'
+    },
+    {
+        cat: 'features',
+        q: 'Bagaimana cara export chat?',
+        a: 'Saat ini export tersedia via keyboard shortcut <code>Ctrl+Shift+S</code> (coming soon di UI). Chat bisa di-copy manual dari bubble dengan klik ikon copy.'
+    },
+    // SHORTCUTS
+    {
+        cat: 'shortcuts',
+        q: 'Apa saja keyboard shortcut yang tersedia?',
+        a: '', // Rendered separately as shortcuts grid
+        isShortcuts: true
+    },
+    // TROUBLESHOOT
+    {
+        cat: 'troubleshoot',
+        q: 'Respons AI sangat lambat atau tidak muncul',
+        a: 'Coba: (1) Refresh halaman, (2) Ganti ke model lain di dropdown, (3) Matikan Extended Thinking untuk respons lebih cepat, (4) Periksa koneksi internet. Jika masalah berlanjut, coba model Gemini Flash yang lebih ringan.'
+    },
+    {
+        cat: 'troubleshoot',
+        q: 'Muncul error "HTTP 401" atau diminta login ulang',
+        a: 'Sesi kamu sudah expired. Ini normal terjadi setelah beberapa jam tidak aktif. Klik <strong>Log out</strong> lalu login kembali. Riwayat chat tetap tersimpan di browser.'
+    },
+    {
+        cat: 'troubleshoot',
+        q: 'Agent berhenti di tengah jalan',
+        a: 'Agent memiliki batas maksimal langkah (default 15). Jika task terlalu kompleks, naikkan slider Max Steps hingga 30, atau pecah task menjadi beberapa bagian yang lebih spesifik.'
+    },
+    {
+        cat: 'troubleshoot',
+        q: 'Riwayat chat hilang',
+        a: 'Riwayat tersimpan di localStorage browser. Kemungkinan penyebab: browser dibersihkan, mode incognito, atau storage penuh. Gunakan browser yang sama dan hindari membersihkan site data.'
+    },
+];
+
+const SHORTCUTS = [
+    { label: 'Kirim pesan', keys: ['Enter'] },
+    { label: 'Baris baru', keys: ['Shift', 'Enter'] },
+    { label: 'Chat baru', keys: ['Ctrl', 'N'] },
+    { label: 'Fokus input', keys: ['Ctrl', 'L'] },
+    { label: 'Buka search', keys: ['Ctrl', 'K'] },
+    { label: 'Toggle sidebar', keys: ['Ctrl', '/'] },
+    { label: 'Ganti mode', keys: ['Ctrl', 'M'] },
+    { label: 'Extended thinking', keys: ['Ctrl', 'E'] },
+    { label: 'Copy respons terakhir', keys: ['Ctrl', '⇧', 'C'] },
+    { label: 'Tutup modal / blur', keys: ['Esc'] },
+];
+
+let _helpActiveCat = 'all';
+let _helpQuery = '';
+
 function openHelp() {
     document.getElementById('helpModal').classList.add('open');
+    document.getElementById('helpSearchInput').value = '';
+    _helpQuery = '';
+    _helpActiveCat = 'all';
+    // Reset tabs
+    document.querySelectorAll('.help-tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.cat === 'all')
+    );
+    renderFAQ();
     closeSidebar();
 }
+
 function closeHelp() {
     document.getElementById('helpModal').classList.remove('open');
+}
+
+function switchHelpTab(el) {
+    document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    _helpActiveCat = el.dataset.cat;
+    renderFAQ();
+}
+
+function filterFAQ(q) {
+    _helpQuery = q.toLowerCase().trim();
+    renderFAQ();
+}
+
+function renderFAQ() {
+    const container = document.getElementById('faqList');
+    if (!container) return;
+
+    let items = FAQ_DATA.filter(f => {
+        const catMatch = _helpActiveCat === 'all' || f.cat === _helpActiveCat;
+        const queryMatch = !_helpQuery ||
+            f.q.toLowerCase().includes(_helpQuery) ||
+            f.a.toLowerCase().includes(_helpQuery);
+        return catMatch && queryMatch;
+    });
+
+    if (!items.length) {
+        container.innerHTML = `
+            <div class="help-empty">
+                <i class="bi bi-search"></i>
+                Tidak ada hasil untuk "<strong>${_helpQuery}</strong>"
+            </div>`;
+        return;
+    }
+
+    // Group by category
+    const groups = {};
+    const CAT_META = {
+        general: { label: 'Umum', icon: 'bi-info-circle' },
+        features: { label: 'Fitur', icon: 'bi-stars' },
+        shortcuts: { label: 'Keyboard Shortcuts', icon: 'bi-keyboard' },
+        troubleshoot: { label: 'Troubleshoot', icon: 'bi-tools' },
+    };
+
+    items.forEach(f => {
+        if (!groups[f.cat]) groups[f.cat] = [];
+        groups[f.cat].push(f);
+    });
+
+    container.innerHTML = '';
+
+    Object.entries(groups).forEach(([cat, catItems]) => {
+        const meta = CAT_META[cat] || { label: cat, icon: 'bi-question-circle' };
+
+        const section = document.createElement('div');
+
+        // Section label — only show when mixing categories
+        if (_helpActiveCat === 'all') {
+            section.innerHTML = `
+                <div class="faq-section-label">
+                    <i class="bi ${meta.icon}"></i>
+                    ${meta.label}
+                </div>`;
+        }
+
+        catItems.forEach(f => {
+            if (f.isShortcuts) {
+                // Render shortcuts grid instead of FAQ item
+                const grid = document.createElement('div');
+                grid.className = 'shortcuts-grid';
+                grid.innerHTML = SHORTCUTS.map(s => `
+                    <div class="shortcut-row">
+                        <span class="shortcut-label">${s.label}</span>
+                        <div class="shortcut-keys">
+                            ${s.keys.map((k, i) => `
+                                ${i > 0 ? '<span class="kbd-plus">+</span>' : ''}
+                                <span class="kbd">${k}</span>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                section.appendChild(grid);
+                return;
+            }
+
+            const item = document.createElement('div');
+            item.className = 'faq-item';
+            item.innerHTML = `
+                <div class="faq-q" onclick="toggleFAQ(this)">
+                    ${f.q}
+                    <i class="bi bi-chevron-down faq-chevron"></i>
+                </div>
+                <div class="faq-a">${f.a}</div>`;
+            section.appendChild(item);
+        });
+
+        container.appendChild(section);
+    });
+}
+
+function toggleFAQ(el) {
+    const item = el.closest('.faq-item');
+    const wasOpen = item.classList.contains('open');
+    // Close all
+    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+    // Toggle clicked
+    if (!wasOpen) item.classList.add('open');
 }
 
 // ═══════════════════════════════════════════════
