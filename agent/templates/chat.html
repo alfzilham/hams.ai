@@ -191,19 +191,18 @@
             <!-- Welcome screen -->
             <div id="welcome">
 
-                <!-- Interactive 3D Orb (Three.js) -->
+                <!-- ════════════════════════════════════
+     3D ORB & EYES
+════════════════════════════════════ -->
                 <div class="orb-wrap" id="orbWrap">
-                    <!-- Three.js WebGL canvas -->
+                    <!-- Three.js Canvas -->
                     <canvas id="orbCanvas"></canvas>
 
-                    <!-- Eyes overlay — Vertical Lines -->
+                    <!-- Eyes Overlay -->
                     <div class="orb-eyes-overlay" id="orbEyesOverlay">
                         <div class="orb-eye-line" id="eyeLeft"></div>
                         <div class="orb-eye-line" id="eyeRight"></div>
                     </div>
-
-                    <!-- Hidden: kept for backward compat with updateOrbMode() -->
-                    <div class="orb chat-mode" id="orb" style="display:none;"></div>
                 </div>
 
                 <div class="welcome-greeting">

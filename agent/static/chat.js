@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════
-   HAMS.AI — Chat UI Logic (FIXED v2)
-   Fixes: B1, B6, B7, B8, B19
+   HAMS.AI — Chat UI Logic (CLEANED - NO ORB)
    ═══════════════════════════════════════════════ */
 
 // ── State ──────────────────────────────────────
@@ -10,10 +9,6 @@ let isLoading = false;
 let mode = 'chat';
 let extended = false;
 let currentChatId = null;
-
-// ── B7 FIX: Global scope untuk orb interaction state ──
-let isHovering = false;
-let isNearOrb = false;
 
 // ── Init ────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -33,9 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load sidebar history
     renderHistoryList();
-
-    // Initialize 3D Orb (Three.js)
-    initOrb3DLight();
 
     initProfile();
 
@@ -263,232 +255,7 @@ function toggleSidebarCollapse() {
 }
 
 // ═══════════════════════════════════════════════
-// PROFESSIONAL ORB INTERACTIONS
-// ═══════════════════════════════════════════════
-
-function initProfessionalOrb() {
-    const orbWrap = document.querySelector('.orb-wrap');
-    const orb = document.getElementById('orb');
-    if (!orbWrap || !orb) return;
-
-    // Create magnetic cursor
-    const magneticCursor = document.createElement('div');
-    magneticCursor.className = 'magnetic-cursor';
-    document.body.appendChild(magneticCursor);
-
-    // Create status indicator
-    const statusIndicator = document.createElement('div');
-    statusIndicator.className = 'orb-status';
-    orbWrap.appendChild(statusIndicator);
-
-    // State variables — B7 FIX: use global isHovering/isNearOrb
-    let mouseX = 0, mouseY = 0;
-    let cursorX = 0, cursorY = 0;
-    let orbCenterX = 0, orbCenterY = 0;
-    let animationId = null;
-
-    // Update orb center position
-    function updateOrbCenter() {
-        const rect = orbWrap.getBoundingClientRect();
-        orbCenterX = rect.left + rect.width / 2;
-        orbCenterY = rect.top + rect.height / 2;
-    }
-
-    // Track mouse movement
-    document.addEventListener('mousemove', (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-
-        const dx = mouseX - orbCenterX;
-        const dy = mouseY - orbCenterY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        const nearThreshold = 150;
-        isNearOrb = distance < nearThreshold;   // B7: global
-        isHovering = distance < 80;              // B7: global
-
-        if (isNearOrb) {
-            magneticCursor.classList.add('active');
-            if (isHovering) {
-                magneticCursor.classList.add('near-orb');
-            } else {
-                magneticCursor.classList.remove('near-orb');
-            }
-        } else {
-            magneticCursor.classList.remove('active', 'near-orb');
-        }
-    });
-
-    document.addEventListener('mouseleave', () => {
-        document.querySelectorAll('.orb-eye-line').forEach(el => {
-            el.style.transform = 'translate(-50%, -50%)';
-        });
-    });
-
-    // Click interaction
-    orbWrap.addEventListener('click', (e) => {
-        e.preventDefault();
-
-        const ripple = document.createElement('div');
-        ripple.className = 'orb-ripple';
-        const rect = orbWrap.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        ripple.style.left = `${x}px`;
-        ripple.style.top = `${y}px`;
-        ripple.style.width = '20px';
-        ripple.style.height = '20px';
-        orbWrap.appendChild(ripple);
-        setTimeout(() => ripple.remove(), 600);
-
-        // Eye blink on click
-        const eyes = document.querySelectorAll('.orb-eye');
-        eyes.forEach(eye => {
-            eye.style.transition = 'transform 0.08s';
-            eye.style.transform = 'scaleY(0.1)';
-            setTimeout(() => { eye.style.transform = 'scaleY(1)'; }, 160);
-        });
-
-        orbWrap.style.transform = 'scale(0.92)';
-        setTimeout(() => { orbWrap.style.transform = ''; }, 120);
-
-        statusIndicator.classList.add('active');
-        setTimeout(() => statusIndicator.classList.remove('active'), 2000);
-
-        showToast('👋 HAMS AI is ready to help!');
-
-        // 3D shockwave distortion on click
-        const canvas = document.getElementById('orbCanvas');
-        if (canvas && canvas._triggerShockwave) {
-            canvas._triggerShockwave();
-        }
-    });
-
-    // Animation loop
-    function animate() {
-        const dx = mouseX - cursorX;
-        const dy = mouseY - cursorY;
-        cursorX += dx * 0.15;
-        cursorY += dy * 0.15;
-
-        if (magneticCursor.classList.contains('active')) {
-            let targetX = cursorX;
-            let targetY = cursorY;
-
-            if (isHovering) {
-                const pullStrength = 0.3;
-                targetX = cursorX + (orbCenterX - cursorX) * pullStrength;
-                targetY = cursorY + (orbCenterY - cursorY) * pullStrength;
-            }
-
-            magneticCursor.style.left = `${targetX}px`;
-            magneticCursor.style.top = `${targetY}px`;
-        }
-
-        // Eye tracking: Vertical Lines Move
-        if (isNearOrb) {
-            document.querySelectorAll('.orb-eye-line').forEach(eye => {
-                const rect = eye.getBoundingClientRect();
-                // Pusat dari garis saat ini
-                const ex = rect.left + rect.width / 2;
-                const ey = rect.top + rect.height / 2;
-
-                const dx = mouseX - ex;
-                const dy = mouseY - ey;
-                const d2 = Math.sqrt(dx * dx + dy * dy) || 1;
-
-                // Batas pergerakan garis (max offset)
-                const maxOffset = 6;
-                const clamp = Math.min(d2, maxOffset * 6) / (maxOffset * 6);
-
-                // Hitung offset
-                const px = (dx / d2) * clamp * maxOffset;
-                const py = (dy / d2) * clamp * maxOffset;
-
-                // Ambil posisi base (left/right) dari CSS ID selector
-                // Karena CSS sudah set left: calc(50% +/- 10px), kita hanya perlu menambah offset
-                // Transform: translate(baseX + offset, baseY + offset)
-                // Di sini kita handle transform translate. 
-                // CSS sudah handle posisi awal. Kita append movement.
-
-                eye.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
-            });
-        }
-
-        animationId = requestAnimationFrame(animate);
-    }
-
-    window.addEventListener('scroll', updateOrbCenter);
-    window.addEventListener('resize', updateOrbCenter);
-    updateOrbCenter();
-    animate();
-
-    window.addEventListener('beforeunload', () => {
-        if (animationId) cancelAnimationFrame(animationId);
-    });
-}
-
-// Update orb mode — smooth 3D color transition + fallback CSS class
-function updateOrbMode(newMode) {
-    // Update hidden orb div for backward compat
-    const orb = document.getElementById('orb');
-    if (orb) {
-        orb.classList.remove('chat-mode', 'agent-mode');
-        orb.classList.add(`${newMode}-mode`);
-    }
-
-    // Status indicator color
-    const status = document.querySelector('.orb-status');
-    if (status) {
-        status.style.background = newMode === 'agent' ? 'var(--green)' : 'var(--accent)';
-    }
-
-    // 3D Orb: smooth color transition via lerp in animation loop
-    if (ORB_COLORS[newMode]) {
-        orbTargetColors = ORB_COLORS[newMode];
-        orbCurrentMode = newMode;
-    }
-}
-
-// Enhanced blink with random intervals — B7 FIX: uses global isHovering
-function scheduleProfessionalBlink() {
-    const baseDelay = 3000 + Math.random() * 5000;
-    const nextDelay = isHovering ? baseDelay * 0.7 : baseDelay;
-
-    setTimeout(() => {
-        const eyes = document.querySelectorAll('.orb-eye-line'); // Ubah selector ke garis
-        eyes.forEach(eye => {
-            // Efek "blink" untuk garis: menghilang sebentar
-            eye.style.transition = 'opacity 0.08s';
-            eye.style.opacity = '0.1'; // Fade out
-            setTimeout(() => { 
-                eye.style.opacity = '0.95'; // Fade in (kembali ke normal)
-                // Reset transform untuk efek "jitter" kecil saat blink (opsional, biarkan kosong jika mau simple)
-            }, 160);
-        });
-        scheduleProfessionalBlink();
-    }, nextDelay);
-}
-
-// Breathing animation — now handled inside Three.js animate loop
-// This function is kept as a no-op for backward compat (called in DOMContentLoaded)
-function initBreathingAnimation() {
-    // Breathing is now integrated into the Three.js animation loop
-    // inside initOrb3DLight() → animate() → step 2 (breathing scale)
-    // No separate requestAnimationFrame needed
-}
-
-// Initialize all professional orb features
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        initProfessionalOrb();
-        scheduleProfessionalBlink();
-        initBreathingAnimation();
-    }, 100);
-});
-
-// ═══════════════════════════════════════════════
-// MODE (Chat / Agent) — B1 FIX: SATU definisi saja + updateOrbMode()
+// MODE (Chat / Agent)
 // ═══════════════════════════════════════════════
 function setMode(m) {
     mode = m;
@@ -506,9 +273,6 @@ function setMode(m) {
     if (slider) slider.style.display = m === 'agent' ? 'flex' : 'none';
 
     updateFeatureCards(m);
-
-    // B1 FIX: updateOrbMode() sekarang SELALU dipanggil
-    updateOrbMode(m);
 
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     const targetNav = m === 'agent'
@@ -555,265 +319,6 @@ function updateFeatureCards(m) {
         <div class="feature-card-desc">Perbandingan teknologi, strategi, breakdown mendalam, dan rekomendasi aksi.</div>
       </div>`;
     }
-}
-
-// ═══════════════════════════════════════════════
-// 3D ORB — Three.js Scene (replaces old CSS initOrb3DLight)
-// ═══════════════════════════════════════════════
-
-// Global Three.js orb state — accessible by other functions
-let orbScene = null;
-let orbCamera = null;
-let orbRenderer = null;
-let orbSphere = null;
-let orbPointLight = null;
-let orbAmbientLight = null;
-let orbGlowMesh = null;
-let orbAnimationId = null;
-
-// Color palettes for mode switching (Silver-White Theme)
-const ORB_COLORS = {
-    chat: {
-        base: new THREE.Color(0.95, 0.95, 0.97),   // Silver-White
-        emissive: new THREE.Color(0.2, 0.2, 0.25),   // Silver glow subtle
-        light: new THREE.Color(1.0, 1.0, 1.0),   // Pure white light
-        glow: new THREE.Color(0.9, 0.9, 0.95),   // Silver-white glow
-        ambient: new THREE.Color(0.15, 0.15, 0.18),   // Dark silver ambient
-    },
-    agent: {
-        base: new THREE.Color(0.85, 0.95, 0.88),   // Light Silver-Green
-        emissive: new THREE.Color(0.15, 0.3, 0.2),   // Green tint glow
-        light: new THREE.Color(0.9, 1.0, 0.95),      // Green-white light
-        glow: new THREE.Color(0.6, 1.0, 0.7),      // Green glow
-        ambient: new THREE.Color(0.1, 0.18, 0.12),   // Dark green ambient
-    }
-};
-
-// Target colors for smooth transitions
-let orbTargetColors = ORB_COLORS.chat;
-let orbCurrentMode = 'chat';
-
-function initOrb3DLight() {
-    const canvas = document.getElementById('orbCanvas');
-    if (!canvas || typeof THREE === 'undefined') {
-        console.warn('[3D Orb] Three.js not loaded or canvas missing, skipping');
-        // Fallback: show the old CSS orb
-        const oldOrb = document.getElementById('orb');
-        if (oldOrb) oldOrb.style.display = '';
-        return;
-    }
-
-    const container = document.getElementById('orbWrap');
-    if (!container) return;
-
-    const size = container.offsetWidth || 130;
-
-    // ── Scene ──
-    orbScene = new THREE.Scene();
-
-    // ── Camera ──
-    orbCamera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    orbCamera.position.z = 3.2;
-
-    // ── Renderer ──
-    orbRenderer = new THREE.WebGLRenderer({
-        canvas: canvas,
-        alpha: true,
-        antialias: true,
-        powerPreference: 'high-performance',
-    });
-    orbRenderer.setSize(size, size);
-    orbRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    orbRenderer.setClearColor(0x000000, 0);
-    orbRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-    orbRenderer.toneMappingExposure = 1.2;
-
-    // ── Sphere geometry — high segment count for smoothness ──
-    const geometry = new THREE.SphereGeometry(1, 128, 128);
-
-    // ── Material — Silver Glass Fluid ──
-    const material = new THREE.MeshPhysicalMaterial({
-        color: orbTargetColors.base,
-        emissive: orbTargetColors.emissive,
-        emissiveIntensity: 0.4,
-        metalness: 0.85,   // Tingkatkan metalness untuk kilau
-        roughness: 0.08,   // Turunkan roughness untuk licin
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.05,
-        reflectivity: 1.0, // Maksimal refleksi
-        transparent: true,
-        opacity: 0.95,     // Sedikit lebih solid
-        envMapIntensity: 1.2,
-    });
-
-    orbSphere = new THREE.Mesh(geometry, material);
-    orbScene.add(orbSphere);
-
-    // ── Inner glow sphere (subsurface scattering simulation) ──
-    const glowGeometry = new THREE.SphereGeometry(0.75, 64, 64);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-        color: orbTargetColors.glow,
-        transparent: true,
-        opacity: 0.12,
-    });
-    orbGlowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
-    orbScene.add(orbGlowMesh);
-
-    // ── Lights ──
-    // Main point light — follows cursor for specular highlights
-    orbPointLight = new THREE.PointLight(orbTargetColors.light, 2.5, 10);
-    orbPointLight.position.set(1.5, 1.5, 2.5);
-    orbScene.add(orbPointLight);
-
-    // Secondary fill light — opposite side for rim lighting
-    const fillLight = new THREE.PointLight(new THREE.Color(0.4, 0.4, 0.6), 0.8, 8);
-    fillLight.position.set(-2, -1, 1);
-    orbScene.add(fillLight);
-
-    // Ambient light — base illumination
-    orbAmbientLight = new THREE.AmbientLight(orbTargetColors.ambient, 0.6);
-    orbScene.add(orbAmbientLight);
-
-    // ── Fake environment map for reflections ──
-    const envScene = new THREE.Scene();
-    const envGeo = new THREE.SphereGeometry(5, 32, 32);
-    const envMat = new THREE.MeshBasicMaterial({
-        color: 0x111122,
-        side: THREE.BackSide,
-    });
-    const envMesh = new THREE.Mesh(envGeo, envMat);
-    envScene.add(envMesh);
-
-    // Add some bright spots to env for reflections
-    for (let i = 0; i < 6; i++) {
-        const spotGeo = new THREE.SphereGeometry(0.3, 8, 8);
-        const spotMat = new THREE.MeshBasicMaterial({
-            color: new THREE.Color(0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5),
-        });
-        const spot = new THREE.Mesh(spotGeo, spotMat);
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.random() * Math.PI;
-        spot.position.set(
-            4 * Math.sin(phi) * Math.cos(theta),
-            4 * Math.sin(phi) * Math.sin(theta),
-            4 * Math.cos(phi)
-        );
-        envScene.add(spot);
-    }
-
-    const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(128);
-    const cubeCamera = new THREE.CubeCamera(0.1, 10, cubeRenderTarget);
-    cubeCamera.update(orbRenderer, envScene);
-    material.envMap = cubeRenderTarget.texture;
-
-    // ── Animation state ──
-    let time = 0;
-    let shockwave = 0; // For click distortion
-    const clock = new THREE.Clock();
-
-    // ── Animation loop ──
-    function animate() {
-        orbAnimationId = requestAnimationFrame(animate);
-        const delta = clock.getDelta();
-        time += delta;
-
-        // 1. Floating motion — sine/cosine on X, Y, Z + slight rotation
-        orbSphere.position.x = Math.sin(time * 0.6) * 0.04;
-        orbSphere.position.y = Math.cos(time * 0.8) * 0.06 + Math.sin(time * 0.3) * 0.02;
-        orbSphere.position.z = Math.sin(time * 0.4) * 0.02;
-        orbSphere.rotation.y = time * 0.15;
-        orbSphere.rotation.x = Math.sin(time * 0.2) * 0.05;
-
-        // 2. Breathing scale when idle (not hovering)
-        if (!isHovering && !isNearOrb) {
-            const breathScale = 1.0 + Math.sin(time * 1.2) * 0.018;
-            orbSphere.scale.setScalar(breathScale);
-        } else {
-            // Slightly larger when hovered
-            orbSphere.scale.lerp(new THREE.Vector3(1.05, 1.05, 1.05), 0.1);
-        }
-
-        // 3. Inner glow pulsing
-        orbGlowMesh.position.copy(orbSphere.position);
-        const glowPulse = 0.10 + Math.sin(time * 1.5) * 0.05;
-        orbGlowMesh.material.opacity = glowPulse;
-        const glowScale = 0.75 + Math.sin(time * 1.0) * 0.03;
-        orbGlowMesh.scale.setScalar(glowScale);
-
-        // 4. Shockwave decay (click distortion)
-        // Uses cached original positions to avoid cloning geometry every frame
-        if (shockwave > 0.01) {
-            shockwave *= 0.92; // decay
-            const positions = orbSphere.geometry.attributes.position;
-
-            // Cache original positions on first shockwave frame
-            if (!orbSphere._originalPositions) {
-                orbSphere._originalPositions = new Float32Array(positions.array);
-            }
-            const orig = orbSphere._originalPositions;
-
-            for (let i = 0; i < positions.count; i++) {
-                const i3 = i * 3;
-                const ox = orig[i3];
-                const oy = orig[i3 + 1];
-                const oz = orig[i3 + 2];
-                const dist = Math.sqrt(ox * ox + oy * oy + oz * oz);
-                const displacement = shockwave * Math.sin(dist * 12 - time * 8) * 0.08;
-                positions.array[i3] = ox * (1 + displacement);
-                positions.array[i3 + 1] = oy * (1 + displacement);
-                positions.array[i3 + 2] = oz * (1 + displacement);
-            }
-            positions.needsUpdate = true;
-        } else if (shockwave > 0) {
-            // Reset geometry from cached original
-            shockwave = 0;
-            if (orbSphere._originalPositions) {
-                const positions = orbSphere.geometry.attributes.position;
-                positions.array.set(orbSphere._originalPositions);
-                positions.needsUpdate = true;
-                orbSphere._originalPositions = null;
-            }
-        }
-
-        // 5. Smooth color transitions (mode switching)
-        orbSphere.material.color.lerp(orbTargetColors.base, 0.03);
-        orbSphere.material.emissive.lerp(orbTargetColors.emissive, 0.03);
-        orbPointLight.color.lerp(orbTargetColors.light, 0.03);
-        orbGlowMesh.material.color.lerp(orbTargetColors.glow, 0.03);
-        orbAmbientLight.color.lerp(orbTargetColors.ambient, 0.03);
-
-        // 6. Orbiting light source (automatic when cursor not near)
-        if (!isNearOrb) {
-            const lightOrbitSpeed = 0.5;
-            orbPointLight.position.x = Math.cos(time * lightOrbitSpeed) * 2.0;
-            orbPointLight.position.y = Math.sin(time * lightOrbitSpeed * 0.7) * 1.8;
-            orbPointLight.position.z = 2.0 + Math.sin(time * lightOrbitSpeed * 0.3) * 0.5;
-        }
-
-        // 7. Render
-        orbRenderer.render(orbScene, orbCamera);
-    }
-
-    animate();
-
-    // ── Expose shockwave trigger for click handler ──
-    canvas._triggerShockwave = function () {
-        shockwave = 1.0;
-    };
-
-    // ── Handle resize ──
-    function handleResize() {
-        const newSize = container.offsetWidth || 130;
-        orbRenderer.setSize(newSize, newSize);
-        orbRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    }
-    window.addEventListener('resize', handleResize);
-
-    // ── Cleanup on page unload ──
-    window.addEventListener('beforeunload', () => {
-        if (orbAnimationId) cancelAnimationFrame(orbAnimationId);
-        if (orbRenderer) orbRenderer.dispose();
-    });
 }
 
 // ═══════════════════════════════════════════════
@@ -1156,13 +661,12 @@ async function sendChat(text, model) {
 
         if (firstChunk) {
             removeTyping();
-            // B19 FIX: Jika tidak ada chunk sama sekali, tampilkan pesan
             if (fullReply) {
                 appendMsg('ai', fullReply);
             }
         }
 
-        // B19 FIX: Tambah actions ke streaming bubble setelah selesai
+        // Add actions to streaming bubble
         const streamBubble = document.getElementById(bubbleId);
         if (streamBubble) {
             const bubble = streamBubble.closest('.bubble');
@@ -1395,11 +899,10 @@ function handleAgentEvent(ev, block, statusBanner, taskText) {
 }
 
 // ═══════════════════════════════════════════════
-// MAIN SEND DISPATCH — B6 FIX: terima parameter opsional
+// MAIN SEND DISPATCH
 // ═══════════════════════════════════════════════
 async function sendMessage(overrideText) {
     const input = document.getElementById('userInput');
-    // B6 FIX: gunakan overrideText jika ada, fallback ke input.value
     const text = overrideText || input.value.trim();
     if (!text || isLoading) return;
 
@@ -1492,18 +995,14 @@ function copyBubble(btn) {
     });
 }
 
-// B6 FIX: regenMsg sekarang bekerja karena sendMessage() terima parameter
 function regenMsg(btn) {
     const lastUser = [...history].reverse().find(m => m.role === 'user');
     if (!lastUser) return;
-    // Hapus response terakhir dari history
     if (history.length >= 2 && history[history.length - 1].role === 'assistant') {
-        history.pop(); // hapus assistant
+        history.pop();
     }
-    // Hapus bubble AI terakhir dari DOM
     const allRows = document.querySelectorAll('#chatBox .msg-row.ai');
     if (allRows.length) allRows[allRows.length - 1].remove();
-    // Kirim ulang dengan teks user terakhir
     sendMessage(lastUser.content);
 }
 
@@ -1654,12 +1153,10 @@ function renderHistoryModal(query = '') {
 // SETTINGS MODAL
 // ═══════════════════════════════════════════════
 function openSettings() {
-    // Isi nama dari localStorage
     const user = JSON.parse(localStorage.getItem('hams_user') || '{}');
     const nameInput = document.getElementById('settingsName');
     if (nameInput) nameInput.value = user.name || '';
 
-    // Tandai theme yang aktif
     const currentTheme = localStorage.getItem('hams_theme') || 'dark';
     document.getElementById('themeOptDark')?.classList.toggle('active', currentTheme === 'dark');
     document.getElementById('themeOptLight')?.classList.toggle('active', currentTheme === 'light');
@@ -1697,16 +1194,13 @@ function initProfile() {
 
     if (avatarEl) {
         if (user.avatar_url) {
-            // Google avatar — show image instead of initial
             avatarEl.innerHTML = `<img src="${user.avatar_url}" alt="${user.name || 'User'}" 
                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
         } else {
-            // Default — show initial letter
             avatarEl.textContent = (user.name || 'U')[0].toUpperCase();
         }
     }
 
-    // Sync profile from server (background, non-blocking)
     syncProfileFromServer();
 }
 
@@ -1721,7 +1215,6 @@ async function syncProfileFromServer() {
 
         if (!res.ok) {
             if (res.status === 401) {
-                // Token expired — force re-login
                 localStorage.removeItem('hams_token');
                 localStorage.removeItem('hams_user');
                 window.location.href = '/login';
@@ -1731,7 +1224,6 @@ async function syncProfileFromServer() {
 
         const serverUser = await res.json();
 
-        // Update localStorage with latest server data
         const currentUser = JSON.parse(localStorage.getItem('hams_user') || '{}');
         const updatedUser = {
             ...currentUser,
@@ -1744,7 +1236,6 @@ async function syncProfileFromServer() {
 
         localStorage.setItem('hams_user', JSON.stringify(updatedUser));
 
-        // Update UI if data changed
         const nameEl = document.getElementById('profileName');
         const emailEl = document.getElementById('profileEmail');
         const avatarEl = document.getElementById('profileAvatar');
@@ -1760,7 +1251,6 @@ async function syncProfileFromServer() {
                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
         }
     } catch (e) {
-        // Network error — silently ignore, use cached data
         console.warn('[Profile] Sync failed:', e.message);
     }
 }
@@ -1991,7 +1481,6 @@ function saveSettings() {
         const nameEl = document.getElementById('profileName');
         if (nameEl) nameEl.textContent = newName;
 
-        // Sync ke server juga
         const token = localStorage.getItem('hams_token');
         if (token) {
             fetch('/auth/profile', {
@@ -2001,10 +1490,200 @@ function saveSettings() {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ name: newName })
-            }).catch(() => { }); // silent fail
+            }).catch(() => { });
         }
     }
 
     closeSettings();
     showToast('✅ Settings saved!');
 }
+
+// ═══════════════════════════════════════════════
+// 3D ORB & INTERACTIVE EYES — RESET IMPLEMENTATION
+// ═══════════════════════════════════════════════
+
+(function initOrbSystem() {
+    // ── 1. THREE.JS SCENE SETUP ─────────────────────
+    const canvas = document.getElementById('orbCanvas');
+    const container = document.getElementById('orbWrap');
+    if (!canvas || !container || typeof THREE === 'undefined') return;
+
+    const size = container.offsetWidth || 130;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.z = 3.0;
+
+    const renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance'
+    });
+    renderer.setSize(size, size);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+
+    // ── 2. ORB MATERIAL (Silver/White/Kilat) ─────────
+    const geometry = new THREE.SphereGeometry(1, 64, 64);
+    const material = new THREE.MeshPhysicalMaterial({
+        color: 0xf5f5f5,      // Putih Silver
+        metalness: 1.0,       // Full metal untuk kilau
+        roughness: 0.05,      // Sangat licin
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        envMapIntensity: 1.5,
+    });
+
+    const orb = new THREE.Mesh(geometry, material);
+    scene.add(orb);
+
+    // ── 3. INNER GLOW ───────────────────────────────
+    const glowGeo = new THREE.SphereGeometry(0.92, 32, 32);
+    const glowMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.12,
+        side: THREE.BackSide
+    });
+    const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+    scene.add(glowMesh);
+
+    // ── 4. LIGHTING ────────────────────────────────
+    // Ambient dasar
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambient);
+
+    // PointLight utama (akan mengikuti kursor untuk efek kilat)
+    const pointLight = new THREE.PointLight(0xffffff, 1.5, 100);
+    pointLight.position.set(5, 5, 5);
+    scene.add(pointLight);
+
+    // Fake Environment Map (untuk refleksi)
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+
+    // Simple cube environment
+    const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256);
+    const cubeCamera = new THREE.CubeCamera(0.1, 10, cubeRenderTarget);
+
+    // Buat environment scene sederhana
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color(0x111111);
+
+    // Tambahkan "cahaya" palsu di environment untuk refleksi
+    const envLight1 = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    envLight1.position.set(4, 4, 4);
+    envScene.add(envLight1);
+
+    cubeCamera.update(renderer, envScene);
+    material.envMap = cubeRenderTarget.texture;
+
+    // ── 5. ANIMATION LOOP ──────────────────────────
+    let time = 0;
+    const clock = new THREE.Clock();
+    let mouseX = 0, mouseY = 0;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        time += delta;
+
+        // Floating motion
+        orb.position.x = Math.sin(time * 0.5) * 0.03;
+        orb.position.y = Math.cos(time * 0.7) * 0.04;
+        orb.rotation.y = time * 0.2;
+        orb.rotation.x = Math.sin(time * 0.3) * 0.1;
+
+        // Update light position based on mouse
+        // Mouse di mapping ke ruang 3D
+        const targetX = mouseX * 4.0;
+        const targetY = mouseY * 4.0;
+        pointLight.position.x += (targetX - pointLight.position.x) * 0.05;
+        pointLight.position.y += (targetY - pointLight.position.y) * 0.05;
+        pointLight.position.z = 4.0;
+
+        // Glow pulse
+        glowMesh.material.opacity = 0.10 + Math.sin(time * 1.2) * 0.04;
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // ── 6. EYE TRACKING LOGIC ──────────────────────
+    const eyeLeft = document.getElementById('eyeLeft');
+    const eyeRight = document.getElementById('eyeRight');
+    const maxMove = 7; // Batas pergeseran mata (pixel)
+
+    function updateEyes(e) {
+        if (!e) return; // Safety check
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        // Normalisasi -1 sampai 1
+        const dx = (e.clientX - centerX) / centerX;
+        const dy = (e.clientY - centerY) / centerY;
+
+        // Hitung pergeseran
+        const moveX = dx * maxMove;
+        const moveY = dy * maxMove;
+
+        // Terapkan ke garis mata (translate)
+        // CSS sudah set transform-origin di center via top:50% left:50%
+        const transformVal = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
+
+        if (eyeLeft) eyeLeft.style.transform = transformVal;
+        if (eyeRight) eyeRight.style.transform = transformVal;
+    }
+
+    function resetEyes() {
+        if (eyeLeft) eyeLeft.style.transform = 'translate(-50%, -50%)';
+        if (eyeRight) eyeRight.style.transform = 'translate(-50%, -50%)';
+    }
+
+    // Global Mouse Move
+    document.addEventListener('mousemove', (e) => {
+        updateEyes(e);
+        // Update variabel untuk light 3D
+        mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+        mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    // Reset ketika keluar window
+    document.addEventListener('mouseleave', () => {
+        resetEyes();
+        mouseX = 0;
+        mouseY = 0;
+    });
+
+    // ── 7. BLINK LOGIC ─────────────────────────────
+    function triggerBlink() {
+        if (eyeLeft) {
+            eyeLeft.classList.add('blinking');
+            setTimeout(() => eyeLeft.classList.remove('blinking'), 150);
+        }
+        if (eyeRight) {
+            eyeRight.classList.add('blinking');
+            setTimeout(() => eyeRight.classList.remove('blinking'), 150);
+        }
+
+        // Random interval 3-6 detik
+        const nextBlink = 3000 + Math.random() * 3000;
+        setTimeout(triggerBlink, nextBlink);
+    }
+
+    // Mulai loop blink
+    setTimeout(triggerBlink, 2000);
+
+    // ── 8. RESIZE HANDLER ──────────────────────────
+    window.addEventListener('resize', () => {
+        const newSize = container.offsetWidth || 130;
+        renderer.setSize(newSize, newSize);
+    });
+
+})();
