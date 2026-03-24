@@ -377,50 +377,16 @@ function parseMarkdown(raw) {
     const codeBlocks = [];
     let text = raw.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
         codeBlocks.push({ lang: lang.trim() || 'text', code: code.trim() });
-        return `%%CB${codeBlocks.length - 1}%%`;
+        return `\n\n%%CB${codeBlocks.length - 1}%%\n\n`;
     });
 
-    text = text
-        .replace(/^### (.+)$/gm, '<hr class="section-divider"><h3>$1</h3>')
-        .replace(/^## (.+)$/gm, '<hr class="section-divider"><h2>$1</h2>')
-        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-        .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-        .replace(/^---$/gm, '<hr>')
-        .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/`([^`\n]+)`/g, '<code>$1</code>')
-        .replace(/\$(.+?)\$\$(.+?)\$/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    if (typeof marked !== 'undefined') {
+        text = marked.parse(text, { breaks: true, gfm: true });
+    } else {
+        text = text.replace(/\n/g, '<br>');
+    }
 
-    // Tables
-    text = text.replace(/((?:^\|.+\|\n?)+)/gm, tbl => {
-        const rows = tbl.trim().split('\n').filter(r => !/^\|[-:\s|]+\|$/.test(r));
-        if (!rows.length) return tbl;
-        const hdr = rows[0].split('|').slice(1, -1).map(c => `<th>${c.trim()}</th>`).join('');
-        const body = rows.slice(1).map(r =>
-            '<tr>' + r.split('|').slice(1, -1).map(c => `<td>${c.trim()}</td>`).join('') + '</tr>'
-        ).join('');
-        return `<table><thead><tr>${hdr}</tr></thead><tbody>${body}</tbody></table>`;
-    });
-
-    // Lists
-    text = text.replace(/((?:^[ \t]*[-*] .+\n?)+)/gm, b =>
-        `<ul>${b.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*] /, '')}</li>`).join('')}</ul>`
-    );
-    text = text.replace(/((?:^[ \t]*\d+\. .+\n?)+)/gm, b =>
-        `<ol>${b.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*\d+\. /, '')}</li>`).join('')}</ol>`
-    );
-
-    // Paragraphs
-    text = text.split('\n\n').map(c => {
-        c = c.trim();
-        if (!c) return '';
-        if (/^<(h[1-3]|ul|ol|table|blockquote|hr)/.test(c)) return c;
-        if (/^%%CB\d+%%$/.test(c)) return c;
-        return `<p>${c.replace(/\n/g, '<br>')}</p>`;
-    }).join('\n');
-
-    return text.replace(/%%CB(\d+)%%/g, (_, i) => buildCodeBlock(codeBlocks[i]));
+    return text.replace(/<p>%%CB(\d+)%%<\/p>|%%CB(\d+)%%/g, (_, i1, i2) => buildCodeBlock(codeBlocks[i1 || i2]));
 }
 
 function buildCodeBlock({ lang, code }) {
