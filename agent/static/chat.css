@@ -3100,10 +3100,193 @@ body>* {
 }
 
 /* ════════════════════════════════════
+   HELP MODAL — STRUCTURE & OVERLAY
+════════════════════════════════════ */
+
+#helpModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+#helpModal.open {
+    display: flex;
+}
+
+.hpmodal-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.smodal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.smodal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+}
+
+.smodal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.15s;
+    line-height: 1;
+}
+
+.smodal-close:hover {
+    background: var(--glass-bg);
+    color: var(--text);
+}
+
+/* Search Bar */
+.hpmodal-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    flex-shrink: 0;
+}
+
+.hpmodal-search i {
+    color: var(--text-3);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.hpmodal-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 0.82rem;
+    font-family: 'Sora', sans-serif;
+}
+
+.hpmodal-search input::placeholder {
+    color: var(--text-3);
+}
+
+/* Scrollable Body */
+.hpmodal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px 20px;
+    scroll-behavior: smooth;
+}
+
+.hpmodal-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.hpmodal-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.hpmodal-body::-webkit-scrollbar-thumb {
+    background: var(--border2);
+    border-radius: 99px;
+}
+
+/* ════════════════════════════════════
+   FAQ ACCORDION  ← INI YANG HILANG
+════════════════════════════════════ */
+
+.faq-item {
+    border-bottom: 1px solid var(--border);
+}
+
+.faq-item:last-child {
+    border-bottom: none;
+}
+
+.faq-q {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-2);
+    user-select: none;
+    gap: 12px;
+    transition: color 0.15s;
+    font-family: 'Sora', sans-serif;
+}
+
+.faq-q:hover {
+    color: var(--text);
+}
+
+/* ✅ FIX UTAMA: sembunyikan jawaban secara default */
+.faq-a {
+    display: none;
+    padding: 0 4px 14px;
+    font-size: 0.8rem;
+    color: var(--text-3);
+    line-height: 1.65;
+    font-family: 'Sora', sans-serif;
+}
+
+/* ✅ FIX UTAMA: tampilkan hanya saat .open */
+.faq-item.open .faq-a {
+    display: block;
+}
+
+.faq-chevron {
+    font-size: 0.72rem;
+    color: var(--text-3);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+/* ✅ Rotate chevron saat terbuka */
+.faq-item.open .faq-chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+}
+
+.faq-item.open .faq-q {
+    color: var(--text);
+}
+
+/* ════════════════════════════════════
    HELP MODAL — TABS & SHORTCUTS
 ════════════════════════════════════ */
 
-/* Category Tabs */
 .help-tabs {
     display: flex;
     gap: 4px;
@@ -3143,7 +3326,6 @@ body>* {
     color: var(--accent);
 }
 
-/* FAQ section label */
 .faq-section-label {
     display: flex;
     align-items: center;
@@ -3161,12 +3343,17 @@ body>* {
     color: var(--accent);
 }
 
-/* Keyboard shortcuts grid */
 .shortcuts-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
     margin-bottom: 4px;
+}
+
+@media (max-width: 480px) {
+    .shortcuts-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .shortcut-row {
@@ -3210,7 +3397,6 @@ body>* {
     color: var(--text-3);
 }
 
-/* Help empty state */
 .help-empty {
     text-align: center;
     padding: 36px 20px;
