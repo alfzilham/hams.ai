@@ -153,40 +153,26 @@ _MULTITASK_SYSTEM = """Kamu adalah HAMS.AI — asisten AI serba bisa yang powerf
 - Langsung berikan hasilnya"""
 
 
-def _build_llm(model: str = "hams-max", extended: bool = False, has_images: bool = False):
-    """Build LLM dengan dukungan multimodal."""
-    # Jika ada gambar → pakai Gemini Vision
-    if has_images:
-        from agent.llm.google_provider import GoogleLLM
-        vision_model = "gemini-1.5-flash" if "flash" in model.lower() else "gemini-1.5-pro"
-        print(f"[Multimodal] Detected images → forcing {vision_model}")
-        return GoogleLLM(model=vision_model)
+def _build_llm(model: str = "hams-max", extended: bool = False):
+    """
+    Build LLM instance berdasarkan model string dari frontend.
 
-    # Gemini biasa
+    B3 FIX: Default model = "hams-max" agar konsisten dengan:
+    - Frontend modelSelect default = "hams-max"
+    - _FRONTEND_TO_HAMSMAX["hams-max"] = ("llama-3.3-70b-versatile", "groq")
+    """
+    # Gemini models → langsung pakai GoogleLLM
     if model.startswith("gemini-"):
         from agent.llm.google_provider import GoogleLLM
         return GoogleLLM(model=model)
 
-    # HamsMax routing
+    # Semua model lain → HamsMax routing
     if extended:
         from agent.llm.hams_max_thinking import HamsMaxThinkingLLM
         return HamsMaxThinkingLLM(model=model)
     else:
         from agent.llm.hams_max_chat import HamsMaxChatLLM
         return HamsMaxChatLLM(model=model)
-
-
-def _get_current_user(request: Request) -> dict:
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    payload = decode_token(auth.split(" ", 1)[1])
-    if not payload:
-        raise HTTPException(status_code=401, detail="Token expired or invalid")
-    user = get_user_by_id(int(payload["sub"]))
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    return user
 
 
 def _build_agent(
@@ -264,16 +250,10 @@ def _get_current_user(request: Request) -> dict:
 async def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
-        version="0.4.0",
+        version="0.3.0",
         timestamp=datetime.now(timezone.utc).isoformat(),
         uptime_seconds=round(time.time() - _start_time, 1),
     )
-
-
-@app.get("/chat-ui", tags=["chat"], include_in_schema=False)
-async def chat_ui() -> FileResponse:
-    html_path = os.path.join(_TEMPLATES_DIR, "chat.html")
-    return FileResponse(html_path, media_type="text/html")
 
 
 # ---------------------------------------------------------------------------
@@ -363,114 +343,37 @@ async def chat(req: ChatRequest) -> ChatResponse:
     )
 
 
-# ---------------------------------------------------------------------------
-# /chat — Multimodal Support
-# ---------------------------------------------------------------------------
+# ══════════════════════════════════════════════════════════════
+# /chat/stream juga perlu A2 FIX yang sama
+# ══════════════════════════════════════════════════════════════
 
-@app.post("/chat", response_model=ChatResponse, tags=["chat"])
-async def chat(req: ChatRequest) -> ChatResponse:
-    session_id = req.session_id or str(uuid.uuid4())
+@app.post("/chat/stream", tags=["chat"])
+async def chat_stream(req: ChatRequest) -> StreamingResponse:
     model = req.model or "hams-max"
 
-    # Deteksi apakah ada gambar
-    has_images = False
-    messages: list[dict] = []
-
-    # History
+    # A2 FIX: Proper message list
+    messages: list[dict[str, str]] = []
     for msg in (req.history or []):
         messages.append({"role": msg.role, "content": msg.content})
+    messages.append({"role": "user", "content": req.message})
 
-    # Message (bisa string atau list multimodal)
-    if isinstance(req.message, list):
-        for part in req.message:
-            if isinstance(part, dict) and part.get("type") == "image_url":
-                has_images = True
-            messages.append(part)
-    else:
-        messages.append({"role": "user", "content": req.message})
-
-    try:
-        llm = _build_llm(model, extended=req.extended, has_images=has_images)
-
-        raw = await llm.generate_text(
-            messages=messages,
-            system=_MULTITASK_SYSTEM,
-            max_tokens=4096,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    thinking: str | None = None
-    response_text: str = raw
-
-    if req.extended:
+    async def event_stream() -> AsyncIterator[str]:
         try:
-            parsed = json.loads(raw)
-            thinking = parsed.get("thinking")
-            response_text = parsed.get("answer", raw)
-        except:
-            pass
+            llm = _build_llm(model)
+            async for chunk in llm.stream(
+                messages=messages,
+                system=_MULTITASK_SYSTEM,
+            ):
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        finally:
+            yield "data: [DONE]\n\n"
 
-    return ChatResponse(
-        session_id=session_id,
-        response=response_text.strip(),
-        thinking=thinking,
-        model_used=model,
-        extended=req.extended,
-    )# ---------------------------------------------------------------------------
-# /chat — Multimodal Support
-# ---------------------------------------------------------------------------
-
-@app.post("/chat", response_model=ChatResponse, tags=["chat"])
-async def chat(req: ChatRequest) -> ChatResponse:
-    session_id = req.session_id or str(uuid.uuid4())
-    model = req.model or "hams-max"
-
-    # Deteksi apakah ada gambar
-    has_images = False
-    messages: list[dict] = []
-
-    # History
-    for msg in (req.history or []):
-        messages.append({"role": msg.role, "content": msg.content})
-
-    # Message (bisa string atau list multimodal)
-    if isinstance(req.message, list):
-        for part in req.message:
-            if isinstance(part, dict) and part.get("type") == "image_url":
-                has_images = True
-            messages.append(part)
-    else:
-        messages.append({"role": "user", "content": req.message})
-
-    try:
-        llm = _build_llm(model, extended=req.extended, has_images=has_images)
-
-        raw = await llm.generate_text(
-            messages=messages,
-            system=_MULTITASK_SYSTEM,
-            max_tokens=4096,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    thinking: str | None = None
-    response_text: str = raw
-
-    if req.extended:
-        try:
-            parsed = json.loads(raw)
-            thinking = parsed.get("thinking")
-            response_text = parsed.get("answer", raw)
-        except:
-            pass
-
-    return ChatResponse(
-        session_id=session_id,
-        response=response_text.strip(),
-        thinking=thinking,
-        model_used=model,
-        extended=req.extended,
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
