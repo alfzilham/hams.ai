@@ -1746,7 +1746,7 @@ function closeProfileDropdown() {
 }
 
 document.addEventListener('click', e => {
-    const profileArea = document.querySelector('.profile-section');
+    const profileArea = document.querySelector('.sidebar-profile');
     const dd = document.getElementById('profileDropdown');
     if (profileArea && dd && !profileArea.contains(e.target)) {
         dd.classList.remove('open');
