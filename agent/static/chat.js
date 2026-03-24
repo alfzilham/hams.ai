@@ -1056,18 +1056,18 @@ function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
 
-    // Apply colors according to success/error
+    // Apply colors according to success/error. Using 'background' instead of 'backgroundColor' to override CSS gradients!
     t.style.fontWeight = '500';
     if (msg.includes('Gagal') || msg.includes('Error') || msg.includes('❌') || msg.includes('⚠️')) {
-        t.style.backgroundColor = '#ef4444'; // Red for errors
+        t.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'; // Red for errors
         t.style.color = '#ffffff';
-        t.style.border = '1px solid #dc2626';
+        t.style.border = '1px solid #b91c1c';
     } else if (msg.includes('berhasil') || msg.includes('✅') || msg.includes('🖼️') || msg.includes('📄') || msg.includes('📝') || msg.includes('📎')) {
-        t.style.backgroundColor = '#10b981'; // Green for success
+        t.style.background = 'linear-gradient(135deg, #10b981, #059669)'; // Green for success
         t.style.color = '#ffffff';
-        t.style.border = '1px solid #059669';
+        t.style.border = '1px solid #047857';
     } else {
-        t.style.backgroundColor = 'var(--surface2)'; // Default
+        t.style.background = 'var(--surface2)'; // Default
         t.style.color = 'var(--text)';
         t.style.border = '1px solid var(--border2)';
     }
@@ -1075,7 +1075,7 @@ function showToast(msg) {
     t.style.display = 'block';
     setTimeout(() => {
         t.style.display = 'none';
-        t.style.backgroundColor = '';
+        t.style.background = '';
         t.style.color = '';
         t.style.border = '';
     }, 3500);
