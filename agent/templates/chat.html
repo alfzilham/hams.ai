@@ -455,16 +455,34 @@
         <div class="pdrop-email" id="profileEmail"></div>
         <div class="pdrop-divider"></div>
         <div class="pdrop-item" onclick="openSettings(); closeProfileDropdown()">
-            <i class="bi bi-gear"></i> Settings
+            <i class="bi bi-gear"></i>
+            <span data-i18n="settings">Settings</span>
             <span class="pdrop-kbd">⇧+Ctrl+,</span>
         </div>
+        <!-- Language item — trigger flyout -->
+        <div class="pdrop-item pdrop-lang-trigger" id="langTrigger" onclick="toggleLangMenu(event)">
+            <i class="bi bi-globe2"></i>
+            <span data-i18n="language">Language</span>
+            <i class="bi bi-chevron-right" style="margin-left:auto;font-size:0.65rem;color:var(--text-3)"></i>
+        </div>
         <div class="pdrop-item" onclick="openHelp(); closeProfileDropdown()">
-            <i class="bi bi-question-circle"></i> Get help
+            <i class="bi bi-question-circle"></i>
+            <span data-i18n="getHelp">Get help</span>
         </div>
         <div class="pdrop-divider"></div>
         <div class="pdrop-item pdrop-logout" onclick="logout()">
-            <i class="bi bi-box-arrow-right"></i> Log out
+            <i class="bi bi-box-arrow-right"></i>
+            <span data-i18n="logout">Log out</span>
         </div>
+    </div>
+
+    <!-- Language Submenu Flyout -->
+    <div id="langMenu">
+        <div class="lang-menu-header">
+            <i class="bi bi-globe2"></i>
+            <span>Language</span>
+        </div>
+        <div class="lang-menu-list" id="langMenuList"></div>
     </div>
 
 </body>

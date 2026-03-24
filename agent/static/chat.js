@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initProfile();
 
+    applyLanguage(currentLang);
+
     // Search input
     document.getElementById('searchInput')?.addEventListener('input', e => {
         const q = e.target.value.toLowerCase();
@@ -1168,6 +1170,505 @@ function openSettings() {
 function closeSettings() {
     document.getElementById('settingsModal').classList.remove('open');
 }
+
+// ═══════════════════════════════════════════════
+// i18n — LANGUAGE SYSTEM
+// ═══════════════════════════════════════════════
+
+const LANGUAGES = [
+    { code: 'en-US', label: 'English (United States)', flag: '🇺🇸' },
+    { code: 'id-ID', label: 'Indonesia (Indonesia)', flag: '🇮🇩' },
+    { code: 'fr-FR', label: 'Français (France)', flag: '🇫🇷' },
+    { code: 'de-DE', label: 'Deutsch (Deutschland)', flag: '🇩🇪' },
+    { code: 'hi-IN', label: 'हिन्दी (भारत)', flag: '🇮🇳' },
+    { code: 'it-IT', label: 'Italiano (Italia)', flag: '🇮🇹' },
+    { code: 'ja-JP', label: '日本語 (日本)', flag: '🇯🇵' },
+    { code: 'ko-KR', label: '한국어 (대한민국)', flag: '🇰🇷' },
+    { code: 'pt-BR', label: 'Português (Brasil)', flag: '🇧🇷' },
+    { code: 'es-419', label: 'Español (Latinoamérica)', flag: '🌎' },
+    { code: 'es-ES', label: 'Español (España)', flag: '🇪🇸' },
+];
+
+const TRANSLATIONS = {
+    'en-US': {
+        newChat: 'New chat',
+        searchChats: 'Search chats',
+        home: 'Home',
+        chat: 'Chat',
+        agent: 'Agent',
+        code: 'Code',
+        history: 'History',
+        theme: 'Theme',
+        settings: 'Settings',
+        language: 'Language',
+        getHelp: 'Get help',
+        logout: 'Log out',
+        messagePH: 'Message AI Chat...',
+        agentPH: 'Describe your task for the agent...',
+        extended: 'Extended',
+        extOn: 'Extended ON ✦',
+        extOff: 'Extended Off',
+        modeHintChat: 'Chat 💬',
+        modeHintAgent: 'Agent 🤖',
+        inputHint: 'Enter to send · Shift+Enter new line · Mode:',
+        welcomeQ: 'Can I help you with anything?',
+        welcomeSub: 'Powered by HAMS-MAX — Groq & NVIDIA models',
+        greetMorning: 'Morning',
+        greetAfternoon: 'Afternoon',
+        greetEvening: 'Evening',
+        noHistory: 'No chat history yet',
+        connecting: 'Connecting...',
+        processing: 'Processing...',
+        thinking: 'Thinking...',
+        almostDone: 'Almost done...',
+    },
+    'id-ID': {
+        newChat: 'Obrolan baru',
+        searchChats: 'Cari obrolan',
+        home: 'Beranda',
+        chat: 'Obrolan',
+        agent: 'Agen',
+        code: 'Kode',
+        history: 'Riwayat',
+        theme: 'Tema',
+        settings: 'Pengaturan',
+        language: 'Bahasa',
+        getHelp: 'Bantuan',
+        logout: 'Keluar',
+        messagePH: 'Kirim pesan ke AI...',
+        agentPH: 'Deskripsikan tugasmu untuk agen...',
+        extended: 'Extended',
+        extOn: 'Extended ON ✦',
+        extOff: 'Extended Off',
+        modeHintChat: 'Obrolan 💬',
+        modeHintAgent: 'Agen 🤖',
+        inputHint: 'Enter kirim · Shift+Enter baris baru · Mode:',
+        welcomeQ: 'Ada yang bisa saya bantu?',
+        welcomeSub: 'Didukung HAMS-MAX — Model Groq & NVIDIA',
+        greetMorning: 'Selamat Pagi',
+        greetAfternoon: 'Selamat Siang',
+        greetEvening: 'Selamat Malam',
+        noHistory: 'Belum ada riwayat chat',
+        connecting: 'Menghubungkan...',
+        processing: 'Memproses...',
+        thinking: 'Sedang berpikir...',
+        almostDone: 'Hampir selesai...',
+    },
+    'fr-FR': {
+        newChat: 'Nouvelle discussion',
+        searchChats: 'Rechercher',
+        home: 'Accueil',
+        chat: 'Discussion',
+        agent: 'Agent',
+        code: 'Code',
+        history: 'Historique',
+        theme: 'Thème',
+        settings: 'Paramètres',
+        language: 'Langue',
+        getHelp: 'Aide',
+        logout: 'Déconnexion',
+        messagePH: 'Envoyer un message...',
+        agentPH: 'Décrivez votre tâche...',
+        extended: 'Étendu',
+        extOn: 'Étendu ACTIVÉ ✦',
+        extOff: 'Étendu Désactivé',
+        modeHintChat: 'Discussion 💬',
+        modeHintAgent: 'Agent 🤖',
+        inputHint: 'Entrée pour envoyer · Maj+Entrée nouvelle ligne · Mode :',
+        welcomeQ: 'Comment puis-je vous aider ?',
+        welcomeSub: 'Propulsé par HAMS-MAX — Modèles Groq & NVIDIA',
+        greetMorning: 'Bonjour',
+        greetAfternoon: 'Bon après-midi',
+        greetEvening: 'Bonsoir',
+        noHistory: 'Aucun historique de chat',
+        connecting: 'Connexion...',
+        processing: 'Traitement...',
+        thinking: 'Réflexion...',
+        almostDone: 'Presque terminé...',
+    },
+    'de-DE': {
+        newChat: 'Neues Gespräch',
+        searchChats: 'Gespräche suchen',
+        home: 'Startseite',
+        chat: 'Chat',
+        agent: 'Agent',
+        code: 'Code',
+        history: 'Verlauf',
+        theme: 'Design',
+        settings: 'Einstellungen',
+        language: 'Sprache',
+        getHelp: 'Hilfe',
+        logout: 'Abmelden',
+        messagePH: 'Nachricht senden...',
+        agentPH: 'Aufgabe beschreiben...',
+        extended: 'Erweitert',
+        extOn: 'Erweitert AN ✦',
+        extOff: 'Erweitert Aus',
+        modeHintChat: 'Chat 💬',
+        modeHintAgent: 'Agent 🤖',
+        inputHint: 'Enter zum Senden · Shift+Enter neue Zeile · Modus:',
+        welcomeQ: 'Wie kann ich Ihnen helfen?',
+        welcomeSub: 'Betrieben von HAMS-MAX — Groq & NVIDIA Modelle',
+        greetMorning: 'Guten Morgen',
+        greetAfternoon: 'Guten Tag',
+        greetEvening: 'Guten Abend',
+        noHistory: 'Noch kein Chatverlauf',
+        connecting: 'Verbinden...',
+        processing: 'Verarbeiten...',
+        thinking: 'Denken...',
+        almostDone: 'Fast fertig...',
+    },
+    'hi-IN': {
+        newChat: 'नई बातचीत',
+        searchChats: 'बातचीत खोजें',
+        home: 'होम',
+        chat: 'चैट',
+        agent: 'एजेंट',
+        code: 'कोड',
+        history: 'इतिहास',
+        theme: 'थीम',
+        settings: 'सेटिंग्स',
+        language: 'भाषा',
+        getHelp: 'सहायता',
+        logout: 'लॉग आउट',
+        messagePH: 'संदेश भेजें...',
+        agentPH: 'अपना कार्य बताएं...',
+        extended: 'विस्तृत',
+        extOn: 'विस्तृत चालू ✦',
+        extOff: 'विस्तृत बंद',
+        modeHintChat: 'चैट 💬',
+        modeHintAgent: 'एजेंट 🤖',
+        inputHint: 'Enter भेजें · Shift+Enter नई लाइन · मोड:',
+        welcomeQ: 'मैं आपकी कैसे मदद कर सकता हूं?',
+        welcomeSub: 'HAMS-MAX द्वारा संचालित — Groq & NVIDIA मॉडल',
+        greetMorning: 'सुप्रभात',
+        greetAfternoon: 'नमस्ते',
+        greetEvening: 'शुभ संध्या',
+        noHistory: 'अभी तक कोई चैट नहीं',
+        connecting: 'कनेक्ट हो रहा है...',
+        processing: 'प्रसंस्करण...',
+        thinking: 'सोच रहा हूं...',
+        almostDone: 'लगभग हो गया...',
+    },
+    'it-IT': {
+        newChat: 'Nuova chat',
+        searchChats: 'Cerca chat',
+        home: 'Home',
+        chat: 'Chat',
+        agent: 'Agente',
+        code: 'Codice',
+        history: 'Cronologia',
+        theme: 'Tema',
+        settings: 'Impostazioni',
+        language: 'Lingua',
+        getHelp: 'Aiuto',
+        logout: 'Esci',
+        messagePH: 'Invia un messaggio...',
+        agentPH: 'Descrivi il tuo compito...',
+        extended: 'Esteso',
+        extOn: 'Esteso ATTIVO ✦',
+        extOff: 'Esteso Disattivo',
+        modeHintChat: 'Chat 💬',
+        modeHintAgent: 'Agente 🤖',
+        inputHint: 'Invio per inviare · Shift+Invio nuova riga · Modalità:',
+        welcomeQ: 'Come posso aiutarti?',
+        welcomeSub: 'Alimentato da HAMS-MAX — Modelli Groq & NVIDIA',
+        greetMorning: 'Buongiorno',
+        greetAfternoon: 'Buon pomeriggio',
+        greetEvening: 'Buonasera',
+        noHistory: 'Nessuna cronologia chat',
+        connecting: 'Connessione...',
+        processing: 'Elaborazione...',
+        thinking: 'Sto pensando...',
+        almostDone: 'Quasi finito...',
+    },
+    'ja-JP': {
+        newChat: '新しいチャット',
+        searchChats: 'チャットを検索',
+        home: 'ホーム',
+        chat: 'チャット',
+        agent: 'エージェント',
+        code: 'コード',
+        history: '履歴',
+        theme: 'テーマ',
+        settings: '設定',
+        language: '言語',
+        getHelp: 'ヘルプ',
+        logout: 'ログアウト',
+        messagePH: 'メッセージを送信...',
+        agentPH: 'タスクを説明してください...',
+        extended: '拡張',
+        extOn: '拡張 オン ✦',
+        extOff: '拡張 オフ',
+        modeHintChat: 'チャット 💬',
+        modeHintAgent: 'エージェント 🤖',
+        inputHint: 'Enterで送信 · Shift+Enterで改行 · モード:',
+        welcomeQ: '何かお手伝いできることはありますか？',
+        welcomeSub: 'HAMS-MAX搭載 — Groq & NVIDIAモデル',
+        greetMorning: 'おはようございます',
+        greetAfternoon: 'こんにちは',
+        greetEvening: 'こんばんは',
+        noHistory: 'チャット履歴はまだありません',
+        connecting: '接続中...',
+        processing: '処理中...',
+        thinking: '考え中...',
+        almostDone: 'もうすぐ完了...',
+    },
+    'ko-KR': {
+        newChat: '새 대화',
+        searchChats: '대화 검색',
+        home: '홈',
+        chat: '채팅',
+        agent: '에이전트',
+        code: '코드',
+        history: '기록',
+        theme: '테마',
+        settings: '설정',
+        language: '언어',
+        getHelp: '도움말',
+        logout: '로그아웃',
+        messagePH: '메시지 보내기...',
+        agentPH: '작업을 설명해 주세요...',
+        extended: '확장',
+        extOn: '확장 켜짐 ✦',
+        extOff: '확장 꺼짐',
+        modeHintChat: '채팅 💬',
+        modeHintAgent: '에이전트 🤖',
+        inputHint: 'Enter로 전송 · Shift+Enter 줄바꿈 · 모드:',
+        welcomeQ: '무엇을 도와드릴까요?',
+        welcomeSub: 'HAMS-MAX 제공 — Groq & NVIDIA 모델',
+        greetMorning: '좋은 아침이에요',
+        greetAfternoon: '안녕하세요',
+        greetEvening: '안녕하세요',
+        noHistory: '아직 대화 기록이 없습니다',
+        connecting: '연결 중...',
+        processing: '처리 중...',
+        thinking: '생각 중...',
+        almostDone: '거의 다 됐어요...',
+    },
+    'pt-BR': {
+        newChat: 'Nova conversa',
+        searchChats: 'Pesquisar conversas',
+        home: 'Início',
+        chat: 'Chat',
+        agent: 'Agente',
+        code: 'Código',
+        history: 'Histórico',
+        theme: 'Tema',
+        settings: 'Configurações',
+        language: 'Idioma',
+        getHelp: 'Ajuda',
+        logout: 'Sair',
+        messagePH: 'Enviar mensagem...',
+        agentPH: 'Descreva sua tarefa...',
+        extended: 'Estendido',
+        extOn: 'Estendido ATIVO ✦',
+        extOff: 'Estendido Desativo',
+        modeHintChat: 'Chat 💬',
+        modeHintAgent: 'Agente 🤖',
+        inputHint: 'Enter para enviar · Shift+Enter nova linha · Modo:',
+        welcomeQ: 'Como posso te ajudar?',
+        welcomeSub: 'Desenvolvido por HAMS-MAX — Modelos Groq & NVIDIA',
+        greetMorning: 'Bom dia',
+        greetAfternoon: 'Boa tarde',
+        greetEvening: 'Boa noite',
+        noHistory: 'Nenhum histórico de chat',
+        connecting: 'Conectando...',
+        processing: 'Processando...',
+        thinking: 'Pensando...',
+        almostDone: 'Quase pronto...',
+    },
+    'es-419': {
+        newChat: 'Nueva conversación',
+        searchChats: 'Buscar conversaciones',
+        home: 'Inicio',
+        chat: 'Chat',
+        agent: 'Agente',
+        code: 'Código',
+        history: 'Historial',
+        theme: 'Tema',
+        settings: 'Configuración',
+        language: 'Idioma',
+        getHelp: 'Ayuda',
+        logout: 'Cerrar sesión',
+        messagePH: 'Enviar mensaje...',
+        agentPH: 'Describe tu tarea...',
+        extended: 'Extendido',
+        extOn: 'Extendido ACTIVO ✦',
+        extOff: 'Extendido Inactivo',
+        modeHintChat: 'Chat 💬',
+        modeHintAgent: 'Agente 🤖',
+        inputHint: 'Enter para enviar · Shift+Enter nueva línea · Modo:',
+        welcomeQ: '¿En qué puedo ayudarte?',
+        welcomeSub: 'Impulsado por HAMS-MAX — Modelos Groq & NVIDIA',
+        greetMorning: 'Buenos días',
+        greetAfternoon: 'Buenas tardes',
+        greetEvening: 'Buenas noches',
+        noHistory: 'Aún no hay historial de chat',
+        connecting: 'Conectando...',
+        processing: 'Procesando...',
+        thinking: 'Pensando...',
+        almostDone: 'Casi listo...',
+    },
+    'es-ES': {
+        newChat: 'Nueva conversación',
+        searchChats: 'Buscar conversaciones',
+        home: 'Inicio',
+        chat: 'Chat',
+        agent: 'Agente',
+        code: 'Código',
+        history: 'Historial',
+        theme: 'Tema',
+        settings: 'Configuración',
+        language: 'Idioma',
+        getHelp: 'Ayuda',
+        logout: 'Cerrar sesión',
+        messagePH: 'Enviar mensaje...',
+        agentPH: 'Describe tu tarea...',
+        extended: 'Extendido',
+        extOn: 'Extendido ACTIVO ✦',
+        extOff: 'Extendido Inactivo',
+        modeHintChat: 'Chat 💬',
+        modeHintAgent: 'Agente 🤖',
+        inputHint: 'Enter para enviar · Shift+Enter nueva línea · Modo:',
+        welcomeQ: '¿En qué puedo ayudarte?',
+        welcomeSub: 'Con tecnología HAMS-MAX — Modelos Groq & NVIDIA',
+        greetMorning: 'Buenos días',
+        greetAfternoon: 'Buenas tardes',
+        greetEvening: 'Buenas noches',
+        noHistory: 'Aún no hay historial de chat',
+        connecting: 'Conectando...',
+        processing: 'Procesando...',
+        thinking: 'Pensando...',
+        almostDone: 'Casi listo...',
+    },
+};
+
+// ── Language state ──
+let currentLang = localStorage.getItem('hams_lang') || 'en-US';
+
+function t(key) {
+    const lang = TRANSLATIONS[currentLang] || TRANSLATIONS['en-US'];
+    return lang[key] || TRANSLATIONS['en-US'][key] || key;
+}
+
+function applyLanguage(code) {
+    currentLang = code;
+    localStorage.setItem('hams_lang', code);
+    document.documentElement.lang = code.split('-')[0];
+
+    // Update semua elemen [data-i18n]
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        el.textContent = t(key);
+    });
+
+    // Update placeholders
+    const userInput = document.getElementById('userInput');
+    if (userInput) {
+        userInput.placeholder = mode === 'agent' ? t('agentPH') : t('messagePH');
+    }
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.placeholder = t('searchChats');
+
+    // Update input hint
+    const inputHint = document.querySelector('.input-hint');
+    if (inputHint) {
+        const modeSpan = document.getElementById('modeHint');
+        const extSpan = document.getElementById('extHint');
+        const modeText = modeSpan ? modeSpan.outerHTML : '';
+        const extText = extSpan ? extSpan.outerHTML : '';
+        inputHint.innerHTML =
+            `${t('inputHint')} ${modeText} &nbsp;·&nbsp; ${extText}`;
+    }
+
+    // Update welcome sub
+    const welcomeSub = document.querySelector('.welcome-sub');
+    if (welcomeSub) welcomeSub.textContent = t('welcomeSub');
+
+    // Update welcome question
+    const welcomeQ = document.querySelector('.welcome-greeting');
+    if (welcomeQ) {
+        const hour = new Date().getHours();
+        const greet = hour < 12 ? t('greetMorning') : hour < 17 ? t('greetAfternoon') : t('greetEvening');
+        const nameEl = document.getElementById('greetingName');
+        const name = nameEl ? nameEl.textContent : 'HAMS AI';
+        welcomeQ.innerHTML = `${greet}, <span class="greeting-name" id="greetingName">${name}</span>.<br />${t('welcomeQ')}`;
+    }
+
+    // Update history empty state
+    const historyEmpty = document.querySelector('.history-empty');
+    if (historyEmpty) historyEmpty.textContent = t('noHistory');
+
+    // Update extended hint
+    const extHint = document.getElementById('extHint');
+    if (extHint) {
+        extHint.textContent = extended ? t('extOn') : t('extOff');
+    }
+
+    // Update mode hint
+    const modeHint = document.getElementById('modeHint');
+    if (modeHint) {
+        modeHint.textContent = mode === 'agent' ? t('modeHintAgent') : t('modeHintChat');
+    }
+
+    // Re-render lang menu to update checkmark
+    renderLangMenu();
+}
+
+function renderLangMenu() {
+    const list = document.getElementById('langMenuList');
+    if (!list) return;
+
+    list.innerHTML = LANGUAGES.map(lang => `
+        <div class="lang-item ${lang.code === currentLang ? 'active' : ''}"
+             onclick="selectLanguage('${lang.code}')">
+            <span class="lang-item-flag">${lang.flag}</span>
+            <span class="lang-item-name">${lang.label}</span>
+            <i class="bi bi-check2 lang-item-check"></i>
+        </div>
+    `).join('');
+}
+
+function selectLanguage(code) {
+    applyLanguage(code);
+    closeLangMenu();
+    closeProfileDropdown();
+    showToast(`🌐 Language changed to ${LANGUAGES.find(l => l.code === code)?.label}`);
+}
+
+function toggleLangMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('langMenu');
+    const trigger = document.getElementById('langTrigger');
+    const isOpen = menu.classList.contains('open');
+
+    if (isOpen) {
+        closeLangMenu();
+    } else {
+        renderLangMenu();
+        menu.classList.add('open');
+        trigger.classList.add('active');
+    }
+}
+
+function closeLangMenu() {
+    document.getElementById('langMenu')?.classList.remove('open');
+    document.getElementById('langTrigger')?.classList.remove('active');
+}
+
+// Close lang menu when clicking outside
+document.addEventListener('click', e => {
+    const menu = document.getElementById('langMenu');
+    const trigger = document.getElementById('langTrigger');
+    if (menu && !menu.contains(e.target) && trigger && !trigger.contains(e.target)) {
+        closeLangMenu();
+    }
+});
+
+// ── Init language on page load ──
+// Tambahkan baris ini di dalam DOMContentLoaded, setelah initProfile():
+// applyLanguage(currentLang);
 
 // ═══════════════════════════════════════════════
 // GET HELP — FAQ DATA & LOGIC
