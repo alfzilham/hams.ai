@@ -196,18 +196,10 @@
                     <!-- Three.js WebGL canvas -->
                     <canvas id="orbCanvas"></canvas>
 
-                    <!-- Eyes overlay — layered on top of 3D canvas -->
+                    <!-- Eyes overlay — Vertical Lines -->
                     <div class="orb-eyes-overlay" id="orbEyesOverlay">
-                        <div class="orb-eye" id="eyeLeft">
-                            <div class="orb-pupil" id="pupilLeft">
-                                <div class="orb-pupil-shine"></div>
-                            </div>
-                        </div>
-                        <div class="orb-eye" id="eyeRight">
-                            <div class="orb-pupil" id="pupilRight">
-                                <div class="orb-pupil-shine"></div>
-                            </div>
-                        </div>
+                        <div class="orb-eye-line" id="eyeLeft"></div>
+                        <div class="orb-eye-line" id="eyeRight"></div>
                     </div>
 
                     <!-- Hidden: kept for backward compat with updateOrbMode() -->

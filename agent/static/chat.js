@@ -320,9 +320,8 @@ function initProfessionalOrb() {
     });
 
     document.addEventListener('mouseleave', () => {
-        document.querySelectorAll('.orb-eyes-overlay .orb-pupil').forEach(p => {
-            p.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)';
-            p.style.transform = 'translate(-50%, -50%)';
+        document.querySelectorAll('.orb-eye-line').forEach(el => {
+            el.style.transform = 'translate(-50%, -50%)';
         });
     });
 
@@ -386,25 +385,33 @@ function initProfessionalOrb() {
             magneticCursor.style.top = `${targetY}px`;
         }
 
-        // Eye tracking + 3D light position
+        // Eye tracking: Vertical Lines Move
         if (isNearOrb) {
-            // Pakai mouseX/mouseY langsung — bukan cursorX/cursorY yang di-lerp
-            document.querySelectorAll('.orb-eyes-overlay .orb-eye').forEach(eye => {
+            document.querySelectorAll('.orb-eye-line').forEach(eye => {
                 const rect = eye.getBoundingClientRect();
+                // Pusat dari garis saat ini
                 const ex = rect.left + rect.width / 2;
                 const ey = rect.top + rect.height / 2;
-                const dx2 = mouseX - ex;
-                const dy2 = mouseY - ey;
-                const d2 = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1;
-                const maxOffset = 4;
+
+                const dx = mouseX - ex;
+                const dy = mouseY - ey;
+                const d2 = Math.sqrt(dx * dx + dy * dy) || 1;
+
+                // Batas pergerakan garis (max offset)
+                const maxOffset = 6;
                 const clamp = Math.min(d2, maxOffset * 6) / (maxOffset * 6);
-                const px = (dx2 / d2) * clamp * maxOffset;
-                const py = (dy2 / d2) * clamp * maxOffset;
-                const pupil = eye.querySelector('.orb-pupil');
-                if (pupil) {
-                    pupil.style.transition = 'none';
-                    pupil.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
-                }
+
+                // Hitung offset
+                const px = (dx / d2) * clamp * maxOffset;
+                const py = (dy / d2) * clamp * maxOffset;
+
+                // Ambil posisi base (left/right) dari CSS ID selector
+                // Karena CSS sudah set left: calc(50% +/- 10px), kita hanya perlu menambah offset
+                // Transform: translate(baseX + offset, baseY + offset)
+                // Di sini kita handle transform translate. 
+                // CSS sudah handle posisi awal. Kita append movement.
+
+                eye.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
             });
         }
 
@@ -449,11 +456,15 @@ function scheduleProfessionalBlink() {
     const nextDelay = isHovering ? baseDelay * 0.7 : baseDelay;
 
     setTimeout(() => {
-        const eyes = document.querySelectorAll('.orb-eye');
+        const eyes = document.querySelectorAll('.orb-eye-line'); // Ubah selector ke garis
         eyes.forEach(eye => {
-            eye.style.transition = 'transform 0.08s';
-            eye.style.transform = 'scaleY(0.1)';
-            setTimeout(() => { eye.style.transform = 'scaleY(1)'; }, 160);
+            // Efek "blink" untuk garis: menghilang sebentar
+            eye.style.transition = 'opacity 0.08s';
+            eye.style.opacity = '0.1'; // Fade out
+            setTimeout(() => { 
+                eye.style.opacity = '0.95'; // Fade in (kembali ke normal)
+                // Reset transform untuk efek "jitter" kecil saat blink (opsional, biarkan kosong jika mau simple)
+            }, 160);
         });
         scheduleProfessionalBlink();
     }, nextDelay);
@@ -560,21 +571,21 @@ let orbAmbientLight = null;
 let orbGlowMesh = null;
 let orbAnimationId = null;
 
-// Color palettes for mode switching
+// Color palettes for mode switching (Silver-White Theme)
 const ORB_COLORS = {
     chat: {
-        base: new THREE.Color(0.92, 0.92, 0.95),   // putih-silver
-        emissive: new THREE.Color(0.18, 0.18, 0.20),   // silver glow subtle
-        light: new THREE.Color(1.0, 1.0, 1.0),   // pure white light
-        glow: new THREE.Color(0.85, 0.88, 0.95),   // silver-white glow
-        ambient: new THREE.Color(0.14, 0.14, 0.16),   // dark silver ambient
+        base: new THREE.Color(0.95, 0.95, 0.97),   // Silver-White
+        emissive: new THREE.Color(0.2, 0.2, 0.25),   // Silver glow subtle
+        light: new THREE.Color(1.0, 1.0, 1.0),   // Pure white light
+        glow: new THREE.Color(0.9, 0.9, 0.95),   // Silver-white glow
+        ambient: new THREE.Color(0.15, 0.15, 0.18),   // Dark silver ambient
     },
     agent: {
-        base: new THREE.Color(0.55, 0.95, 0.65),   // vibrant green
-        emissive: new THREE.Color(0.08, 0.25, 0.12),   // green glow
-        light: new THREE.Color(0.7, 1.0, 0.8),      // green-white light
-        glow: new THREE.Color(0.3, 1.0, 0.5),      // green glow
-        ambient: new THREE.Color(0.08, 0.18, 0.10),   // dark green ambient
+        base: new THREE.Color(0.85, 0.95, 0.88),   // Light Silver-Green
+        emissive: new THREE.Color(0.15, 0.3, 0.2),   // Green tint glow
+        light: new THREE.Color(0.9, 1.0, 0.95),      // Green-white light
+        glow: new THREE.Color(0.6, 1.0, 0.7),      // Green glow
+        ambient: new THREE.Color(0.1, 0.18, 0.12),   // Dark green ambient
     }
 };
 
@@ -620,19 +631,19 @@ function initOrb3DLight() {
     // ── Sphere geometry — high segment count for smoothness ──
     const geometry = new THREE.SphereGeometry(1, 128, 128);
 
-    // ── Material — glass-like with subsurface scattering feel ──
+    // ── Material — Silver Glass Fluid ──
     const material = new THREE.MeshPhysicalMaterial({
         color: orbTargetColors.base,
         emissive: orbTargetColors.emissive,
         emissiveIntensity: 0.4,
-        metalness: 0.35,
-        roughness: 0.05,
+        metalness: 0.85,   // Tingkatkan metalness untuk kilau
+        roughness: 0.08,   // Turunkan roughness untuk licin
         clearcoat: 1.0,
         clearcoatRoughness: 0.05,
-        reflectivity: 0.9,
+        reflectivity: 1.0, // Maksimal refleksi
         transparent: true,
-        opacity: 0.92,
-        envMapIntensity: 1.0,
+        opacity: 0.95,     // Sedikit lebih solid
+        envMapIntensity: 1.2,
     });
 
     orbSphere = new THREE.Mesh(geometry, material);

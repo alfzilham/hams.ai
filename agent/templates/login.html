@@ -123,6 +123,69 @@
             height: 100%;
         }
 
+        /* ══════════════════════════════════════════════════════════════
+   ORB EYES — Vertical Lines (New Design)
+   ══════════════════════════════════════════════════════════════ */
+
+        .orb-eyes-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 240px;
+            height: 240px;
+            z-index: 5;
+            pointer-events: none;
+            /* Tidak perlu flex, karena kita akan posisi absolute manual untuk presisi */
+        }
+
+        /* Garis Vertikal Mata (Base Style) */
+        .orb-eye-line {
+            position: absolute;
+            top: 50%;
+            width: 2px;
+            height: 18px;
+            /* Panjang garis */
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 1px;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.9), 0 0 16px rgba(255, 255, 255, 0.4);
+            transform: translate(-50%, -50%);
+            /* Center default */
+            transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1);
+            /* Smooth follow */
+        }
+
+        /* Posisi Default Kiri & Kanan (Dalam container 240px visual side) */
+        #loginEyeLeft,
+        #registerEyeLeft {
+            left: calc(50% - 12px);
+            /* Jarak dari tengah */
+        }
+
+        #loginEyeRight,
+        #registerEyeRight {
+            left: calc(50% + 12px);
+            /* Jarak dari tengah */
+        }
+
+        /* Responsif mobile */
+        @media (max-width: 640px) {
+            .orb-eye-line {
+                width: 1.5px;
+                height: 14px;
+            }
+
+            #loginEyeLeft,
+            #registerEyeLeft {
+                left: calc(50% - 8px);
+            }
+
+            #loginEyeRight,
+            #registerEyeRight {
+                left: calc(50% + 8px);
+            }
+        }
+
         /* Visual branding overlay */
         .visual-brand {
             position: absolute;
@@ -665,17 +728,10 @@
         <div class="auth-visual" id="authVisual">
             <canvas id="orbCanvas3D"></canvas>
 
+            <!-- Ganti div orb-eyes-overlay lama dengan ini -->
             <div class="orb-eyes-overlay" id="loginEyesOverlay">
-                <div class="orb-eye" id="loginEyeLeft">
-                    <div class="orb-pupil" id="loginPupilLeft">
-                        <div class="orb-pupil-shine"></div>
-                    </div>
-                </div>
-                <div class="orb-eye" id="loginEyeRight">
-                    <div class="orb-pupil" id="loginPupilRight">
-                        <div class="orb-pupil-shine"></div>
-                    </div>
-                </div>
+                <div class="orb-eye-line" id="loginEyeLeft"></div>
+                <div class="orb-eye-line" id="loginEyeRight"></div>
             </div>
 
             <!-- Floating particles -->
@@ -953,17 +1009,18 @@
 
             // ── Main sphere ──
             const geometry = new THREE.SphereGeometry(1.2, 128, 128);
+            // ── Main sphere ──
             const material = new THREE.MeshPhysicalMaterial({
-                color: new THREE.Color(0.90, 0.90, 0.93),
-                emissive: new THREE.Color(0.16, 0.16, 0.18),
-                emissiveIntensity: 0.5,
-                metalness: 0.35,
-                roughness: 0.05,
+                color: new THREE.Color(0.95, 0.95, 0.97), // Silver White
+                emissive: new THREE.Color(0.2, 0.2, 0.25),
+                emissiveIntensity: 0.4,
+                metalness: 0.85,
+                roughness: 0.08,
                 clearcoat: 1.0,
                 clearcoatRoughness: 0.05,
-                reflectivity: 0.95,
+                reflectivity: 1.0,
                 transparent: true,
-                opacity: 0.88,
+                opacity: 0.95,
             });
             const sphere = new THREE.Mesh(geometry, material);
             scene.add(sphere);
@@ -1044,7 +1101,9 @@
             cubeCam.update(renderer, envScene);
             material.envMap = cubeRT.texture;
 
-            // ── Mouse tracking ──
+            // ═══════════════════════════════════════
+            // MOUSE TRACKING — FOR 3D LIGHT (SAFE)
+            // ═══════════════════════════════════════
             let mouseX = 0, mouseY = 0;
             let targetLightX = 2, targetLightY = 2;
 
@@ -1056,7 +1115,9 @@
                 targetLightY = mouseY * 2.5;
             });
 
-            // ── Animation ──
+            // ═══════════════════════════════════════
+            // ANIMATION LOOP
+            // ═══════════════════════════════════════
             const clock = new THREE.Clock();
             let time = 0;
 
@@ -1087,7 +1148,7 @@
                 ring2.rotation.y = time * 0.1;
                 ring2.rotation.z = Math.PI / 6 + time * 0.08;
 
-                // Light follows mouse (smooth)
+                // Light follows mouse (smooth) — USING VARIABLES FROM TOP
                 pointLight.position.x += (targetLightX - pointLight.position.x) * 0.05;
                 pointLight.position.y += (targetLightY - pointLight.position.y) * 0.05;
                 pointLight.position.z = 3.0;
@@ -1103,7 +1164,9 @@
 
             animate();
 
-            // ── Resize ──
+            // ═══════════════════════════════════════
+            // RESIZE HANDLER
+            // ═══════════════════════════════════════
             window.addEventListener('resize', () => {
                 if (window.innerWidth < 768) return;
                 const w = container.offsetWidth;
@@ -1113,33 +1176,37 @@
                 renderer.setSize(w, h);
             });
 
-            // ── Eye tracking — direct snap, no lerp ──
-            const loginEyesOverlay = document.getElementById('loginEyesOverlay');
-            if (loginEyesOverlay) {
+            // ═══════════════════════════════════════
+            // EYE TRACKING — VERTICAL LINES (FIXED)
+            // ═══════════════════════════════════════
+
+            // GANTI 'loginEyesOverlay' menjadi 'registerEyesOverlay' untuk file register.html
+            const eyesOverlay = document.getElementById('loginEyesOverlay');
+
+            if (eyesOverlay) {
                 container.addEventListener('mousemove', (e) => {
-                    document.querySelectorAll('#loginEyesOverlay .orb-eye').forEach(eye => {
-                        const rect = eye.getBoundingClientRect();
+                    const lines = eyesOverlay.querySelectorAll('.orb-eye-line');
+                    lines.forEach(line => {
+                        const rect = line.getBoundingClientRect();
                         const ex = rect.left + rect.width / 2;
                         const ey = rect.top + rect.height / 2;
+
                         const dx = e.clientX - ex;
                         const dy = e.clientY - ey;
                         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                        const maxOffset = 5;
+
+                        const maxOffset = 6;
                         const clamp = Math.min(dist, maxOffset * 6) / (maxOffset * 6);
                         const px = (dx / dist) * clamp * maxOffset;
                         const py = (dy / dist) * clamp * maxOffset;
-                        const pupil = eye.querySelector('.orb-pupil');
-                        if (pupil) {
-                            pupil.style.transition = 'none';
-                            pupil.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
-                        }
+
+                        line.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
                     });
                 });
 
                 container.addEventListener('mouseleave', () => {
-                    document.querySelectorAll('#loginEyesOverlay .orb-pupil').forEach(p => {
-                        p.style.transition = 'transform 0.25s cubic-bezier(0.34,1.56,0.64,1)';
-                        p.style.transform = 'translate(-50%, -50%)';
+                    eyesOverlay.querySelectorAll('.orb-eye-line').forEach(l => {
+                        l.style.transform = 'translate(-50%, -50%)';
                     });
                 });
             }
