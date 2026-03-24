@@ -715,6 +715,11 @@ async function sendChat(content, model) {   // content bisa string atau array
 
         const reply = fullReply || 'Tidak ada respons.';
         let userTextForHistory = typeof content === 'string' ? content : (Array.isArray(content) ? content.find(c => c.type === 'text')?.text || '📎 Attached files' : '📎 Attached files');
+        
+        // TRUNCATE text before saving to history to avoid localStorage QuotaExceededError (5MB limit)
+        if (userTextForHistory.length > 1500) {
+            userTextForHistory = userTextForHistory.substring(0, 1400) + '\n...\n[FILE CONTENT TRUNCATED DARI HISTORY]';
+        }
         history.push({ role: 'user', content: userTextForHistory });
         history.push({ role: 'assistant', content: reply });
 
@@ -2159,7 +2164,7 @@ function setThemeOpt(t) {
 
 
 // ═══════════════════════════════════════════════
-// FILE ATTACHMENT SYSTEM — Fase 1 + 2 (Text Files)
+// FILE ATTACHMENT SYSTEM
 // ═══════════════════════════════════════════════
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -2184,30 +2189,62 @@ async function processFile(file) {
     else if (ext === 'docx' || ext === 'doc') {
         await processDOCX(file);
     }
-    // IMAGE — Phase 2
+    // IMAGE
     else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
         await processImage(file);
     }
     // Video (nanti)
     else if (['mp4', 'mov', 'webm'].includes(ext)) {
-        showToast(`🎥 Video support akan ditambahkan di tahap berikutnya`);
+        showToast(`🎥 Video support belum di-support model API untuk saat ini`);
     }
     else {
         showToast(`⚠️ Format belum didukung: .${ext}`);
     }
 }
 
-async function processTextFile(file) {
+async function processImage(file) {
+    const loadingChipIndex = attachedFiles.length;
+    attachedFiles.push({ type: 'image', name: file.name, size: file.size, loading: true });
+    renderAttachmentChips();
+
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
-            const content = e.target.result;
-            attachedFiles.push({
+            attachedFiles[loadingChipIndex] = {
+                type: 'image',
+                name: file.name,
+                size: file.size,
+                base64: e.target.result,
+                loading: false
+            };
+            renderAttachmentChips();
+            showToast(`🖼️ ${file.name} berhasil di-attach`);
+            resolve();
+        };
+        reader.onerror = () => {
+            attachedFiles[loadingChipIndex] = { type: 'image', name: file.name, size: file.size, error: true, loading: false };
+            renderAttachmentChips();
+            resolve();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function processTextFile(file) {
+    const loadingChipIndex = attachedFiles.length;
+    attachedFiles.push({ type: 'text', name: file.name, size: file.size, loading: true });
+    renderAttachmentChips();
+
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            attachedFiles[loadingChipIndex] = {
                 type: 'text',
                 name: file.name,
                 size: file.size,
-                content: content
-            });
+                content: e.target.result,
+                loading: false
+            };
             renderAttachmentChips();
             showToast(`📎 ${file.name} berhasil di-attach`);
             resolve();
@@ -2218,13 +2255,7 @@ async function processTextFile(file) {
 
 async function processPDF(file) {
     const loadingChipIndex = attachedFiles.length;
-    attachedFiles.push({
-        type: 'pdf',
-        name: file.name,
-        size: file.size,
-        content: '',
-        loading: true
-    });
+    attachedFiles.push({ type: 'pdf', name: file.name, size: file.size, content: '', loading: true });
     renderAttachmentChips();
 
     try {
@@ -2242,16 +2273,11 @@ async function processPDF(file) {
             type: 'pdf',
             name: file.name,
             size: file.size,
-            content: fullText.trim()
+            content: fullText.trim(),
+            loading: false
         };
     } catch (err) {
-        attachedFiles[loadingChipIndex] = {
-            type: 'pdf',
-            name: file.name,
-            size: file.size,
-            content: '',
-            error: true
-        };
+        attachedFiles[loadingChipIndex] = { type: 'pdf', name: file.name, size: file.size, content: '', error: true, loading: false };
         showToast(`❌ Gagal baca PDF: ${file.name}`);
     }
 
@@ -2261,13 +2287,7 @@ async function processPDF(file) {
 
 async function processDOCX(file) {
     const loadingChipIndex = attachedFiles.length;
-    attachedFiles.push({
-        type: 'docx',
-        name: file.name,
-        size: file.size,
-        content: '',
-        loading: true
-    });
+    attachedFiles.push({ type: 'docx', name: file.name, size: file.size, content: '', loading: true });
     renderAttachmentChips();
 
     try {
@@ -2277,16 +2297,11 @@ async function processDOCX(file) {
             type: 'docx',
             name: file.name,
             size: file.size,
-            content: result.value.trim()
+            content: result.value.trim(),
+            loading: false
         };
     } catch (err) {
-        attachedFiles[loadingChipIndex] = {
-            type: 'docx',
-            name: file.name,
-            size: file.size,
-            content: '',
-            error: true
-        };
+        attachedFiles[loadingChipIndex] = { type: 'docx', name: file.name, size: file.size, content: '', error: true, loading: false };
         showToast(`❌ Gagal baca DOCX: ${file.name}`);
     }
 
@@ -2312,20 +2327,13 @@ function renderAttachmentChips() {
         chip.className = `attachment-chip chip-${f.type} ${f.loading ? 'loading' : ''} ${f.error ? 'error' : ''}`;
 
         let iconHTML = '';
-
         if (f.type === 'image' && f.base64) {
-            iconHTML = `
-                <div class="chip-icon" style="width:32px;height:32px;overflow:hidden;border-radius:6px;border:1px solid rgba(255,255,255,0.15);">
-                    <img src="${f.base64}" alt="${f.name}" style="width:100%;height:100%;object-fit:cover;">
-                </div>`;
-        }
-        else if (f.type === 'pdf') {
+            iconHTML = `<div class="chip-icon" style="width:32px;height:32px;overflow:hidden;border-radius:6px;border:1px solid rgba(255,255,255,0.15);"><img src="${f.base64}" alt="${f.name}" style="width:100%;height:100%;object-fit:cover;"></div>`;
+        } else if (f.type === 'pdf') {
             iconHTML = `<i class="bi bi-file-earmark-pdf chip-icon"></i>`;
-        }
-        else if (f.type === 'docx') {
+        } else if (f.type === 'docx') {
             iconHTML = `<i class="bi bi-file-earmark-word chip-icon"></i>`;
-        }
-        else {
+        } else {
             iconHTML = `<i class="bi bi-file-earmark-text chip-icon"></i>`;
         }
 
@@ -2337,7 +2345,6 @@ function renderAttachmentChips() {
             </div>
             <button class="chip-remove" onclick="removeAttachment(${i}); event.stopImmediatePropagation();">×</button>
         `;
-
         chipsContainer.appendChild(chip);
     });
 }
@@ -2348,13 +2355,9 @@ window.removeAttachment = function (index) {
 };
 
 // ═══════════════════════════════════════════════
-// MODIFY sendMessage() — Inject attachments (Fase 3)
+// MAIN SEND DISPATCH
 // ═══════════════════════════════════════════════
 
-// Cari fungsi sendMessage() yang lama, lalu GANTI seluruh fungsinya dengan ini:
-// ═══════════════════════════════════════════════
-// PHASE 3 — MULTIMODAL SEND MESSAGE (Text + Image)
-// ═══════════════════════════════════════════════
 async function sendMessage(overrideText) {
     const input = document.getElementById('userInput');
     let userText = overrideText || input.value.trim();
@@ -2367,41 +2370,33 @@ async function sendMessage(overrideText) {
     isLoading = true;
     document.getElementById('sendBtn').disabled = true;
 
-    // Build multimodal content array
-    const contentArray = [];
-
-    if (userText) {
-        contentArray.push({ type: "text", text: userText });
-    }
-
-    attachedFiles.forEach(f => {
-        if (f.type === 'image' && f.base64) {
-            contentArray.push({
-                type: "image_url",
-                image_url: { url: f.base64 }
-            });
-        } else if (f.content) {
-            contentArray.push({
-                type: "text",
-                text: `**Attached File:** ${f.name}\n\`\`\`\n${f.content}\n\`\`\``
-            });
-        }
-    });
-
-    // Tampilan di chat (hanya preview)
+    // 1. Tampilan di User Bubble (Hanya preview nama file/icon)
     let displayText = userText || '';
-    if (attachedFiles.some(f => f.type === 'image')) displayText += ' 🖼️';
-    if (attachedFiles.some(f => f.type !== 'image')) displayText += ' 📎';
-    appendMsg('user', displayText || '📎 Attached files');
+    if (attachedFiles.some(f => f.type === 'image')) displayText += '\n🖼️ Attached Images';
+    if (attachedFiles.some(f => f.type !== 'image')) displayText += '\n📎 Attached Files';
+    appendMsg('user', displayText.trim());
+
+    // 2. Format untuk Backend API. 
+    // Backend API `message` parameter bertipe string, BUKAN array. Oleh karena itu, kita gabungkan teksnya disini.
+    let fullPrompt = userText || '';
+    if (attachedFiles.length > 0) {
+        fullPrompt += `\n\n[FILE CONTEXT]\nBerikut adalah isi dari file-file yang dilampirkan:\n`;
+        attachedFiles.forEach(f => {
+            if (f.content) {
+                fullPrompt += `\n--- START OF ${f.name} ---\n${f.content}\n--- END OF ${f.name} ---\n`;
+            } else if (f.base64) {
+                fullPrompt += `\n--- IMAGE ${f.name} ---\n(Image Base64 is omitted API limitation for string)\n`;
+            }
+        });
+    }
 
     const model = document.getElementById('modelSelect').value;
 
     try {
         if (mode === 'agent') {
-            // Agent masih text-only untuk sekarang
-            await sendAgent(userText || "[Files attached]", model);
+            await sendAgent(fullPrompt || "[Files attached]", model);
         } else {
-            await sendChat(contentArray, model);   // Kirim array
+            await sendChat(fullPrompt, model);   // Kirim String (Bukan Array)
         }
     } finally {
         attachedFiles = [];
@@ -2411,8 +2406,6 @@ async function sendMessage(overrideText) {
         input.focus();
     }
 }
-
-
 
 // ═══════════════════════════════════════════════
 // 3D ORB & INTERACTIVE EYES — UPDATED
