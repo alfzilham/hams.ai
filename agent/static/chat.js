@@ -2522,14 +2522,14 @@ async function sendMessage(overrideText) {
     // ── 2. ORB MATERIAL (BLUE-TEAL → BLACK) ────────
     const geometry = new THREE.SphereGeometry(1, 64, 64);
     const material = new THREE.MeshPhysicalMaterial({
-        color: 0x004d5c,      // Mid teal (matches avatar-orb-mini)
-        metalness: 0.25,      // Sedikit glossy
-        roughness: 0.18,      // Sharp highlight
+        color: 0x001e2b,      // Sangat gelap — cahaya yang bikin teal
+        metalness: 0.1,
+        roughness: 0.25,
         clearcoat: 1.0,
-        clearcoatRoughness: 0.1,
-        envMapIntensity: 0.7,
-        emissive: 0x001e2b,  // Dark teal-black
-        emissiveIntensity: 1.8
+        clearcoatRoughness: 0.08,
+        envMapIntensity: 0.2,
+        emissive: 0x000000,   // Matikan emissive — biarkan lighting yang kerja
+        emissiveIntensity: 0.0
     });
 
     const orb = new THREE.Mesh(geometry, material);
@@ -2538,21 +2538,21 @@ async function sendMessage(overrideText) {
     // ── 3. INNER GLOW (BLUE-TEAL) ──────────────────
     const glowGeo = new THREE.SphereGeometry(0.92, 32, 32);
     const glowMat = new THREE.MeshBasicMaterial({
-        color: 0x00c8d4,      // Blue-Teal Glow (matches CSS gradient top)
+        color: 0x00c8d4,
         transparent: true,
-        opacity: 0.22,
+        opacity: 0.12,        // Tipis — hanya rim glow
         side: THREE.BackSide
     });
     const glowMesh = new THREE.Mesh(glowGeo, glowMat);
     scene.add(glowMesh);
 
     // ── 4. LIGHTING ────────────────────────────────
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.04);
     scene.add(ambient);
 
     // PointLight utama (mengikuti kursor)
-    const pointLight = new THREE.PointLight(0x00f2ff, 2.0, 100);
-    pointLight.position.set(5, 5, 5);
+    const pointLight = new THREE.PointLight(0x00c8d4, 4.5, 100);
+    pointLight.position.set(-3, 3, 4);
     scene.add(pointLight);
 
     // Fake Environment Map
