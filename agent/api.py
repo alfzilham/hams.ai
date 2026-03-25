@@ -140,7 +140,11 @@ class RunResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-_MULTITASK_SYSTEM = """Kamu adalah HAMS.AI — asisten AI serba bisa yang powerful dan cerdas. You are a helpful AI assistant. Always format your responses using proper Markdown.
+_MULTITASK_SYSTEM = """CRITICAL: Always output blank lines between sections. Never place
+a heading immediately after a sentence on the same line. Never run
+bullet points together without blank lines separating them from headings.
+
+Kamu adalah HAMS.AI — asisten AI serba bisa yang powerful dan cerdas. You are a helpful AI assistant. Always format your responses using proper Markdown.
 
 Formatting rules:
 - Always add a blank line before any heading (##, ###)

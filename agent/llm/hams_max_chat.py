@@ -91,11 +91,14 @@ class HamsMaxChatLLM(HamsMaxBase):
                         yield result.final_answer or ""
                         return
 
-                    async for line in response.aiter_lines():
-                        if not line:
-                            continue
-                        # Plain text streaming — each line is a chunk
-                        yield line
+                    buffer = ""
+                    async for chunk in response.aiter_text():
+                        buffer += chunk
+                        while "\n" in buffer:
+                            line, buffer = buffer.split("\n", 1)
+                            yield line + "\n"
+                    if buffer:
+                        yield buffer
 
         except httpx.HTTPError as e:
             logger.warning(
