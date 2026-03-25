@@ -151,6 +151,16 @@ class HamsMaxBase(BaseLLM):
         if system:
             history.insert(0, {"role": "system", "content": system})
 
+        MAX_HISTORY_CHARS = 12_000
+        total_chars = sum(len(h["content"]) for h in history)
+        if total_chars > MAX_HISTORY_CHARS:
+            # Keep only the last 4 history turns to stay within limits
+            history = history[-4:]
+            logger.warning(
+                f"[hams-max] History truncated to last 4 turns "
+                f"(was {total_chars} chars total)"
+            )
+
         return {
             "message":    user_message,
             "session_id": f"hams-agent-{uuid.uuid4().hex[:8]}",

@@ -112,34 +112,52 @@ async def _tavily_search(query: str, max_results: int, search_depth: str) -> lis
 # Provider: DuckDuckGo
 # ---------------------------------------------------------------------------
 
-def _ensure_ddg_installed() -> None:
-    try:
-        import duckduckgo_search  # noqa
-    except ImportError:
-        import subprocess
-        import sys
-        logger.info("[web_search] duckduckgo-search not found, attempting auto-install...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "duckduckgo-search", "--quiet"])
-
 async def _ddg_search(query: str, max_results: int) -> list[dict]:
     """Return results from DuckDuckGo. No API key required."""
-    _ensure_ddg_installed()
-    from duckduckgo_search import DDGS  # type: ignore[import]
-
     try:
-        results: list[dict] = []
-        with DDGS() as ddgs:
-            for r in ddgs.text(query, max_results=max_results):
-                results.append({
-                    "title": r.get("title", ""),
-                    "url": r.get("href", ""),
-                    "snippet": r.get("body", "")[:MAX_RESULT_CHARS],
-                    "score": 0.0,
-                })
-        return results
-    except Exception as exc:
-        logger.warning(f"[web_search] DuckDuckGo error: {exc}")
-        return [{"title": "Search failed", "url": "", "snippet": str(exc), "score": 0.0}]
+        from duckduckgo_search import DDGS  # type: ignore[import]
+    except ImportError:
+        import sys, subprocess
+        logger.info("[web_search] duckduckgo-search not found, attempting auto-install...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "duckduckgo-search", "--quiet"])
+        from duckduckgo_search import DDGS  # type: ignore[import]
+
+    import asyncio
+
+    for attempt in range(3):
+        try:
+            results: list[dict] = []
+            with DDGS() as ddgs:
+                for r in ddgs.text(query, max_results=max_results):
+                    results.append({
+                        "title": r.get("title", ""),
+                        "url": r.get("href", ""),
+                        "snippet": r.get("body", "")[:MAX_RESULT_CHARS],
+                        "score": 0.0,
+                    })
+
+            if results:
+                return results
+
+            # Empty results — wait and retry with shorter query
+            if attempt < 2:
+                wait = (attempt + 1) * 2
+                logger.warning(
+                    f"[web_search] DDG returned 0 results (attempt {attempt+1}), "
+                    f"retrying in {wait}s with simplified query..."
+                )
+                await asyncio.sleep(wait)
+                # Shorten query on retry (take first 4 words)
+                query = " ".join(query.split()[:4])
+
+        except Exception as exc:
+            logger.warning(f"[web_search] DuckDuckGo attempt {attempt+1} error: {exc}")
+            if attempt < 2:
+                await asyncio.sleep(2)
+
+    return [{"title": "Search unavailable", "url": "", "snippet":
+             "Search returned no results after 3 attempts. Use knowledge cutoff data instead.",
+             "score": 0.0}]
 
 
 # ---------------------------------------------------------------------------
