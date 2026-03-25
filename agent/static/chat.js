@@ -794,7 +794,7 @@ async function sendChat(content, model) {   // content bisa string atau array
 
         // === AUTO GENERATE JUDUL PINTAR ===
         if (history.length === 2) {           // hanya pada percakapan pertama
-            generateSmartTitle();
+            window.generateSmartTitle();
         }
 
     } catch (err) {
@@ -992,7 +992,7 @@ function handleAgentEvent(ev, block, statusBanner, taskText) {
 
         // === AUTO GENERATE JUDUL PINTAR ===
         if (history.length === 2) {
-            generateSmartTitle();
+            window.generateSmartTitle();
         }
 
     } else if (ev.type === 'error') {
@@ -2683,51 +2683,45 @@ async function sendMessage(overrideText) {
     });
 
     // ═══════════════════════════════════════════════
-    // AUTO GENERATE CHAT TITLE (menggunakan endpoint baru /v1/chat/generate-title)
+    // AUTO GENERATE CHAT TITLE — FIXED
     // ═══════════════════════════════════════════════
-    async function generateSmartTitle() {
-        // Hanya generate kalau ini percakapan pertama (1 user + 1 AI)
+    window.generateSmartTitle = async function () {
         if (history.length < 2 || !currentChatId) return;
 
-        const lastUserMsg = history[history.length - 2].content;
+        const lastUserMsg = history[history.length - 2].content || "";
 
         try {
             const res = await fetch('/v1/chat/generate-title', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                    // Authorization tidak ditambahkan karena /chat/stream juga tidak pakai (sesuai kode lama kamu)
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: lastUserMsg,
-                    history: history.slice(-6),        // ambil 6 pesan terakhir untuk konteks yang lebih baik
-                    provider: document.getElementById('modelSelect')?.value === 'nvidia' ? 'nvidia' : 'groq',
-                    model: null
+                    history: history.slice(-6),
+                    provider: document.getElementById('modelSelect')?.value === 'nvidia' ? 'nvidia' : 'groq'
                 })
             });
 
-            if (!res.ok) throw new Error('Generate title failed');
+            if (!res.ok) return;
 
             const data = await res.json();
-            const smartTitle = data.title.trim();
+            let smartTitle = (data.title || '').trim();
 
             if (!smartTitle) return;
 
-            // Update title di localStorage + refresh sidebar
+            // Update title di history
             const chats = loadAllChats();
             const idx = chats.findIndex(c => c.id === currentChatId);
             if (idx !== -1) {
                 chats[idx].title = smartTitle;
                 chats[idx].updatedAt = new Date().toISOString();
                 saveAllChats(chats);
-                renderHistoryList();           // refresh sidebar langsung
+                renderHistoryList();
             }
 
-            console.log('%c[Title Generated] ' + smartTitle, 'color:#00d4ff;font-weight:bold');
+            console.log('%c[Smart Title] ' + smartTitle, 'color:#00ff9d;font-weight:bold');
         } catch (err) {
-            console.warn('[Title Gen] Gagal:', err.message);
-            // fallback otomatis ke judul lama (tidak perlu lakukan apa-apa)
+            console.warn('[generateSmartTitle] Gagal:', err.message);
         }
-    }
+    };
 
 })();
