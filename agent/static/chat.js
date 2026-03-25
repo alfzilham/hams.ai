@@ -307,6 +307,39 @@ function setModeAndFocus(m) {
     document.getElementById('userInput')?.focus();
 }
 
+function sendSuggestion(text) {
+    const input = document.getElementById('userInput');
+    if (!input) return;
+    input.value = text;
+    autoResize(input);
+    input.focus();
+    sendMessage();
+}
+
+function clearChat() {
+    history = [];
+    sessionId = null;
+    currentChatId = null;
+    attachedFiles = [];
+
+    const box = document.getElementById('chatBox');
+    if (box) {
+        box.innerHTML = '';
+        box.classList.remove('active');
+    }
+
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.style.display = '';
+
+    renderAttachmentChips();
+    renderHistoryList();
+
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('navHome')?.classList.add('active');
+
+    document.getElementById('userInput')?.focus();
+}
+
 function updateFeatureCards(m) {
     const container = document.getElementById('featureCards');
     if (!container) return;
