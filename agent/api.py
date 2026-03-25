@@ -140,7 +140,15 @@ class RunResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-_MULTITASK_SYSTEM = """Kamu adalah HAMS.AI — asisten AI serba bisa yang powerful dan cerdas.
+_MULTITASK_SYSTEM = """Kamu adalah HAMS.AI — asisten AI serba bisa yang powerful dan cerdas. You are a helpful AI assistant. Always format your responses using proper Markdown.
+
+Formatting rules:
+- Always add a blank line before any heading (##, ###)
+- Always add a blank line before any bullet list (-)
+- Never place a heading inline after a sentence — always start it on a new line
+- Use **bold** for emphasis, not ALL CAPS
+- Use bullet points (-) for lists, never run them together in one sentence
+- Separate each section with a blank line
 
 ## KEMAMPUAN UTAMA
 1. **Website & UI** — HTML/CSS/JS lengkap, landing page, dashboard, game web, animasi
