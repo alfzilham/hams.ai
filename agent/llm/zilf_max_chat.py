@@ -1,5 +1,5 @@
 """
-HAMS-MAX Chat Mode — simple chat tanpa tools dan tanpa extended thinking.
+ZILF-MAX Chat Mode — simple chat tanpa tools dan tanpa extended thinking.
 
 Fixes applied:
   B18  — Token tracking via track_tokens=True
@@ -14,11 +14,11 @@ from typing import Any, AsyncIterator
 import httpx
 from loguru import logger
 
-from agent.llm.hams_max_base import HamsMaxBase, HAMS_MAX_BASE_URL
+from agent.llm.zilf_max_base import ZilfMaxBase, ZILF_MAX_BASE_URL
 from agent.llm.base import LLMResponse
 
 
-class HamsMaxChatLLM(HamsMaxBase):
+class ZilfMaxChatLLM(ZilfMaxBase):
     """Mode chat biasa — with token tracking and true streaming."""
 
     async def generate(
@@ -65,7 +65,7 @@ class HamsMaxChatLLM(HamsMaxBase):
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         """
-        B10 FIX: True streaming via hams-max-api /v1/chat/stream endpoint.
+        B10 FIX: True streaming via zilf-max-api /v1/chat/stream endpoint.
 
         Sends SSE request and yields chunks as they arrive,
         instead of waiting for full response then yielding once.
@@ -78,13 +78,13 @@ class HamsMaxChatLLM(HamsMaxBase):
             async with httpx.AsyncClient(timeout=180.0) as client:
                 async with client.stream(
                     "POST",
-                    f"{HAMS_MAX_BASE_URL}/v1/chat/stream",
+                    f"{ZILF_MAX_BASE_URL}/v1/chat/stream",
                     headers=self._headers(),
                     json=payload,
                 ) as response:
                     if response.status_code != 200:
                         logger.warning(
-                            f"[hams-max-chat] stream endpoint returned {response.status_code}, "
+                            f"[zilf-max-chat] stream endpoint returned {response.status_code}, "
                             f"falling back to non-streaming"
                         )
                         result = await self.generate(messages, system=system)
@@ -102,12 +102,12 @@ class HamsMaxChatLLM(HamsMaxBase):
 
         except httpx.HTTPError as e:
             logger.warning(
-                f"[hams-max-chat] stream failed ({e}), falling back to non-streaming"
+                f"[zilf-max-chat] stream failed ({e}), falling back to non-streaming"
             )
             result = await self.generate(messages, system=system)
             yield result.final_answer or ""
 
         except Exception as e:
-            logger.error(f"[hams-max-chat] unexpected stream error: {e}")
+            logger.error(f"[zilf-max-chat] unexpected stream error: {e}")
             result = await self.generate(messages, system=system)
             yield result.final_answer or ""

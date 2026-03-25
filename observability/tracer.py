@@ -1,5 +1,5 @@
 """
-Tracer — OpenTelemetry-based distributed tracing for the Hams AI.
+Tracer — OpenTelemetry-based distributed tracing for the Zilf AI.
 
 Creates spans for:
   - Agent task runs (root span)
@@ -12,7 +12,7 @@ so the agent works without observability dependencies.
 
 Usage::
 
-    tracer = AgentTracer(service_name="hams-ai")
+    tracer = AgentTracer(service_name="zilf-ai")
 
     with tracer.task_span(run_id="abc", task="Fix the bug") as span:
         with tracer.step_span(step=1, thought="I should read the file"):
@@ -76,7 +76,7 @@ class AgentTracer:
 
     def __init__(
         self,
-        service_name: str = "hams-ai",
+        service_name: str = "zilf-ai",
         service_version: str = "0.1.0",
         exporter: str = "console",           # console | otlp | none
         otlp_endpoint: str = "http://localhost:4317",

@@ -1,5 +1,5 @@
 """
-Structured output schemas for the Hams AI.
+Structured output schemas for the Zilf AI.
 
 Pydantic models for:
   - CodeResult        : result of a code generation or edit task

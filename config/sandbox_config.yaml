@@ -5,7 +5,7 @@
 
 sandbox:
   # Docker image for the sandbox container
-  image: hams-ai-sandbox:latest
+  image: zilf-ai-sandbox:latest
 
   # Resource limits
   cpu_limit: "1.0"       # CPU cores (string for Docker API)

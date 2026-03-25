@@ -1,23 +1,23 @@
 {
-  "name": "@hams-ai/cli",
+  "name": "@zilf-ai/cli",
   "version": "1.0.3",
-  "description": "hams.ai — Official CLI for the hams.ai coding agent",
+  "description": "zilf.ai — Official CLI for the zilf.ai coding agent",
   "bin": {
-    "hams": "bin/hams.js"
+    "zilf": "bin/zilf.js"
   },
-  "main": "bin/hams.js",
+  "main": "bin/zilf.js",
   "scripts": {
-    "start": "node bin/hams.js"
+    "start": "node bin/zilf.js"
   },
   "keywords": [
-    "hams",
-    "hams-ai",
+    "zilf",
+    "zilf-ai",
     "ai",
     "agent",
     "cli",
     "coding"
   ],
-  "author": "hams.ai",
+  "author": "zilf.ai",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

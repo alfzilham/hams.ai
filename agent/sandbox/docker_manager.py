@@ -67,7 +67,7 @@ class DockerSandbox:
 
     Context manager usage (recommended)::
 
-        async with DockerSandbox(image="hams-ai-sandbox:latest") as sb:
+        async with DockerSandbox(image="zilf-ai-sandbox:latest") as sb:
             result = await sb.run("python -c 'print(42)'")
 
     Manual usage::
@@ -80,7 +80,7 @@ class DockerSandbox:
 
     def __init__(
         self,
-        image: str = "hams-ai-sandbox:latest",
+        image: str = "zilf-ai-sandbox:latest",
         workspace_path: str = "./workspace",
         cpu_limit: str = "1.0",
         memory_limit: str = "512m",

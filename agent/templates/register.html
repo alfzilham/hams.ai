@@ -828,14 +828,14 @@
         // ═══════════════════════════════════════
         // THEME
         // ═══════════════════════════════════════
-        const savedTheme = localStorage.getItem('hams_theme') || 'dark';
+        const savedTheme = localStorage.getItem('zilf_theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
         document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
 
         function toggleTheme() {
             const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', t);
-            localStorage.setItem('hams_theme', t);
+            localStorage.setItem('zilf_theme', t);
             document.getElementById('themeIcon').className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
         }
 
@@ -961,8 +961,8 @@
                 const data = await res.json();
 
                 // Simpan token
-                localStorage.setItem('hams_token', data.token);
-                localStorage.setItem('hams_user', JSON.stringify({
+                localStorage.setItem('zilf_token', data.token);
+                localStorage.setItem('zilf_user', JSON.stringify({
                     id: data.user_id,
                     name: data.name,
                     username: data.username,
@@ -991,7 +991,7 @@
         // ═══════════════════════════════════════
         // REDIRECT IF ALREADY LOGGED IN
         // ═══════════════════════════════════════
-        if (localStorage.getItem('hams_token')) {
+        if (localStorage.getItem('zilf_token')) {
             window.location.href = '/onboarding/topics';
         }
 

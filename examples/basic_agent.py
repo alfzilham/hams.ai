@@ -135,7 +135,7 @@ class MockLLM:
             # Step 1: list workspace
             'I need to see what\'s in the workspace first.\n{"tool": "list_dir", "directory": "/workspace"}',
             # Step 2: write a hello world file
-            'Let me create a simple Python script.\n{"tool": "write_file", "path": "/workspace/hello.py", "content": "print(\'Hello from Hams AI!\')\\n"}',
+            'Let me create a simple Python script.\n{"tool": "write_file", "path": "/workspace/hello.py", "content": "print(\'Hello from Zilf AI!\')\\n"}',
             # Step 3: run it
             '{"tool": "run_command", "command": "python /workspace/hello.py"}',
             # Step 4: done
@@ -186,7 +186,7 @@ async def run_task(task: str, demo: bool = False) -> None:
 
     console.print(Panel(
         Text(task, style="bold white"),
-        title="[cyan]Hams AI[/cyan]",
+        title="[cyan]Zilf AI[/cyan]",
         border_style="cyan",
     ))
 
@@ -218,7 +218,7 @@ def main() -> None:
     args = [a for a in args if a != "--demo"]
 
     task = args[0] if args else (
-        "Create a Python file called hello.py that prints 'Hello from Hams AI!' "
+        "Create a Python file called hello.py that prints 'Hello from Zilf AI!' "
         "and verify it runs correctly."
     )
 

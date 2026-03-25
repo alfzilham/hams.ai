@@ -1,32 +1,32 @@
 """
-HAMS-MAX Provider — router utama yang memilih mode yang tepat.
+ZILF-MAX Provider — router utama yang memilih mode yang tepat.
 
 Mode:
-  - HamsMaxChatLLM     → chat biasa (default)
-  - HamsMaxAgentLLM    → agent/ReAct dengan tools
-  - HamsMaxThinkingLLM → chat dengan extended thinking
+  - ZilfMaxChatLLM     → chat biasa (default)
+  - ZilfMaxAgentLLM    → agent/ReAct dengan tools
+  - ZilfMaxThinkingLLM → chat dengan extended thinking
 
-Backward compatible: HamsMaxLLM masih bisa dipakai seperti biasa.
+Backward compatible: ZilfMaxLLM masih bisa dipakai seperti biasa.
 """
 
 from __future__ import annotations
 
 from typing import Any, AsyncIterator
 
-from agent.llm.hams_max_base import HamsMaxBase, resolve_model
-from agent.llm.hams_max_chat import HamsMaxChatLLM
-from agent.llm.hams_max_agent import HamsMaxAgentLLM
-from agent.llm.hams_max_thinking import HamsMaxThinkingLLM
+from agent.llm.zilf_max_base import ZilfMaxBase, resolve_model
+from agent.llm.zilf_max_chat import ZilfMaxChatLLM
+from agent.llm.zilf_max_agent import ZilfMaxAgentLLM
+from agent.llm.zilf_max_thinking import ZilfMaxThinkingLLM
 from agent.llm.base import LLMResponse
 
 
-class HamsMaxLLM(HamsMaxBase):
+class ZilfMaxLLM(ZilfMaxBase):
     """
     Router utama — delegate ke mode yang tepat berdasarkan
     apakah ada tools (agent) atau extended=True (thinking).
 
     Usage (tidak berubah dari sebelumnya):
-        llm = HamsMaxLLM(model="groq", extended=True)
+        llm = ZilfMaxLLM(model="groq", extended=True)
         response = await llm.generate(messages, tools=tools)
     """
 
@@ -41,11 +41,11 @@ class HamsMaxLLM(HamsMaxBase):
         self._extended = extended
 
         # Inisialisasi semua mode dengan model yang sama
-        self._chat    = HamsMaxChatLLM(model=model, max_tokens=max_tokens, temperature=temperature)
-        self._agent   = HamsMaxAgentLLM(model=model, max_tokens=max_tokens, temperature=temperature)
-        self._thinking = HamsMaxThinkingLLM(model=model, max_tokens=max_tokens, temperature=temperature)
+        self._chat    = ZilfMaxChatLLM(model=model, max_tokens=max_tokens, temperature=temperature)
+        self._agent   = ZilfMaxAgentLLM(model=model, max_tokens=max_tokens, temperature=temperature)
+        self._thinking = ZilfMaxThinkingLLM(model=model, max_tokens=max_tokens, temperature=temperature)
 
-    def _pick(self, has_tools: bool) -> HamsMaxBase:
+    def _pick(self, has_tools: bool) -> ZilfMaxBase:
         """Pilih mode yang tepat."""
         if has_tools:
             return self._agent          # Agent: ReAct, tanpa extended thinking

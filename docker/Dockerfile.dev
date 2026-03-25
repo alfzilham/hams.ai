@@ -1,8 +1,8 @@
 # ============================================================
-# Hams AI — Development Image
+# Zilf AI — Development Image
 # Includes debugging tools, hot-reload, and dev dependencies.
 #
-# Build:  docker build -f docker/Dockerfile.dev -t hams-ai-dev .
+# Build:  docker build -f docker/Dockerfile.dev -t zilf-ai-dev .
 # Run:    docker-compose -f docker/docker-compose.yml up agent-dev
 # ============================================================
 

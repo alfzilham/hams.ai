@@ -1,8 +1,8 @@
 # ============================================================
-# Hams AI — Sandbox Image
+# Zilf AI — Sandbox Image
 # Multi-stage build for minimal attack surface.
 #
-# Build:  docker build -f docker/Dockerfile -t hams-ai-sandbox .
+# Build:  docker build -f docker/Dockerfile -t zilf-ai-sandbox .
 # ============================================================
 
 # ---- Stage 1: builder ----
@@ -24,7 +24,7 @@ RUN pip install --user --no-cache-dir -r requirements.txt
 # ---- Stage 2: runtime sandbox ----
 FROM python:3.14-slim AS sandbox
 
-LABEL maintainer="hams-ai"
+LABEL maintainer="zilf-ai"
 LABEL description="Isolated sandbox for AI agent code execution"
 
 WORKDIR /workspace

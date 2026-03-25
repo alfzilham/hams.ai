@@ -147,8 +147,8 @@
                 <div class="model-panel" id="modelPanel">
                     <div class="model-group">
                         <div class="model-group-label">ZILF-MAX — Powered by 12 Models</div>
-                        <div class="model-option selected" data-value="hams-max" onclick="selectModel(this)">
-                            <span class="model-badge hams">Z</span>ZILF-MAX
+                        <div class="model-option selected" data-value="zilf-max" onclick="selectModel(this)">
+                            <span class="model-badge zilf">Z</span>ZILF-MAX
                         </div>
                     </div>
                     <div class="model-group">
@@ -168,7 +168,7 @@
                 </div>
             </div>
             <!-- Hidden input untuk value -->
-            <input type="hidden" id="modelSelect" value="hams-max" />
+            <input type="hidden" id="modelSelect" value="zilf-max" />
 
             <div class="topbar-spacer"></div>
 
@@ -206,7 +206,7 @@
                 <!-- ════════════════════════════════════
      3D ORB & EYES
 ════════════════════════════════════ -->
-                <div class="orb-wrap" id="orbWrap" data-aos="zoom-in" data-aos-duration="1000">
+                <div class="orb-wrap" id="orbWrap" data-aos="zoom-in" data-aos-duration="2500">
                     <!-- Three.js Canvas -->
                     <canvas id="orbCanvas"></canvas>
 
@@ -222,10 +222,12 @@
                     <span class="greeting-name" id="greetingName">Zilf.ai</span>.<br />
                     Can I help you with anything?
                 </div>
-                <div class="welcome-sub" data-aos="fade-up" data-aos-delay="400" data-aos-duration="800">Powered by ZILF-MAX — Groq &amp; NVIDIA models</div>
+                <div class="welcome-sub" data-aos="fade-up" data-aos-delay="400" data-aos-duration="800">Powered by
+                    ZILF-MAX — Groq &amp; NVIDIA models</div>
 
                 <!-- Feature cards (updated by JS based on mode) -->
-                <div class="feature-cards" id="featureCards" data-aos="fade-up" data-aos-delay="600" data-aos-duration="800">
+                <div class="feature-cards" id="featureCards" data-aos="fade-up" data-aos-delay="600"
+                    data-aos-duration="800">
                     <div class="feature-card"
                         onclick="sendSuggestion('Buatkan landing page modern untuk produk kopi premium, HTML CSS JS lengkap dengan animasi.')">
                         <div class="feature-card-title"><i class="bi bi-globe2" style="color:var(--accent)"></i>

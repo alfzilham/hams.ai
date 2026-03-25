@@ -1,5 +1,5 @@
 """
-HTTP API for the Hams AI — v0.3.0
+HTTP API for the Zilf AI — v0.3.0
 
 Endpoints:
   GET  /health            — liveness probe
@@ -34,7 +34,7 @@ from agent.auth import router as auth_router, decode_token, get_user_by_id
 # App setup
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Hams AI", version="0.3.0")
+app = FastAPI(title="Zilf AI", version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,7 +76,7 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     message: str
     history: list[ChatMessage] | None = []
-    model: str | None = Field(default="hams-max")  # B3 FIX
+    model: str | None = Field(default="zilf-max")  # B3 FIX
     extended: bool = Field(
         default=False,
         description="Aktifkan Extended Thinking — AI menampilkan proses berpikirnya sebelum menjawab"
@@ -93,7 +93,7 @@ class ChatResponse(BaseModel):
 
 class AgentRunRequest(BaseModel):
     task: str = Field(..., min_length=1)
-    model: str | None = Field(default="hams-max")  # B3 FIX
+    model: str | None = Field(default="zilf-max")  # B3 FIX
     max_steps: int = Field(15, ge=1, le=50)
     extended: bool = Field(default=False)
 
@@ -144,7 +144,7 @@ _MULTITASK_SYSTEM = """CRITICAL: Always output blank lines between sections. Nev
 a heading immediately after a sentence on the same line. Never run
 bullet points together without blank lines separating them from headings.
 
-Kamu adalah HAMS.AI — asisten AI serba bisa yang powerful dan cerdas. You are a helpful AI assistant. Always format your responses using proper Markdown.
+Kamu adalah ZILF.AI — asisten AI serba bisa yang powerful dan cerdas. You are a helpful AI assistant. Always format your responses using proper Markdown.
 
 Formatting rules:
 - Always add a blank line before any heading (##, ###)
@@ -168,30 +168,30 @@ Formatting rules:
 - Langsung berikan hasilnya"""
 
 
-def _build_llm(model: str = "hams-max", extended: bool = False):
+def _build_llm(model: str = "zilf-max", extended: bool = False):
     """
     Build LLM instance berdasarkan model string dari frontend.
 
-    B3 FIX: Default model = "hams-max" agar konsisten dengan:
-    - Frontend modelSelect default = "hams-max"
-    - _FRONTEND_TO_HAMSMAX["hams-max"] = ("llama-3.3-70b-versatile", "groq")
+    B3 FIX: Default model = "zilf-max" agar konsisten dengan:
+    - Frontend modelSelect default = "zilf-max"
+    - _FRONTEND_TO_ZILFMAX["zilf-max"] = ("llama-3.3-70b-versatile", "groq")
     """
     # Gemini models → langsung pakai GoogleLLM
     if model.startswith("gemini-"):
         from agent.llm.google_provider import GoogleLLM
         return GoogleLLM(model=model)
 
-    # Semua model lain → HamsMax routing
+    # Semua model lain → ZilfMax routing
     if extended:
-        from agent.llm.hams_max_thinking import HamsMaxThinkingLLM
-        return HamsMaxThinkingLLM(model=model)
+        from agent.llm.zilf_max_thinking import ZilfMaxThinkingLLM
+        return ZilfMaxThinkingLLM(model=model)
     else:
-        from agent.llm.hams_max_chat import HamsMaxChatLLM
-        return HamsMaxChatLLM(model=model)
+        from agent.llm.zilf_max_chat import ZilfMaxChatLLM
+        return ZilfMaxChatLLM(model=model)
 
 
 def _build_agent(
-    model: str = "hams-max",
+    model: str = "zilf-max",
     max_steps: int = 15,
     step_callback=None,
     extended: bool = False,
@@ -199,15 +199,15 @@ def _build_agent(
     """
     Build Agent instance untuk agent mode.
 
-    B3  FIX: Default model = "hams-max"
+    B3  FIX: Default model = "zilf-max"
     B11 FIX: step_callback passed via Agent.__init__() parameter,
              not via agent._loop.step_callback (private attribute access).
     """
-    from agent.llm.hams_max_agent import HamsMaxAgentLLM
+    from agent.llm.zilf_max_agent import ZilfMaxAgentLLM
     from agent.tools.registry import ToolRegistry
     from agent.core.agent import Agent
 
-    llm = HamsMaxAgentLLM(model=model)
+    llm = ZilfMaxAgentLLM(model=model)
     registry = ToolRegistry.default()
 
     # B11 FIX: step_callback sebagai parameter resmi
@@ -306,10 +306,10 @@ async def onboarding_suggestions_page() -> FileResponse:
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
 async def chat(req: ChatRequest) -> ChatResponse:
     session_id = req.session_id or str(uuid.uuid4())
-    model      = req.model or "hams-max"
+    model      = req.model or "zilf-max"
 
     # A2 FIX: Build proper message list instead of manual prompt string.
-    # This lets HamsMaxBase._build_payload() handle system prompt as
+    # This lets ZilfMaxBase._build_payload() handle system prompt as
     # separate system message (consistent with B20 fix).
     messages: list[dict[str, str]] = []
     for msg in (req.history or []):
@@ -364,7 +364,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
 @app.post("/chat/stream", tags=["chat"])
 async def chat_stream(req: ChatRequest) -> StreamingResponse:
-    model = req.model or "hams-max"
+    model = req.model or "zilf-max"
 
     # A2 FIX: Proper message list
     messages: list[dict[str, str]] = []
@@ -398,7 +398,7 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
 
 @app.post("/agent/run", response_model=AgentRunResponse, tags=["agent"])
 async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
-    model = req.model or "hams-max"  # B3 FIX
+    model = req.model or "zilf-max"  # B3 FIX
     t0    = time.perf_counter()
 
     try:
@@ -432,7 +432,7 @@ async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
 
 @app.post("/agent/stream", tags=["agent"])
 async def agent_stream(req: AgentRunRequest) -> StreamingResponse:
-    model = req.model or "hams-max"  # B3 FIX
+    model = req.model or "zilf-max"  # B3 FIX
 
     async def event_stream() -> AsyncIterator[str]:
         queue: asyncio.Queue[dict] = asyncio.Queue()

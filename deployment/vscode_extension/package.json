@@ -1,13 +1,13 @@
 {
-  "name": "hams-ai",
-  "displayName": "Hams AI",
+  "name": "zilf-ai",
+  "displayName": "Zilf AI",
   "description": "Autonomous coding assistant — write, test, fix, and explain code directly in VS Code",
   "version": "0.1.0",
   "publisher": "alfizilham",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/alfizilham/hams-ai"
+    "url": "https://github.com/alfizilham/zilf-ai"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -34,29 +34,29 @@
     "commands": [
       {
         "command": "aiAgent.startChat",
-        "title": "Hams AI: Open Chat",
+        "title": "Zilf AI: Open Chat",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "aiAgent.runTask",
-        "title": "Hams AI: Run Task on File",
+        "title": "Zilf AI: Run Task on File",
         "icon": "$(play)"
       },
       {
         "command": "aiAgent.explainSelection",
-        "title": "Hams AI: Explain Selection"
+        "title": "Zilf AI: Explain Selection"
       },
       {
         "command": "aiAgent.generateTests",
-        "title": "Hams AI: Generate Tests for File"
+        "title": "Zilf AI: Generate Tests for File"
       },
       {
         "command": "aiAgent.fixSelection",
-        "title": "Hams AI: Fix This Code"
+        "title": "Zilf AI: Fix This Code"
       },
       {
         "command": "aiAgent.refactorCode",
-        "title": "Hams AI: Suggest Refactoring"
+        "title": "Zilf AI: Suggest Refactoring"
       }
     ],
     "menus": {
@@ -82,12 +82,12 @@
     },
     "configuration": {
       "type": "object",
-      "title": "Hams AI",
+      "title": "Zilf AI",
       "properties": {
         "aiAgent.apiUrl": {
           "type": "string",
           "default": "http://localhost:8000",
-          "description": "URL of the Hams AI API server"
+          "description": "URL of the Zilf AI API server"
         },
         "aiAgent.provider": {
           "type": "string",
@@ -122,7 +122,7 @@
       "activitybar": [
         {
           "id": "aiAgentSidebar",
-          "title": "Hams AI",
+          "title": "Zilf AI",
           "icon": "$(robot)"
         }
       ]

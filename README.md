@@ -1,15 +1,15 @@
-# 🤖 Hams AI
+# 🤖 Zilf AI
 
 <div align="center">
 
-![Hams AI Banner](https://img.shields.io/badge/Hams%20AI-Autonomous%20Coding%20Assistant-blue?style=for-the-badge&logo=robot)
+![Zilf AI Banner](https://img.shields.io/badge/Zilf%20AI-Autonomous%20Coding%20Assistant-blue?style=for-the-badge&logo=robot)
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/alfizilham/hams-ai/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/alfizilham/hams-ai/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/alfizilham/zilf-ai/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/alfizilham/zilf-ai/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.14+-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-0.1.0-orange.svg?style=flat-square)](pyproject.toml)
-[![npm](https://img.shields.io/npm/v/@hams-ai/cli?style=flat-square&logo=npm&label=%40hams-ai%2Fcli)](https://www.npmjs.com/package/@hams-ai/cli)
-[![Open Source](https://img.shields.io/badge/Open%20Source-❤️-red.svg?style=flat-square)](https://github.com/alfizilham/hams-ai)
+[![npm](https://img.shields.io/npm/v/@zilf-ai/cli?style=flat-square&logo=npm&label=%40zilf-ai%2Fcli)](https://www.npmjs.com/package/@zilf-ai/cli)
+[![Open Source](https://img.shields.io/badge/Open%20Source-❤️-red.svg?style=flat-square)](https://github.com/alfizilham/zilf-ai)
 
 **AI Coding Agent open source yang berjalan lokal — tanpa biaya API, tanpa batas.**
 
@@ -19,27 +19,27 @@
 
 ---
 
-## ✨ Apa itu Hams AI?
+## ✨ Apa itu Zilf AI?
 
-Hams AI adalah **autonomous coding assistant** yang dapat menulis, menjalankan, memperbaiki, dan memverifikasi kode secara mandiri. Dibangun di atas arsitektur **ReAct (Reasoning + Acting)**, agent ini berpikir langkah demi langkah sebelum mengambil tindakan — persis seperti developer sungguhan.
+Zilf AI adalah **autonomous coding assistant** yang dapat menulis, menjalankan, memperbaiki, dan memverifikasi kode secara mandiri. Dibangun di atas arsitektur **ReAct (Reasoning + Acting)**, agent ini berpikir langkah demi langkah sebelum mengambil tindakan — persis seperti developer sungguhan.
 
-### Keunggulan Hams AI
+### Keunggulan Zilf AI
 - 🆓 **100% Gratis** — Jalankan lokal dengan Ollama, tidak perlu bayar API
 - 🔒 **Privat** — Kode kamu tidak dikirim ke server manapun (mode Ollama)
 - 🔌 **Multi-Provider** — Dukung Ollama, Groq, dan Google Gemini
 - 🛠️ **8 Tools Bawaan** — File system, terminal, web search, code executor
 - 🐳 **Sandbox Docker** — Eksekusi kode dalam environment yang terisolasi
 - 🔍 **Observability** — Tracing, cost tracking, dan dashboard built-in
-- 💻 **CLI Global** — Install sekali via npm, jalankan `hams` dari mana saja
+- 💻 **CLI Global** — Install sekali via npm, jalankan `zilf` dari mana saja
 
 ---
 
 ## 🎬 Demo
 
 ```
-╭─────────────────────────── Hams AI ───────────────────────────╮
+╭─────────────────────────── Zilf AI ───────────────────────────╮
 │ Create a Python file called hello.py that prints               │
-│ 'Hello from Hams AI!' and verify it runs correctly.           │
+│ 'Hello from Zilf AI!' and verify it runs correctly.           │
 ╰────────────────────────────────────────────────────────────────╯
 
 💭 Thought: I need to create hello.py and verify it works...
@@ -48,7 +48,7 @@ Hams AI adalah **autonomous coding assistant** yang dapat menulis, menjalankan, 
 
 ╭────────────────────── ✅ Complete ─────────────────────────────╮
 │ File hello.py created and verified successfully.               │
-│ Output: Hello from Hams AI!                                    │
+│ Output: Hello from Zilf AI!                                    │
 ╰────────────────────────────────────────────────────────────────╯
 
 Steps: 2  |  Tokens: 0  |  Time: 45.7s
@@ -67,8 +67,8 @@ Steps: 2  |  Tokens: 0  |  Time: 45.7s
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/alfizilham/hams-ai.git
-cd hams-ai
+git clone https://github.com/alfizilham/zilf-ai.git
+cd zilf-ai
 ```
 
 ### 2. Buat Virtual Environment
@@ -125,12 +125,12 @@ TAVILY_API_KEY=tvly-...
 
 ## 💻 CLI via npm
 
-Gunakan Hams AI langsung dari terminal mana saja menggunakan `hams` — tanpa perlu masuk ke folder project setiap kali.
+Gunakan Zilf AI langsung dari terminal mana saja menggunakan `zilf` — tanpa perlu masuk ke folder project setiap kali.
 
 ### Prasyarat CLI
 - [Node.js](https://nodejs.org) 16+
 - Python 3.14+ (sudah terinstall dari langkah di atas)
-- Repository hams-ai sudah di-clone di komputer kamu
+- Repository zilf-ai sudah di-clone di komputer kamu
 
 ### Instalasi CLI
 
@@ -138,23 +138,23 @@ Gunakan Hams AI langsung dari terminal mana saja menggunakan `hams` — tanpa pe
 
 ```powershell
 # Step 1 — Install CLI secara global
-npm install -g @hams-ai/cli
+npm install -g @zilf-ai/cli
 
 # Step 2 — Tambahkan Python Scripts ke PATH (jika belum)
 $env:PATH += ";C:\Users\<username>\AppData\Local\Python\pythoncore-3.14-64\Scripts"
 
 # Step 3 — Install Python dependencies (pertama kali saja)
-pip install -r "C:\path\to\hams-ai\requirements.txt"
+pip install -r "C:\path\to\zilf-ai\requirements.txt"
 
-# Step 4 — Set path ke folder project hams-ai
-$env:HAMS_PATH = "C:\path\to\hams-ai"
+# Step 4 — Set path ke folder project zilf-ai
+$env:ZILF_PATH = "C:\path\to\zilf-ai"
 
 # Step 5 — Jalankan!
-hams
+zilf
 ```
 
-> **Ganti** `C:\path\to\hams-ai` dengan path aktual folder hasil clone di komputer kamu.
-> Contoh: `D:\2026\Workspace\Website\.hams.ai`
+> **Ganti** `C:\path\to\zilf-ai` dengan path aktual folder hasil clone di komputer kamu.
+> Contoh: `D:\2026\Workspace\Website\.zilf.ai`
 
 ### Buat PATH permanen (agar tidak perlu set ulang setiap restart)
 
@@ -164,39 +164,39 @@ notepad $PROFILE
 
 # Tambahkan dua baris ini ke dalam file, lalu simpan:
 $env:PATH += ";C:\Users\<username>\AppData\Local\Python\pythoncore-3.14-64\Scripts"
-$env:HAMS_PATH = "C:\path\to\hams-ai"
+$env:ZILF_PATH = "C:\path\to\zilf-ai"
 ```
 
 ### Perintah CLI
 
 ```powershell
 # Mode chat interaktif (default)
-hams
+zilf
 
 # Jalankan satu task langsung
-hams run "Buatkan fungsi Python untuk sorting bubble sort"
+zilf run "Buatkan fungsi Python untuk sorting bubble sort"
 
 # Lihat daftar tools yang tersedia
-hams tools
+zilf tools
 
 # Cek status backend
-hams status
+zilf status
 
 # Tampilkan output Python (untuk debug)
-hams --verbose
+zilf --verbose
 
 # Gunakan port custom
-hams --port 9000
+zilf --port 9000
 ```
 
 ### Contoh Sesi Chat
 
 ```
-PS C:\Users\LENOVO> hams
+PS C:\Users\LENOVO> zilf
 
-hams.ai — AI Coding Agent
+zilf.ai — AI Coding Agent
 
-✔ hams.ai ready — port 8000
+✔ zilf.ai ready — port 8000
 
   Type your task and press Enter. Type "exit" to quit.
 
@@ -277,7 +277,7 @@ curl -X POST http://localhost:8000/run \
 
 ```
 ┌─────────────────────────────────────────────┐
-│                  Hams AI                     │
+│                  Zilf AI                     │
 │                                             │
 │  ┌──────────┐    ┌──────────────────────┐   │
 │  │  CLI /   │───▶│      Agent Core      │   │
@@ -307,7 +307,7 @@ curl -X POST http://localhost:8000/run \
 ## 📁 Struktur Project
 
 ```
-hams-ai/
+zilf-ai/
 ├── agent/                  ← Source code utama
 │   ├── core/               ← Agent, reasoning loop, state
 │   ├── llm/                ← Provider: Ollama, Groq, Gemini
@@ -315,8 +315,8 @@ hams-ai/
 │   ├── memory/             ← Short-term & long-term memory
 │   ├── sandbox/            ← Docker isolation
 │   └── prompts/            ← System & task prompts
-├── cli/                    ← npm CLI (@hams-ai/cli)
-│   ├── bin/hams.js         ← Entry point CLI
+├── cli/                    ← npm CLI (@zilf-ai/cli)
+│   ├── bin/zilf.js         ← Entry point CLI
 │   └── lib/                ← client, server, installer
 ├── config/                 ← YAML configuration
 ├── examples/               ← Contoh penggunaan
@@ -346,7 +346,7 @@ pytest tests/ --cov=agent --cov-report=html
 
 ## 🤝 Kontribusi
 
-Kontribusi sangat disambut! Hams AI adalah project open source dan kami senang menerima kontribusi dari siapapun.
+Kontribusi sangat disambut! Zilf AI adalah project open source dan kami senang menerima kontribusi dari siapapun.
 
 ### Cara Berkontribusi
 
@@ -391,7 +391,7 @@ Kontribusi sangat disambut! Hams AI adalah project open source dan kami senang m
 - [x] Docker sandbox isolation
 - [x] FastAPI server
 - [x] VS Code extension
-- [x] npm CLI (`@hams-ai/cli`)
+- [x] npm CLI (`@zilf-ai/cli`)
 
 ### v0.2.0 — Memory & Intelligence 🚧
 - [ ] Long-term memory dengan ChromaDB
@@ -415,9 +415,9 @@ Kontribusi sangat disambut! Hams AI adalah project open source dan kami senang m
 
 ## 📄 Lisensi
 
-Hams AI dilisensikan di bawah [MIT License](LICENSE).
+Zilf AI dilisensikan di bawah [MIT License](LICENSE).
 
-Copyright (c) 2025 Hams AI Contributors
+Copyright (c) 2025 Zilf AI Contributors
 
 ---
 
@@ -436,6 +436,6 @@ Copyright (c) 2025 Hams AI Contributors
 
 Dibuat dengan ❤️ oleh [Alfiz Ilham](https://github.com/alfizilham)
 
-⭐ **Star repo ini jika Hams AI bermanfaat untukmu!** ⭐
+⭐ **Star repo ini jika Zilf AI bermanfaat untukmu!** ⭐
 
 </div>

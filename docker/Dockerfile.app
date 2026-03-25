@@ -1,8 +1,8 @@
-﻿# ============================================================
-# Hams AI â€” Production App Image
+# ============================================================
+# Zilf AI â€” Production App Image
 # Runs the FastAPI API server (agent/api.py) via uvicorn.
 #
-# Build:  docker build -f docker/Dockerfile.app -t hams-ai-app .
+# Build:  docker build -f docker/Dockerfile.app -t zilf-ai-app .
 # Run:    docker-compose -f deployment/docker-compose.prod.yml up
 # ============================================================
 
@@ -28,7 +28,7 @@ RUN pip install --user --no-cache-dir -e "." || \
 FROM python:3.14-slim AS app
 
 LABEL maintainer="alfizilham51@outlook.com"
-LABEL description="Hams AI â€” production API server"
+LABEL description="Zilf AI â€” production API server"
 LABEL version="0.1.0"
 
 WORKDIR /app
@@ -54,8 +54,6 @@ RUN groupadd --gid 1001 appuser && \
 # Copy source code
 COPY --chown=appuser:appuser agent/     /app/agent/
 COPY --chown=appuser:appuser config/    /app/config/
-COPY --chown=appuser:appuser prompts/   /app/prompts/ 2>/dev/null || true
-
 # Create runtime directories
 RUN mkdir -p /app/workspace /app/logs && \
     chown -R appuser:appuser /app/workspace /app/logs

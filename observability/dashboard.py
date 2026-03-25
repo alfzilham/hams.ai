@@ -38,12 +38,12 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
         sys.exit(1)
 
     st.set_page_config(
-        page_title="Hams AI — Dashboard",
+        page_title="Zilf AI — Dashboard",
         page_icon="🤖",
         layout="wide",
     )
 
-    st.title("🤖 Hams AI — Live Dashboard")
+    st.title("🤖 Zilf AI — Live Dashboard")
 
     log_path = Path(log_dir)
     if not log_path.exists():

@@ -14,14 +14,14 @@ import argparse
 # ── 1. Tambahkan endpoint ini ke FastAPI app kamu ────────────────────────────
 @app.get("/health")
 def health():
-    return {"status": "ok", "agent": "hams.ai", "version": "1.0.0"}
+    return {"status": "ok", "agent": "zilf.ai", "version": "1.0.0"}
 
 
 # ── 2. Ganti bagian if __name__ == "__main__" dengan ini ─────────────────────
 if __name__ == "__main__":
     import uvicorn
 
-    parser = argparse.ArgumentParser(description="hams.ai API Server")
+    parser = argparse.ArgumentParser(description="zilf.ai API Server")
     parser.add_argument(
         "--port",
         type=int,

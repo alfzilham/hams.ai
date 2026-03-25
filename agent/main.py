@@ -1,5 +1,5 @@
 """
-CLI entrypoint for the Hams AI.
+CLI entrypoint for the Zilf AI.
 
 Usage:
     python -m agent.main "Write a Python function that reverses a linked list"
@@ -21,7 +21,7 @@ from rich.text import Text
 
 app = typer.Typer(
     name="agent",
-    help="Hams AI — autonomous software engineering assistant",
+    help="Zilf AI — autonomous software engineering assistant",
     add_completion=False,
 )
 console = Console()
@@ -77,12 +77,12 @@ def run(
     verbose: bool = typer.Option(True, "--verbose/--quiet", "-v/-q", help="Show step-by-step logs"),
     no_plan: bool = typer.Option(False, "--no-plan", help="Skip task decomposition"),
 ) -> None:
-    """Run the Hams AI on a task."""
+    """Run the Zilf AI on a task."""
     _setup_logging(verbose)
 
     console.print(Panel(
         Text(task, style="bold white"),
-        title="[cyan]Hams AI[/cyan]",
+        title="[cyan]Zilf AI[/cyan]",
         border_style="cyan",
     ))
 
@@ -117,7 +117,7 @@ def run(
 def version() -> None:
     """Print the agent version."""
     from agent import __version__
-    console.print(f"hams-ai v{__version__}")
+    console.print(f"zilf-ai v{__version__}")
 
 
 # Allow `python -m agent.main "task"` shorthand

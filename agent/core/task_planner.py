@@ -133,7 +133,7 @@ class TaskPlanner:
         Parse JSON dari LLM response.
 
         Fix: handle wrapper {"thinking": "", "answer": "..."} yang datang
-        dari HamsMaxThinkingLLM.generate_text() — unwrap dulu sebelum parse.
+        dari ZilfMaxThinkingLLM.generate_text() — unwrap dulu sebelum parse.
         """
         import json
         import re

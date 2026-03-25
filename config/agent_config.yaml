@@ -1,5 +1,5 @@
 # ============================================================
-# Hams AI — Agent Configuration
+# Zilf AI — Agent Configuration
 # Override any value with an environment variable:
 #   AGENT_MAX_STEPS=20 python -m agent.main "task"
 # ============================================================

@@ -1,5 +1,5 @@
 """
-Custom exception hierarchy for the Hams AI.
+Custom exception hierarchy for the Zilf AI.
 
 Every error carries:
   - message       : human-readable description

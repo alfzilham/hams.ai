@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HAMS.AI — Let's Get Started</title>
+    <title>ZILF.AI — Let's Get Started</title>
     <link rel="icon" type="image/png" href="/static/favicon/apple-icon.png" />
     <link
         href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -372,14 +372,14 @@
         // ═══════════════════════════════════════
         // THEME
         // ═══════════════════════════════════════
-        const savedTheme = localStorage.getItem('hams_theme') || 'dark';
+        const savedTheme = localStorage.getItem('zilf_theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
         document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
 
         function toggleTheme() {
             const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', t);
-            localStorage.setItem('hams_theme', t);
+            localStorage.setItem('zilf_theme', t);
             document.getElementById('themeIcon').className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
         }
 
@@ -532,7 +532,7 @@
         // ═══════════════════════════════════════
         // INIT
         // ═══════════════════════════════════════
-        const selectedTopics = JSON.parse(localStorage.getItem('hams_topics') || '["coding", "learning", "writing"]');
+        const selectedTopics = JSON.parse(localStorage.getItem('zilf_topics') || '["coding", "learning", "writing"]');
         const grid = document.getElementById('suggestionsGrid');
 
         // Pick suggestions based on selected topics
@@ -567,11 +567,11 @@
         // ═══════════════════════════════════════
         function goToChat(initialPrompt = null) {
             // Mark onboarding as complete
-            localStorage.setItem('hams_onboarded', 'true');
+            localStorage.setItem('zilf_onboarded', 'true');
 
             if (initialPrompt) {
                 // Store initial prompt for chat page
-                localStorage.setItem('hams_initial_prompt', initialPrompt);
+                localStorage.setItem('zilf_initial_prompt', initialPrompt);
             }
 
             window.location.href = '/chat-ui';

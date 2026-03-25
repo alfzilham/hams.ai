@@ -2,7 +2,7 @@
 
 const axios = require("axios");
 
-class HamsClient {
+class ZilfClient {
   constructor(port = 8000) {
     this.base = `http://127.0.0.1:${port}`;
     this.http = axios.create({
@@ -64,4 +64,4 @@ class HamsClient {
   }
 }
 
-module.exports = HamsClient;
+module.exports = ZilfClient;

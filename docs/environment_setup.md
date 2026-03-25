@@ -31,8 +31,8 @@ Download the installer from [python.org](https://www.python.org/downloads/) and 
 ## 2. Clone & Virtual Environment
 
 ```bash
-git clone https://github.com/alfizilham/hams-ai.git
-cd hams-ai
+git clone https://github.com/alfizilham/zilf-ai.git
+cd zilf-ai
 
 # Create isolated environment
 python -m venv .venv
@@ -137,7 +137,7 @@ AGENT_LLM_PROVIDER=ollama AGENT_MODEL=codestral \
 ## 7. Project Layout After Setup
 
 ```
-hams-ai/
+zilf-ai/
 ├── .venv/             ← virtual environment (git-ignored)
 ├── .env               ← your API keys (git-ignored)
 ├── agent/             ← source code

@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures for the Hams AI test suite.
+Shared pytest fixtures for the Zilf AI test suite.
 
 Available fixtures:
   mock_llm           — MockLLM with scripted responses

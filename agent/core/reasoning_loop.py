@@ -1,5 +1,5 @@
 """
-Reasoning Loop — the heart of the Hams AI.
+Reasoning Loop — the heart of the Zilf AI.
 
 Implements the Perceive → Reason → Act → Observe → Reflect cycle
 based on the ReAct (Reasoning + Acting) framework.
@@ -519,7 +519,7 @@ class ReasoningLoop:
 - Use tools repeatedly until the task is 100% complete
 - Only use final_answer when ALL work is done and verified
 
-# Tool calling format is defined in the provider layer (hams_max_provider.py)
+# Tool calling format is defined in the provider layer (zilf_max_provider.py)
 
 ## Available Tools
 {tools_list}

@@ -1,6 +1,6 @@
 """
-HAMS-MAX Base — shared constants, helpers, dan base class.
-Di-import oleh hams_max_chat.py, hams_max_agent.py, hams_max_thinking.py.
+ZILF-MAX Base — shared constants, helpers, dan base class.
+Di-import oleh zilf_max_chat.py, zilf_max_agent.py, zilf_max_thinking.py.
 
 Fixes applied:
   B18 — Token tracking via _call_api_tracked()
@@ -20,9 +20,9 @@ from loguru import logger
 
 from agent.llm.base import BaseLLM, LLMResponse
 
-HAMS_MAX_BASE_URL = "https://hams-max-api-production.up.railway.app"
+ZILF_MAX_BASE_URL = "https://zilf-max-api-production.up.railway.app"
 
-HAMS_MAX_MODELS: dict[str, str] = {
+ZILF_MAX_MODELS: dict[str, str] = {
     "groq":       "llama-3.3-70b-versatile",
     "qwen":       "qwen3.5-122b-a10b",
     "deepseek":   "deepseek-v3.2",
@@ -47,7 +47,7 @@ _GROQ_MODELS: set[str] = {
     "compound-beta-mini",
 }
 
-_FRONTEND_TO_HAMSMAX: dict[str, tuple[str, str]] = {
+_FRONTEND_TO_ZILFMAX: dict[str, tuple[str, str]] = {
     "llama-3.3-70b-versatile": ("llama-3.3-70b-versatile", "groq"),
     "llama-3.1-8b-instant":    ("llama-3.1-8b-instant",    "groq"),
     "llama3-8b-8192":          ("llama-3.1-8b-instant",    "groq"),
@@ -64,7 +64,7 @@ _FRONTEND_TO_HAMSMAX: dict[str, tuple[str, str]] = {
     "nvidia/deepseek-v3.2":    ("deepseek",   "nvidia"),
     "nvidia/kimi-k2-thinking": ("kimi-think", "nvidia"),
     "nvidia/nemotron-super-3": ("nemotron",   "nvidia"),
-    "hams-max":                ("llama-3.3-70b-versatile", "groq"),
+    "zilf-max":                ("llama-3.3-70b-versatile", "groq"),
 }
 
 FALLBACK_CHAIN: list[str] = [
@@ -78,10 +78,10 @@ FALLBACK_CHAIN: list[str] = [
 
 
 def resolve_model(model: str) -> tuple[str, str]:
-    if model in _FRONTEND_TO_HAMSMAX:
-        return _FRONTEND_TO_HAMSMAX[model]
-    if model in HAMS_MAX_MODELS:
-        model_id = HAMS_MAX_MODELS[model]
+    if model in _FRONTEND_TO_ZILFMAX:
+        return _FRONTEND_TO_ZILFMAX[model]
+    if model in ZILF_MAX_MODELS:
+        model_id = ZILF_MAX_MODELS[model]
         provider = "groq" if model_id in _GROQ_MODELS else "nvidia"
         return model_id, provider
     if model in _GROQ_MODELS:
@@ -89,7 +89,7 @@ def resolve_model(model: str) -> tuple[str, str]:
     return model, "groq"
 
 
-class HamsMaxBase(BaseLLM):
+class ZilfMaxBase(BaseLLM):
     """
     Base class dengan _call_api dan _build_payload yang di-share
     oleh semua mode (chat, agent, thinking).
@@ -101,10 +101,10 @@ class HamsMaxBase(BaseLLM):
         self._model_key    = model_id
         self._provider     = provider
         self._active_model = model
-        self._api_key      = os.environ.get("HAMS_MAX_API_KEY", "")
+        self._api_key      = os.environ.get("ZILF_MAX_API_KEY", "")
         if not self._api_key:
-            raise RuntimeError("HAMS_MAX_API_KEY environment variable is not set.")
-        logger.info(f"[hams-max] provider={self._provider} model={self._model_key} mode={self.__class__.__name__}")
+            raise RuntimeError("ZILF_MAX_API_KEY environment variable is not set.")
+        logger.info(f"[zilf-max] provider={self._provider} model={self._model_key} mode={self.__class__.__name__}")
 
     def _headers(self) -> dict:
         return {
@@ -114,7 +114,7 @@ class HamsMaxBase(BaseLLM):
 
     def _build_payload(self, messages: list[dict], system: str | None = None) -> dict:
         """
-        Build payload untuk hams-max-api.
+        Build payload untuk zilf-max-api.
 
         B20 FIX: System prompt di-inject sebagai pesan system terpisah
         di awal history, bukan di-prepend ke content user/assistant.
@@ -157,28 +157,28 @@ class HamsMaxBase(BaseLLM):
             # Keep only the last 4 history turns to stay within limits
             history = history[-4:]
             logger.warning(
-                f"[hams-max] History truncated to last 4 turns "
+                f"[zilf-max] History truncated to last 4 turns "
                 f"(was {total_chars} chars total)"
             )
 
         return {
             "message":    user_message,
-            "session_id": f"hams-agent-{uuid.uuid4().hex[:8]}",
+            "session_id": f"zilf-agent-{uuid.uuid4().hex[:8]}",
             "history":    history,
             "provider":   self._provider,
             "model":      self._model_key,
         }
 
     async def _call_api(self, payload: dict) -> str:
-        """Call hams-max-api dan return reply text."""
+        """Call zilf-max-api dan return reply text."""
         async with httpx.AsyncClient(timeout=180.0) as client:
             resp = await client.post(
-                f"{HAMS_MAX_BASE_URL}/v1/chat",
+                f"{ZILF_MAX_BASE_URL}/v1/chat",
                 headers=self._headers(),
                 json=payload,
             )
             if resp.status_code != 200:
-                logger.error(f"[hams-max] {resp.status_code} — body: {resp.text[:1000]}")
+                logger.error(f"[zilf-max] {resp.status_code} — body: {resp.text[:1000]}")
             resp.raise_for_status()
             return resp.json().get("reply", "")
 
@@ -191,12 +191,12 @@ class HamsMaxBase(BaseLLM):
         """
         async with httpx.AsyncClient(timeout=180.0) as client:
             resp = await client.post(
-                f"{HAMS_MAX_BASE_URL}/v1/chat",
+                f"{ZILF_MAX_BASE_URL}/v1/chat",
                 headers=self._headers(),
                 json=payload,
             )
             if resp.status_code != 200:
-                logger.error(f"[hams-max] {resp.status_code} — body: {resp.text[:1000]}")
+                logger.error(f"[zilf-max] {resp.status_code} — body: {resp.text[:1000]}")
             resp.raise_for_status()
 
             data = resp.json()
@@ -247,7 +247,7 @@ class HamsMaxBase(BaseLLM):
             model_id, provider = resolve_model(frontend_key)
             patched = {**payload, "model": model_id, "provider": provider}
             try:
-                logger.info(f"[hams-max] trying: {frontend_key}")
+                logger.info(f"[zilf-max] trying: {frontend_key}")
 
                 if track_tokens:
                     result = await asyncio.wait_for(
@@ -261,20 +261,20 @@ class HamsMaxBase(BaseLLM):
                     )
 
                 if frontend_key != self._active_model:
-                    logger.warning(f"[hams-max] fallback: {self._active_model} → {frontend_key}")
+                    logger.warning(f"[zilf-max] fallback: {self._active_model} → {frontend_key}")
                     self._active_model = frontend_key
                 return result
 
             except asyncio.TimeoutError as exc:
                 last_error = exc
                 logger.warning(
-                    f"[hams-max] timeout on {frontend_key} after {per_model_timeout}s, next..."
+                    f"[zilf-max] timeout on {frontend_key} after {per_model_timeout}s, next..."
                 )
                 continue
             except Exception as exc:
                 last_error = exc
                 if self._is_rate_limit_error(exc):
-                    logger.warning(f"[hams-max] rate limit on {frontend_key}, next...")
+                    logger.warning(f"[zilf-max] rate limit on {frontend_key}, next...")
                     continue
                 raise
 

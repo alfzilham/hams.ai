@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HAMS.AI — Pick Your Topics</title>
+    <title>ZILF.AI — Pick Your Topics</title>
     <link rel="icon" type="image/png" href="/static/favicon/apple-icon.png" />
     <link
         href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -506,21 +506,21 @@
         // ═══════════════════════════════════════
         // THEME
         // ═══════════════════════════════════════
-        const savedTheme = localStorage.getItem('hams_theme') || 'dark';
+        const savedTheme = localStorage.getItem('zilf_theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
         document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
 
         function toggleTheme() {
             const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', t);
-            localStorage.setItem('hams_theme', t);
+            localStorage.setItem('zilf_theme', t);
             document.getElementById('themeIcon').className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
         }
 
         // ═══════════════════════════════════════
         // USER DATA
         // ═══════════════════════════════════════
-        const userData = JSON.parse(localStorage.getItem('hams_user') || '{}');
+        const userData = JSON.parse(localStorage.getItem('zilf_user') || '{}');
         const displayName = userData.display_name || userData.name || 'there';
         document.getElementById('userName').textContent = displayName;
 
@@ -594,11 +594,11 @@
             btn.innerHTML = '<div class="spinner"></div>';
 
             // Save topics
-            localStorage.setItem('hams_topics', JSON.stringify(selectedTopics));
+            localStorage.setItem('zilf_topics', JSON.stringify(selectedTopics));
 
             // Update user data
             userData.topics = selectedTopics;
-            localStorage.setItem('hams_user', JSON.stringify(userData));
+            localStorage.setItem('zilf_user', JSON.stringify(userData));
 
             window.location.href = '/onboarding/suggestions';
         }

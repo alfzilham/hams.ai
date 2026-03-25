@@ -1,5 +1,5 @@
 """
-HAMS-MAX Agent Mode — ReAct tool calling via prompt engineering.
+ZILF-MAX Agent Mode — ReAct tool calling via prompt engineering.
 TIDAK ada extended thinking di sini — fokus ke format XML saja.
 Dipakai oleh reasoning_loop.py saat agent berjalan.
 
@@ -16,7 +16,7 @@ from typing import Any, AsyncIterator
 
 from loguru import logger
 
-from agent.llm.hams_max_base import HamsMaxBase
+from agent.llm.zilf_max_base import ZilfMaxBase
 from agent.llm.base import LLMResponse
 
 # ── ReAct system prompt ────────────────────────────────────────────────────
@@ -152,13 +152,13 @@ def _parse_react_response(text: str) -> tuple[str, str, str | None, dict | None]
     clean_text = _clean_answer(stripped)
 
     if not clean_text:
-        logger.warning("[hams-max] Answer empty after cleaning, returning raw text")
+        logger.warning("[zilf-max] Answer empty after cleaning, returning raw text")
         clean_text = text.strip()
 
     return thought, "final_answer", clean_text, None
 
 
-class HamsMaxAgentLLM(HamsMaxBase):
+class ZilfMaxAgentLLM(ZilfMaxBase):
     """
     Mode agent — ReAct tool calling murni.
     B18 FIX: token tracking terintegrasi.
@@ -201,7 +201,7 @@ class HamsMaxAgentLLM(HamsMaxBase):
             payload, track_tokens=True
         )
 
-        logger.debug(f"[hams-max/agent] Raw (first 300): {raw_text[:300]}")
+        logger.debug(f"[zilf-max/agent] Raw (first 300): {raw_text[:300]}")
 
         thought, action_type, tool_or_answer, tool_args = _parse_react_response(raw_text)
 
@@ -211,7 +211,7 @@ class HamsMaxAgentLLM(HamsMaxBase):
                 tool_use_id=f"tc_{uuid.uuid4().hex[:8]}",
                 tool_input=tool_args or {},
             )
-            logger.debug(f"[hams-max/agent] → tool_call: {tool_or_answer}")
+            logger.debug(f"[zilf-max/agent] → tool_call: {tool_or_answer}")
             return LLMResponse(
                 thought=thought,
                 action_type=ActionType.TOOL_CALL,
@@ -223,7 +223,7 @@ class HamsMaxAgentLLM(HamsMaxBase):
             )
 
         answer = tool_or_answer or thought or raw_text
-        logger.debug(f"[hams-max/agent] → final_answer: {answer[:200]}")
+        logger.debug(f"[zilf-max/agent] → final_answer: {answer[:200]}")
         return LLMResponse(
             thought=thought,
             action_type=ActionType.FINAL_ANSWER,

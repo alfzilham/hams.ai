@@ -1,5 +1,5 @@
 """
-HAMS-MAX LLM Provider — wraps hams-max-api-production.up.railway.app
+ZILF-MAX LLM Provider — wraps zilf-max-api-production.up.railway.app
 
 Fitur:
 - ReAct-style tool calling via prompt engineering (XML tags)
@@ -22,9 +22,9 @@ from loguru import logger
 
 from agent.llm.base import BaseLLM, LLMResponse
 
-HAMS_MAX_BASE = "https://hams-max-api-production.up.railway.app"
+ZILF_MAX_BASE = "https://zilf-max-api-production.up.railway.app"
 
-HAMS_MAX_MODELS: dict[str, str] = {
+ZILF_MAX_MODELS: dict[str, str] = {
     "groq":       "llama-3.3-70b-versatile",
     "qwen":       "qwen3.5-122b-a10b",
     "deepseek":   "deepseek-v3.2",
@@ -66,7 +66,7 @@ _FRONTEND_TO_HAMSMAX: dict[str, tuple[str, str]] = {
     "nvidia/deepseek-v3.2":    ("deepseek",   "nvidia"),
     "nvidia/kimi-k2-thinking": ("kimi-think", "nvidia"),
     "nvidia/nemotron-super-3": ("nemotron",   "nvidia"),
-    "hams-max":                ("llama-3.3-70b-versatile", "groq"),
+    "zilf-max":                ("llama-3.3-70b-versatile", "groq"),
 }
 
 # ── System prompts ─────────────────────────────────────────────────────────
@@ -118,8 +118,8 @@ ATURAN KRITIS untuk Extended Thinking:
 def _resolve_model(model: str) -> tuple[str, str]:
     if model in _FRONTEND_TO_HAMSMAX:
         return _FRONTEND_TO_HAMSMAX[model]
-    if model in HAMS_MAX_MODELS:
-        model_id = HAMS_MAX_MODELS[model]
+    if model in ZILF_MAX_MODELS:
+        model_id = ZILF_MAX_MODELS[model]
         provider = "groq" if model_id in _GROQ_MODELS else "nvidia"
         return model_id, provider
     if model in _GROQ_MODELS:
@@ -232,7 +232,7 @@ def _parse_react_response(text: str) -> tuple[str, str, str | None, dict | None]
                     tool_args = json.loads(args_m.group(1).strip())
                 except json.JSONDecodeError:
                     pass
-            logger.warning(f"[hams-max] <answer> tag contains tool call text, forcing tool_call: {tool_name}")
+            logger.warning(f"[zilf-max] <answer> tag contains tool call text, forcing tool_call: {tool_name}")
             return thought, "tool_call", tool_name, tool_args
 
         # Bersihkan answer dari sisa-sisa tool call text
@@ -256,7 +256,7 @@ def _parse_react_response(text: str) -> tuple[str, str, str | None, dict | None]
                             tool_args = json.loads(m.group())
                         except json.JSONDecodeError:
                             pass
-            logger.debug(f"[hams-max] No <answer> tag, detected tool call: {tool_name}")
+            logger.debug(f"[zilf-max] No <answer> tag, detected tool call: {tool_name}")
             return thought, "tool_call", tool_name, tool_args
 
     # ── CASE 4: Fallback — bersihkan text dan jadikan final answer ────────
@@ -265,7 +265,7 @@ def _parse_react_response(text: str) -> tuple[str, str, str | None, dict | None]
 
     # Kalau setelah dibersihkan hasilnya kosong → ada yang salah, return raw
     if not clean_text:
-        logger.warning("[hams-max] Answer empty after cleaning, returning raw text")
+        logger.warning("[zilf-max] Answer empty after cleaning, returning raw text")
         clean_text = text.strip()
 
     return thought, "final_answer", clean_text, None
@@ -282,9 +282,9 @@ def _extract_thinking(text: str) -> tuple[str, str]:
     return thinking, answer
 
 
-class HamsMaxLLM(BaseLLM):
+class ZilfMaxLLM(BaseLLM):
     """
-    LLM provider yang memanggil HAMS-MAX API.
+    LLM provider yang memanggil ZILF-MAX API.
 
     Fitur:
         extended=True  → inject extended thinking prompt, parse <think> blocks
@@ -304,12 +304,12 @@ class HamsMaxLLM(BaseLLM):
         self._model_key = model_id
         self._provider  = provider
         self._extended  = extended
-        self._api_key   = os.environ.get("HAMS_MAX_API_KEY", "")
+        self._api_key   = os.environ.get("ZILF_MAX_API_KEY", "")
 
         if not self._api_key:
-            raise RuntimeError("HAMS_MAX_API_KEY environment variable is not set.")
+            raise RuntimeError("ZILF_MAX_API_KEY environment variable is not set.")
 
-        logger.info(f"[hams-max] provider={self._provider} model={self._model_key} extended={self._extended}")
+        logger.info(f"[zilf-max] provider={self._provider} model={self._model_key} extended={self._extended}")
 
     def _headers(self) -> dict:
         return {
@@ -354,7 +354,7 @@ class HamsMaxLLM(BaseLLM):
 
         return {
             "message":    user_message,
-            "session_id": f"hams-agent-{uuid.uuid4().hex[:8]}",
+            "session_id": f"zilf-agent-{uuid.uuid4().hex[:8]}",
             "history":    history,
             "provider":   self._provider,
             "model":      self._model_key,
@@ -363,7 +363,7 @@ class HamsMaxLLM(BaseLLM):
     async def _call_api(self, payload: dict) -> str:
         async with httpx.AsyncClient(timeout=180.0) as client:
             resp = await client.post(
-                f"{HAMS_MAX_BASE}/v1/chat",
+                f"{ZILF_MAX_BASE}/v1/chat",
                 headers=self._headers(),
                 json=payload,
             )
@@ -398,7 +398,7 @@ class HamsMaxLLM(BaseLLM):
             payload  = self._build_payload(messages, system=react_system)
             raw_text = await self._call_api(payload)
 
-            logger.debug(f"[hams-max] Raw response (first 300 chars): {raw_text[:300]}")
+            logger.debug(f"[zilf-max] Raw response (first 300 chars): {raw_text[:300]}")
 
             # Extract thinking if present
             thinking, clean_text = _extract_thinking(raw_text)
@@ -413,7 +413,7 @@ class HamsMaxLLM(BaseLLM):
                     tool_use_id=f"tc_{uuid.uuid4().hex[:8]}",
                     tool_input=tool_args or {},
                 )
-                logger.debug(f"[hams-max] → tool_call: {tool_or_answer} args={tool_args}")
+                logger.debug(f"[zilf-max] → tool_call: {tool_or_answer} args={tool_args}")
                 return LLMResponse(
                     thought=thought,
                     action_type=ActionType.TOOL_CALL if hasattr(ActionType, 'TOOL_CALL') else "tool_call",
@@ -427,13 +427,13 @@ class HamsMaxLLM(BaseLLM):
                 # Validasi final: kalau answer masih mengandung tool call text → log warning
                 if _looks_like_tool_call(answer):
                     logger.warning(
-                        f"[hams-max] final_answer still contains tool call patterns after cleaning! "
+                        f"[zilf-max] final_answer still contains tool call patterns after cleaning! "
                         f"Answer (first 200): {answer[:200]}"
                     )
                     # Last resort clean
                     answer = _clean_answer(answer) or answer
 
-                logger.debug(f"[hams-max] → final_answer (first 200): {answer[:200]}")
+                logger.debug(f"[zilf-max] → final_answer (first 200): {answer[:200]}")
                 return LLMResponse(
                     thought=thought,
                     action_type=ActionType.FINAL_ANSWER if hasattr(ActionType, 'FINAL_ANSWER') else "final_answer",
@@ -509,7 +509,7 @@ class HamsMaxLLM(BaseLLM):
         async with httpx.AsyncClient(timeout=180.0) as client:
             async with client.stream(
                 "POST",
-                f"{HAMS_MAX_BASE}/v1/chat/stream",
+                f"{ZILF_MAX_BASE}/v1/chat/stream",
                 headers=self._headers(),
                 json=payload,
             ) as resp:

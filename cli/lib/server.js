@@ -14,7 +14,7 @@ function waitForServer(port, timeoutMs) {
 
     function poll() {
       if (Date.now() > deadline) {
-        return reject(new Error(`hams.ai backend did not start within ${timeoutMs / 1000}s`));
+        return reject(new Error(`zilf.ai backend did not start within ${timeoutMs / 1000}s`));
       }
       const req = http.get(`http://127.0.0.1:${port}/health`, (res) => {
         if (res.statusCode < 500) resolve();
@@ -50,13 +50,13 @@ async function startServer({ pythonCmd, projectRoot, port = DEFAULT_PORT, verbos
     child.stderr && child.stderr.on("data", (d) => { stderr += d.toString(); });
     child.on("exit", (code) => {
       if (code !== 0 && code !== null) {
-        stderr && process.stderr.write(`\n[hams.ai] ${stderr}\n`);
+        stderr && process.stderr.write(`\n[zilf.ai] ${stderr}\n`);
       }
     });
   }
 
   child.on("error", (err) => {
-    throw new Error(`Failed to start hams.ai backend: ${err.message}`);
+    throw new Error(`Failed to start zilf.ai backend: ${err.message}`);
   });
 
   await waitForServer(port, STARTUP_TIMEOUT_MS);

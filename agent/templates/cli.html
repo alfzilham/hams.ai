@@ -822,7 +822,7 @@
                         </div>
 
                         <div class="doc-text">
-                            Gunakan Zilf AI langsung dari terminal mana saja menggunakan <code>hams</code> — tanpa perlu
+                            Gunakan Zilf AI langsung dari terminal mana saja menggunakan <code>zilf</code> — tanpa perlu
                             masuk ke folder project setiap kali.
                         </div>
 
@@ -840,7 +840,7 @@
                                 </div>
                                 <div class="prereq-item">
                                     <i class="bi bi-check-circle-fill"></i>
-                                    <span>Repository <strong>hams-ai</strong> sudah di-clone di komputer kamu</span>
+                                    <span>Repository <strong>zilf-ai</strong> sudah di-clone di komputer kamu</span>
                                 </div>
                             </div>
                         </div>
@@ -855,24 +855,24 @@
                                         Copy</button>
                                 </div>
                                 <pre># Step 1 — Install CLI secara global
-npm install -g @hams-ai/cli
+npm install -g @zilf-ai/cli
 
 # Step 2 — Tambahkan Python Scripts ke PATH (jika belum)
 $env:PATH += ";C:\Users\&lt;username&gt;\AppData\Local\Python\pythoncore-3.14-64\Scripts"
 
 # Step 3 — Install Python dependencies (pertama kali saja)
-pip install -r "C:\path\to\hams-ai\requirements.txt"
+pip install -r "C:\path\to\zilf-ai\requirements.txt"
 
-# Step 4 — Set path ke folder project hams-ai
-$env:HAMS_PATH = "C:\path\to\hams-ai"
+# Step 4 — Set path ke folder project zilf-ai
+$env:ZILF_PATH = "C:\path\to\zilf-ai"
 
 # Step 5 — Jalankan!
-hams</pre>
+zilf</pre>
                             </div>
                             <div class="info-box">
                                 <i class="bi bi-info-circle-fill"></i>
-                                <p>Ganti <code>C:\path\to\hams-ai</code> dengan path aktual folder hasil clone di
-                                    komputer kamu. Contoh: <code>D:\2026\Workspace\Website\.hams.ai</code></p>
+                                <p>Ganti <code>C:\path\to\zilf-ai</code> dengan path aktual folder hasil clone di
+                                    komputer kamu. Contoh: <code>D:\2026\Workspace\Website\.zilf.ai</code></p>
                             </div>
 
                             <div class="doc-subsection-title" style="margin-top:20px;">Buat PATH permanen</div>
@@ -888,7 +888,7 @@ notepad $PROFILE
 
 # Tambahkan dua baris ini ke dalam file, lalu simpan:
 $env:PATH += ";C:\Users\&lt;username&gt;\AppData\Local\Python\pythoncore-3.14-64\Scripts"
-$env:HAMS_PATH = "C:\path\to\hams-ai"</pre>
+$env:ZILF_PATH = "C:\path\to\zilf-ai"</pre>
                             </div>
                         </div>
 
@@ -902,22 +902,22 @@ $env:HAMS_PATH = "C:\path\to\hams-ai"</pre>
                                         Copy</button>
                                 </div>
                                 <pre># Mode chat interaktif (default)
-hams
+zilf
 
 # Jalankan satu task langsung
-hams run "Buatkan fungsi Python untuk sorting bubble sort"
+zilf run "Buatkan fungsi Python untuk sorting bubble sort"
 
 # Lihat daftar tools yang tersedia
-hams tools
+zilf tools
 
 # Cek status backend
-hams status
+zilf status
 
 # Tampilkan output Python (untuk debug)
-hams --verbose
+zilf --verbose
 
 # Gunakan port custom
-hams --port 9000</pre>
+zilf --port 9000</pre>
                             </div>
                         </div>
 
@@ -930,11 +930,11 @@ hams --port 9000</pre>
                                     <button class="copy-btn" onclick="copyCode(this)"><i class="bi bi-clipboard"></i>
                                         Copy</button>
                                 </div>
-                                <pre>PS C:\Users\LENOVO> hams
+                                <pre>PS C:\Users\LENOVO> zilf
 
-hams.ai — AI Coding Agent
+zilf.ai — AI Coding Agent
 
-✔ hams.ai ready — port 8000
+✔ zilf.ai ready — port 8000
 
   Type your task and press Enter. Type "exit" to quit.
 
@@ -1029,10 +1029,10 @@ curl -X POST http://localhost:8000/run \
             const html = document.documentElement;
             const t = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', t);
-            localStorage.setItem('hams_theme', t);
+            localStorage.setItem('zilf_theme', t);
             document.getElementById('themeIcon').className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
         }
-        const saved = localStorage.getItem('hams_theme') || 'dark';
+        const saved = localStorage.getItem('zilf_theme') || 'dark';
         document.documentElement.setAttribute('data-theme', saved);
         document.getElementById('themeIcon').className = saved === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
 

@@ -1,5 +1,5 @@
 # ============================================================
-# Hams AI — Docker Compose (Development)
+# Zilf AI — Docker Compose (Development)
 # Includes: agent (hot-reload) + sandbox + ollama
 #
 # Usage:
@@ -17,8 +17,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.dev
-    image: hams-ai-dev:latest
-    container_name: hams-ai-dev
+    image: zilf-ai-dev:latest
+    container_name: zilf-ai-dev
     ports:
       - "8000:8000"
     volumes:
@@ -56,8 +56,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: hams-ai-sandbox:latest
-    container_name: hams-ai-sandbox
+    image: zilf-ai-sandbox:latest
+    container_name: zilf-ai-sandbox
     volumes:
       - ../workspace:/workspace
     environment:
@@ -79,7 +79,7 @@ services:
   # ── Ollama (local LLM server) ────────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
-    container_name: hams-ai-ollama
+    container_name: zilf-ai-ollama
     ports:
       - "11434:11434"
     volumes:
@@ -97,7 +97,7 @@ services:
         #       count: 1
         #       capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
       start_period: 30s

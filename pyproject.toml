@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hams-ai"
+name = "zilf-ai"
 version = "0.1.0"
 description = "Open-source autonomous coding assistant powered by Ollama, Groq, Gemini, or local LLMs"
 readme = "README.md"
@@ -72,9 +72,9 @@ observability = [
 agent = "agent.main:app"
 
 [project.urls]
-Repository = "https://github.com/alfizilham/hams-ai"
-Issues = "https://github.com/alfizilham/hams-ai/issues"
-Documentation = "https://github.com/alfizilham/hams-ai/tree/main/docs"
+Repository = "https://github.com/alfizilham/zilf-ai"
+Issues = "https://github.com/alfizilham/zilf-ai/issues"
+Documentation = "https://github.com/alfizilham/zilf-ai/tree/main/docs"
 
 # --- Tool configs ---
 

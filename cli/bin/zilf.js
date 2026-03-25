@@ -9,13 +9,13 @@
  *  ██║  ██║██║  ██║██║ ╚═╝ ██║███████║  ██║  ██║██║
  *  ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝  ╚═╝  ╚═╝╚═╝
  *
- *  hams.ai CLI — @hams-ai/cli
+ *  zilf.ai CLI — @zilf-ai/cli
  *
  *  Commands:
- *    hams              → interactive chat (default)
- *    hams run "task"   → run single task and exit
- *    hams tools        → list available tools
- *    hams status       → check backend status
+ *    zilf              → interactive chat (default)
+ *    zilf run "task"   → run single task and exit
+ *    zilf tools        → list available tools
+ *    zilf status       → check backend status
  */
 
 const path = require("path");
@@ -27,20 +27,20 @@ const inquirer = require("inquirer");
 
 const { findPython, findRequirements, isPythonAgentInstalled, installPythonDeps } = require("../lib/installer");
 const { startServer, stopServer } = require("../lib/server");
-const HamsClient = require("../lib/client");
+const ZilfClient = require("../lib/client");
 
 // ─── Banner ──────────────────────────────────────────────────────────────────
 const BANNER = `
-${chalk.bold.white("hams.ai")} ${chalk.dim("— AI Coding Agent")}
+${chalk.bold.white("zilf.ai")} ${chalk.dim("— AI Coding Agent")}
 `;
 
 // ─── Resolve project root ─────────────────────────────────────────────────────
 function resolveProjectRoot() {
   // 1. Environment variable
-  if (process.env.HAMS_PATH && fs.existsSync(process.env.HAMS_PATH)) {
-    return process.env.HAMS_PATH;
+  if (process.env.ZILF_PATH && fs.existsSync(process.env.ZILF_PATH)) {
+    return process.env.ZILF_PATH;
   }
-  // 2. npm global install: .../node_modules/@hams-ai/cli/bin/hams.js → up 5 levels
+  // 2. npm global install: .../node_modules/@zilf-ai/cli/bin/zilf.js → up 5 levels
   const fromBin = path.resolve(__dirname, "..", "..", "..", "..", "..");
   if (fs.existsSync(path.join(fromBin, "agent", "api.py"))) return fromBin;
 
@@ -57,7 +57,7 @@ function resolveProjectRoot() {
 // ─── Setup: find Python, install deps, start server ──────────────────────────
 async function setup(verbose = false, port = 8000) {
   console.log(BANNER);
-  const spinner = ora({ text: "Starting hams.ai...", color: "white" }).start();
+  const spinner = ora({ text: "Starting zilf.ai...", color: "white" }).start();
 
   // 1. Find Python
   const pythonCmd = findPython();
@@ -73,10 +73,10 @@ async function setup(verbose = false, port = 8000) {
   const projectRoot = resolveProjectRoot();
   if (!projectRoot) {
     spinner.fail(
-      chalk.red("Cannot find hams.ai project folder.\n\n") +
-      chalk.white("  Set the HAMS_PATH environment variable:\n") +
-      chalk.dim("  PowerShell: ") + chalk.cyan(`$env:HAMS_PATH = "C:\\path\\to\\hams.ai"\n`) +
-      chalk.dim("  Linux/Mac:  ") + chalk.cyan(`export HAMS_PATH="/path/to/hams.ai"`)
+      chalk.red("Cannot find zilf.ai project folder.\n\n") +
+      chalk.white("  Set the ZILF_PATH environment variable:\n") +
+      chalk.dim("  PowerShell: ") + chalk.cyan(`$env:ZILF_PATH = "C:\\path\\to\\zilf.ai"\n`) +
+      chalk.dim("  Linux/Mac:  ") + chalk.cyan(`export ZILF_PATH="/path/to/zilf.ai"`)
     );
     process.exit(1);
   }
@@ -101,7 +101,7 @@ async function setup(verbose = false, port = 8000) {
   spinner.text = "Starting backend...";
   try {
     const { process: serverProc } = await startServer({ pythonCmd, projectRoot, port, verbose });
-    spinner.succeed(chalk.green(`hams.ai ready`) + chalk.dim(` — port ${port}`));
+    spinner.succeed(chalk.green(`zilf.ai ready`) + chalk.dim(` — port ${port}`));
     return { serverProc, port };
   } catch (err) {
     spinner.fail(chalk.red(`Backend failed to start: ${err.message}`));
@@ -166,8 +166,8 @@ async function interactiveMode(client) {
 
 // ─── Commands ─────────────────────────────────────────────────────────────────
 program
-  .name("hams")
-  .description("hams.ai — AI Coding Agent CLI")
+  .name("zilf")
+  .description("zilf.ai — AI Coding Agent CLI")
   .version("1.0.0", "-v, --version")
   .option("--verbose", "Show Python backend output")
   .option("--port <port>", "Backend port", "8000");
@@ -180,7 +180,7 @@ program
     const opts = program.opts();
     const port = parseInt(opts.port);
     const { serverProc } = await setup(opts.verbose, port);
-    const client = new HamsClient(port);
+    const client = new ZilfClient(port);
 
     process.on("exit", () => stopServer(serverProc));
     process.on("SIGINT", () => { stopServer(serverProc); process.exit(0); });
@@ -196,7 +196,7 @@ program
     const opts = program.opts();
     const port = parseInt(opts.port);
     const { serverProc } = await setup(opts.verbose, port);
-    const client = new HamsClient(port);
+    const client = new ZilfClient(port);
 
     process.on("exit", () => stopServer(serverProc));
 
@@ -225,11 +225,11 @@ program
     const opts = program.opts();
     const port = parseInt(opts.port);
     const { serverProc } = await setup(opts.verbose, port);
-    const client = new HamsClient(port);
+    const client = new ZilfClient(port);
 
     try {
       const tools = await client.tools();
-      console.log(chalk.bold("\n  Tools available in hams.ai:\n"));
+      console.log(chalk.bold("\n  Tools available in zilf.ai:\n"));
       if (Array.isArray(tools) && tools.length) {
         tools.forEach((t) => {
           const name = t.name || t;
@@ -254,10 +254,10 @@ program
   .action(async () => {
     const opts = program.opts();
     const port = parseInt(opts.port);
-    const client = new HamsClient(port);
+    const client = new ZilfClient(port);
     try {
       const h = await client.health();
-      console.log(chalk.green(`\n  hams.ai backend is running`) + chalk.dim(` on port ${port}`));
+      console.log(chalk.green(`\n  zilf.ai backend is running`) + chalk.dim(` on port ${port}`));
       console.log(chalk.dim(`  ${JSON.stringify(h)}\n`));
     } catch (_) {
       console.log(chalk.dim(`\n  No backend found on port ${port}.\n`));

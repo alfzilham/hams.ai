@@ -36,7 +36,7 @@ observability:
     enabled: false
     exporter: otlp          # otlp | jaeger | zipkin | console
     endpoint: http://localhost:4317
-    service_name: hams-ai
+    service_name: zilf-ai
     service_version: "0.1.0"
 
     # Span attributes added to every trace

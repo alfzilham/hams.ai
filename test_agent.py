@@ -5,7 +5,7 @@ from loguru import logger
 from dotenv import load_dotenv
 load_dotenv()
 from agent.core.agent import Agent
-from agent.llm.hams_max_provider import HamsMaxLLM
+from agent.llm.zilf_max_provider import ZilfMaxLLM
 from agent.tools.registry import ToolRegistry
 
 async def main():
@@ -14,7 +14,7 @@ async def main():
     
     # Init registry and tools automatically loaded?
     registry = ToolRegistry.default()
-    llm = HamsMaxLLM(model="groq")
+    llm = ZilfMaxLLM(model="groq")
     agent = Agent(llm=llm, tool_registry=registry, verbose=True)
     
     task = "Cari framework JavaScript terpopuler 2025 dan buat laporan"

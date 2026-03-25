@@ -1,5 +1,5 @@
 """
-HAMS.AI — Authentication Module (v2)
+ZILF.AI — Authentication Module (v2)
 =====================================
 - FastAPI Router with all auth endpoints
 - SQLite user CRUD
@@ -31,7 +31,7 @@ from pydantic import BaseModel, EmailStr, Field, validator
 # ═══════════════════════════════════════════════
 # CONFIG
 # ═══════════════════════════════════════════════
-SECRET_KEY    = os.environ.get("SECRET_KEY", "hams-secret-key-change-in-production")
+SECRET_KEY    = os.environ.get("SECRET_KEY", "zilf-secret-key-change-in-production")
 ALGORITHM     = "HS256"
 TOKEN_EXPIRE  = 60 * 24 * 7   # 7 days in minutes
 BCRYPT_ROUNDS = 12
@@ -57,7 +57,7 @@ RATE_LIMIT_WINDOW = 300     # 5 minutes in seconds
 # ═══════════════════════════════════════════════
 # DATABASE
 # ═══════════════════════════════════════════════
-DB_PATH = Path(os.environ.get("HAMS_DB_PATH", "/app/data/hams.db"))
+DB_PATH = Path(os.environ.get("ZILF_DB_PATH", "/app/data/zilf.db"))
 
 
 def get_db() -> sqlite3.Connection:

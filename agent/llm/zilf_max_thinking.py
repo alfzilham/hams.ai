@@ -1,5 +1,5 @@
 """
-HAMS-MAX Thinking Mode — chat dengan Extended Thinking (<think> blocks).
+ZILF-MAX Thinking Mode — chat dengan Extended Thinking (<think> blocks).
 HANYA untuk chat mode (tanpa tools). Tidak dipakai di agent mode.
 """
 
@@ -11,7 +11,7 @@ from typing import Any, AsyncIterator
 
 from loguru import logger
 
-from agent.llm.hams_max_base import HamsMaxBase
+from agent.llm.zilf_max_base import ZilfMaxBase
 from agent.llm.base import LLMResponse
 
 _THINKING_PROMPT = """Before answering, think deeply inside <think>...</think> tags.
@@ -29,7 +29,7 @@ def _extract_thinking(text: str) -> tuple[str, str]:
     return thinking, answer
 
 
-class HamsMaxThinkingLLM(HamsMaxBase):
+class ZilfMaxThinkingLLM(ZilfMaxBase):
     """
     Mode extended thinking — chat biasa tapi model berpikir keras
     di dalam <think> tags sebelum menjawab.

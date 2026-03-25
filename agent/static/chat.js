@@ -20,12 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
         hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : 'Evening';
 
     // isi nama dari localStorage
-    const user = JSON.parse(localStorage.getItem('hams_user') || '{}');
+    const user = JSON.parse(localStorage.getItem('zilf_user') || '{}');
     const greetName = document.getElementById('greetingName');
     if (greetName && user.name) greetName.textContent = user.name;
 
     // Theme
-    applyTheme(localStorage.getItem('hams_theme') || 'dark');
+    applyTheme(localStorage.getItem('zilf_theme') || 'dark');
 
     // Load sidebar history
     renderHistoryList();
@@ -72,12 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (urlToken) {
         // Store token from Google OAuth redirect
-        localStorage.setItem('hams_token', urlToken);
+        localStorage.setItem('zilf_token', urlToken);
 
         if (urlUser) {
             try {
                 const userData = JSON.parse(decodeURIComponent(urlUser));
-                localStorage.setItem('hams_user', JSON.stringify(userData));
+                localStorage.setItem('zilf_user', JSON.stringify(userData));
             } catch (e) {
                 console.warn('[Auth] Failed to parse user data from URL:', e);
             }
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Normal auth check
-    const token = localStorage.getItem('hams_token');
+    const token = localStorage.getItem('zilf_token');
     if (!token) {
         window.location.href = '/login';
         return;
@@ -100,8 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const exp = payload.exp * 1000; // convert to ms
         if (Date.now() > exp) {
-            localStorage.removeItem('hams_token');
-            localStorage.removeItem('hams_user');
+            localStorage.removeItem('zilf_token');
+            localStorage.removeItem('zilf_user');
             window.location.href = '/login';
             return;
         }
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ═══════════════════════════════════════════════
 // HISTORY — localStorage helpers
 // ═══════════════════════════════════════════════
-const HISTORY_KEY = 'hams_chat_history';
+const HISTORY_KEY = 'zilf_chat_history';
 const MAX_HISTORY = 50;
 
 function loadAllChats() {
@@ -246,7 +246,7 @@ function restoreChat(id) {
 // ═══════════════════════════════════════════════
 function applyTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('hams_theme', t);
+    localStorage.setItem('zilf_theme', t);
     const icon = document.getElementById('themeIcon');
     if (icon) icon.className = t === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
 }
@@ -565,7 +565,7 @@ function showContent() {
 }
 
 function buildUserAvatar() {
-    const user = JSON.parse(localStorage.getItem('hams_user') || '{}');
+    const user = JSON.parse(localStorage.getItem('zilf_user') || '{}');
     if (user.avatar_url) {
         const img = document.createElement('img');
         img.src = user.avatar_url;
@@ -1225,11 +1225,11 @@ function renderHistoryModal(query = '') {
 // SETTINGS MODAL
 // ═══════════════════════════════════════════════
 function openSettings() {
-    const user = JSON.parse(localStorage.getItem('hams_user') || '{}');
+    const user = JSON.parse(localStorage.getItem('zilf_user') || '{}');
     const nameInput = document.getElementById('settingsName');
     if (nameInput) nameInput.value = user.name || '';
 
-    const currentTheme = localStorage.getItem('hams_theme') || 'dark';
+    const currentTheme = localStorage.getItem('zilf_theme') || 'dark';
     document.getElementById('themeOptDark')?.classList.toggle('active', currentTheme === 'dark');
     document.getElementById('themeOptLight')?.classList.toggle('active', currentTheme === 'light');
 
@@ -1615,7 +1615,7 @@ const TRANSLATIONS = {
 };
 
 // ── Language state ──
-let currentLang = localStorage.getItem('hams_lang') || 'en-US';
+let currentLang = localStorage.getItem('zilf_lang') || 'en-US';
 
 function t(key) {
     const lang = TRANSLATIONS[currentLang] || TRANSLATIONS['en-US'];
@@ -1624,7 +1624,7 @@ function t(key) {
 
 function applyLanguage(code) {
     currentLang = code;
-    localStorage.setItem('hams_lang', code);
+    localStorage.setItem('zilf_lang', code);
     document.documentElement.lang = code.split('-')[0];
 
     // Update semua elemen [data-i18n]
@@ -1966,7 +1966,7 @@ function toggleFAQ(el) {
 // PROFILE DROPDOWN
 // ═══════════════════════════════════════════════
 function initProfile() {
-    const user = JSON.parse(localStorage.getItem('hams_user') || '{}');
+    const user = JSON.parse(localStorage.getItem('zilf_user') || '{}');
     const nameEl = document.getElementById('profileName');
     const emailEl = document.getElementById('profileEmail');
     const avatarEl = document.getElementById('profileAvatar');
@@ -1987,7 +1987,7 @@ function initProfile() {
 }
 
 async function syncProfileFromServer() {
-    const token = localStorage.getItem('hams_token');
+    const token = localStorage.getItem('zilf_token');
     if (!token) return;
 
     try {
@@ -1997,8 +1997,8 @@ async function syncProfileFromServer() {
 
         if (!res.ok) {
             if (res.status === 401) {
-                localStorage.removeItem('hams_token');
-                localStorage.removeItem('hams_user');
+                localStorage.removeItem('zilf_token');
+                localStorage.removeItem('zilf_user');
                 window.location.href = '/login';
             }
             return;
@@ -2006,7 +2006,7 @@ async function syncProfileFromServer() {
 
         const serverUser = await res.json();
 
-        const currentUser = JSON.parse(localStorage.getItem('hams_user') || '{}');
+        const currentUser = JSON.parse(localStorage.getItem('zilf_user') || '{}');
         const updatedUser = {
             ...currentUser,
             id: serverUser.user_id,
@@ -2016,7 +2016,7 @@ async function syncProfileFromServer() {
             avatar_url: serverUser.avatar_url || currentUser.avatar_url || '',
         };
 
-        localStorage.setItem('hams_user', JSON.stringify(updatedUser));
+        localStorage.setItem('zilf_user', JSON.stringify(updatedUser));
 
         const nameEl = document.getElementById('profileName');
         const emailEl = document.getElementById('profileEmail');
@@ -2056,8 +2056,8 @@ document.addEventListener('click', e => {
 });
 
 function logout() {
-    localStorage.removeItem('hams_token');
-    localStorage.removeItem('hams_user');
+    localStorage.removeItem('zilf_token');
+    localStorage.removeItem('zilf_user');
     localStorage.removeItem(HISTORY_KEY);
     sessionId = null;
     currentChatId = null;
@@ -2224,7 +2224,7 @@ function exportChat() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `hams-chat-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `zilf-chat-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('📥 Chat exported!');

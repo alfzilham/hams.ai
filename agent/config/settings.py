@@ -52,7 +52,7 @@ class AgentSettings(BaseSettings):
 class SandboxSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SANDBOX_", extra="ignore")
 
-    image: str = "hams-ai-sandbox:latest"
+    image: str = "zilf-ai-sandbox:latest"
     cpu_limit: str = "1.0"
     memory_limit: str = "512m"
     pids_limit: int = 64

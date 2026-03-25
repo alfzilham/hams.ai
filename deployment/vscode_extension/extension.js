@@ -1,4 +1,4 @@
-// Hams AI — VS Code Extension
+// Zilf AI — VS Code Extension
 //
 // Wires the agent API into VS Code:
 //   - Chat sidebar panel  (WebviewView)
@@ -17,7 +17,7 @@ const vscode = require("vscode");
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
-  console.log("Hams AI extension activated");
+  console.log("Zilf AI extension activated");
 
   const controller = new AgentController(context);
 
@@ -49,7 +49,7 @@ function activate(context) {
 }
 
 function deactivate() {
-  console.log("Hams AI extension deactivated");
+  console.log("Zilf AI extension deactivated");
 }
 
 module.exports = { activate, deactivate };
@@ -78,7 +78,7 @@ class AgentController {
   async runTaskOnActiveFile() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showWarningMessage("Hams AI: No active file.");
+      vscode.window.showWarningMessage("Zilf AI: No active file.");
       return;
     }
     const fileName = editor.document.fileName;
@@ -103,7 +103,7 @@ class AgentController {
   async generateTests() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showWarningMessage("Hams AI: No active file.");
+      vscode.window.showWarningMessage("Zilf AI: No active file.");
       return;
     }
     const lang = editor.document.languageId;
@@ -125,7 +125,7 @@ class AgentController {
   async refactorCode() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showWarningMessage("Hams AI: No active file.");
+      vscode.window.showWarningMessage("Zilf AI: No active file.");
       return;
     }
     const file = editor.document.fileName;
@@ -139,12 +139,12 @@ class AgentController {
   _getSelection() {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showWarningMessage("Hams AI: No active editor.");
+      vscode.window.showWarningMessage("Zilf AI: No active editor.");
       return null;
     }
     const text = editor.document.getText(editor.selection).trim();
     if (!text) {
-      vscode.window.showWarningMessage("Hams AI No text selected.");
+      vscode.window.showWarningMessage("Zilf AI No text selected.");
       return null;
     }
     return text;
@@ -313,7 +313,7 @@ class ChatViewProvider {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hams AI</title>
+<title>Zilf AI</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -448,7 +448,7 @@ class ChatViewProvider {
 </head>
 <body>
 <div class="header">
-  Hams AI
+  Zilf AI
   <div class="header-actions">
     <button class="icon-btn" onclick="clearChat()" title="Clear chat">⊘</button>
     <button class="icon-btn" onclick="openSettings()" title="Settings">⚙</button>
@@ -457,7 +457,7 @@ class ChatViewProvider {
 
 <div id="messages">
   <div class="welcome">
-    <div class="welcome-title">Hams AI</div>
+    <div class="welcome-title">Zilf AI</div>
     Describe a coding task and the agent will<br>
     write, test, fix, and verify the code for you.
   </div>
@@ -482,7 +482,7 @@ class ChatViewProvider {
 
   function clearChat() {
     document.getElementById('messages').innerHTML =
-      '<div class="welcome"><div class="welcome-title">Hams AI</div>Chat cleared.</div>';
+      '<div class="welcome"><div class="welcome-title">Zilf AI</div>Chat cleared.</div>';
     busy = false;
     document.getElementById('send-btn').disabled = false;
   }

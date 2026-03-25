@@ -1,5 +1,5 @@
 """
-Hams AI — autonomous coding assistant.
+Zilf AI — autonomous coding assistant.
 
 Public API::
 

@@ -77,12 +77,12 @@ class LLMRouter(BaseLLM):
         fallbacks: list[BaseLLM] = []
 
         # ── 1. Tentukan primary berdasarkan AGENT_LLM_PROVIDER ──
-        if provider_name == "hams-max":
+        if provider_name == "zilf-max":
             try:
-                from agent.llm.hams_max_provider import HamsMaxLLM
-                primary = HamsMaxLLM(model=model or "groq")
+                from agent.llm.zilf_max_provider import ZilfMaxLLM
+                primary = ZilfMaxLLM(model=model or "groq")
             except (ImportError, RuntimeError) as e:
-                logger.warning(f"[router] HamsMaxLLM not available: {e}")
+                logger.warning(f"[router] ZilfMaxLLM not available: {e}")
 
         elif provider_name == "groq":
             try:
@@ -104,11 +104,11 @@ class LLMRouter(BaseLLM):
         # ── 2. Tambahkan semua provider lain sebagai fallback ──
         # B4 FIX: Setiap provider dicek INDEPENDEN (if, bukan elif)
 
-        if os.environ.get("HAMS_MAX_API_KEY"):
+        if os.environ.get("ZILF_MAX_API_KEY"):
             try:
-                from agent.llm.hams_max_provider import HamsMaxLLM
-                if primary is None or not isinstance(primary, HamsMaxLLM):
-                    fallbacks.append(HamsMaxLLM(model="groq"))
+                from agent.llm.zilf_max_provider import ZilfMaxLLM
+                if primary is None or not isinstance(primary, ZilfMaxLLM):
+                    fallbacks.append(ZilfMaxLLM(model="groq"))
             except (ImportError, RuntimeError):
                 pass
 
