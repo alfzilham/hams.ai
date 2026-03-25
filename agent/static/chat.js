@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   HAMS.AI — Chat UI Logic (CLEANED - NO ORB)
+   Zilf.ai — Chat UI Logic (CLEANED - NO ORB)
    ═══════════════════════════════════════════════ */
 
 // ── State ──────────────────────────────────────
@@ -1282,7 +1282,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'Agent 🤖',
         inputHint: 'Enter to send · Shift+Enter new line · Mode:',
         welcomeQ: 'Can I help you with anything?',
-        welcomeSub: 'Powered by HAMS-MAX — Groq & NVIDIA models',
+        welcomeSub: 'Powered by ZILF-MAX — Groq & NVIDIA models',
         greetMorning: 'Morning',
         greetAfternoon: 'Afternoon',
         greetEvening: 'Evening',
@@ -1314,7 +1314,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'Agen 🤖',
         inputHint: 'Enter kirim · Shift+Enter baris baru · Mode:',
         welcomeQ: 'Ada yang bisa saya bantu?',
-        welcomeSub: 'Didukung HAMS-MAX — Model Groq & NVIDIA',
+        welcomeSub: 'Didukung ZILF-MAX — Model Groq & NVIDIA',
         greetMorning: 'Selamat Pagi',
         greetAfternoon: 'Selamat Siang',
         greetEvening: 'Selamat Malam',
@@ -1346,7 +1346,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'Agent 🤖',
         inputHint: 'Entrée pour envoyer · Maj+Entrée nouvelle ligne · Mode :',
         welcomeQ: 'Comment puis-je vous aider ?',
-        welcomeSub: 'Propulsé par HAMS-MAX — Modèles Groq & NVIDIA',
+        welcomeSub: 'Propulsé par ZILF-MAX — Modèles Groq & NVIDIA',
         greetMorning: 'Bonjour',
         greetAfternoon: 'Bon après-midi',
         greetEvening: 'Bonsoir',
@@ -1378,7 +1378,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'Agent 🤖',
         inputHint: 'Enter zum Senden · Shift+Enter neue Zeile · Modus:',
         welcomeQ: 'Wie kann ich Ihnen helfen?',
-        welcomeSub: 'Betrieben von HAMS-MAX — Groq & NVIDIA Modelle',
+        welcomeSub: 'Betrieben von ZILF-MAX — Groq & NVIDIA Modelle',
         greetMorning: 'Guten Morgen',
         greetAfternoon: 'Guten Tag',
         greetEvening: 'Guten Abend',
@@ -1410,7 +1410,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'एजेंट 🤖',
         inputHint: 'Enter भेजें · Shift+Enter नई लाइन · मोड:',
         welcomeQ: 'मैं आपकी कैसे मदद कर सकता हूं?',
-        welcomeSub: 'HAMS-MAX द्वारा संचालित — Groq & NVIDIA मॉडल',
+        welcomeSub: 'ZILF-MAX द्वारा संचालित — Groq & NVIDIA मॉडल',
         greetMorning: 'सुप्रभात',
         greetAfternoon: 'नमस्ते',
         greetEvening: 'शुभ संध्या',
@@ -1442,7 +1442,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'Agente 🤖',
         inputHint: 'Invio per inviare · Shift+Invio nuova riga · Modalità:',
         welcomeQ: 'Come posso aiutarti?',
-        welcomeSub: 'Alimentato da HAMS-MAX — Modelli Groq & NVIDIA',
+        welcomeSub: 'Alimentato da ZILF-MAX — Modelli Groq & NVIDIA',
         greetMorning: 'Buongiorno',
         greetAfternoon: 'Buon pomeriggio',
         greetEvening: 'Buonasera',
@@ -1474,7 +1474,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'エージェント 🤖',
         inputHint: 'Enterで送信 · Shift+Enterで改行 · モード:',
         welcomeQ: '何かお手伝いできることはありますか？',
-        welcomeSub: 'HAMS-MAX搭載 — Groq & NVIDIAモデル',
+        welcomeSub: 'ZILF-MAX搭載 — Groq & NVIDIAモデル',
         greetMorning: 'おはようございます',
         greetAfternoon: 'こんにちは',
         greetEvening: 'こんばんは',
@@ -1506,7 +1506,7 @@ const TRANSLATIONS = {
         modeHintAgent: '에이전트 🤖',
         inputHint: 'Enter로 전송 · Shift+Enter 줄바꿈 · 모드:',
         welcomeQ: '무엇을 도와드릴까요?',
-        welcomeSub: 'HAMS-MAX 제공 — Groq & NVIDIA 모델',
+        welcomeSub: 'ZILF-MAX 제공 — Groq & NVIDIA 모델',
         greetMorning: '좋은 아침이에요',
         greetAfternoon: '안녕하세요',
         greetEvening: '안녕하세요',
@@ -1538,7 +1538,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'Agente 🤖',
         inputHint: 'Enter para enviar · Shift+Enter nova linha · Modo:',
         welcomeQ: 'Como posso te ajudar?',
-        welcomeSub: 'Desenvolvido por HAMS-MAX — Modelos Groq & NVIDIA',
+        welcomeSub: 'Desenvolvido por ZILF-MAX — Modelos Groq & NVIDIA',
         greetMorning: 'Bom dia',
         greetAfternoon: 'Boa tarde',
         greetEvening: 'Boa noite',
@@ -1570,7 +1570,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'Agente 🤖',
         inputHint: 'Enter para enviar · Shift+Enter nueva línea · Modo:',
         welcomeQ: '¿En qué puedo ayudarte?',
-        welcomeSub: 'Impulsado por HAMS-MAX — Modelos Groq & NVIDIA',
+        welcomeSub: 'Impulsado por ZILF-MAX — Modelos Groq & NVIDIA',
         greetMorning: 'Buenos días',
         greetAfternoon: 'Buenas tardes',
         greetEvening: 'Buenas noches',
@@ -1602,7 +1602,7 @@ const TRANSLATIONS = {
         modeHintAgent: 'Agente 🤖',
         inputHint: 'Enter para enviar · Shift+Enter nueva línea · Modo:',
         welcomeQ: '¿En qué puedo ayudarte?',
-        welcomeSub: 'Con tecnología HAMS-MAX — Modelos Groq & NVIDIA',
+        welcomeSub: 'Con tecnología ZILF-MAX — Modelos Groq & NVIDIA',
         greetMorning: 'Buenos días',
         greetAfternoon: 'Buenas tardes',
         greetEvening: 'Buenas noches',
@@ -1662,7 +1662,7 @@ function applyLanguage(code) {
         const hour = new Date().getHours();
         const greet = hour < 12 ? t('greetMorning') : hour < 17 ? t('greetAfternoon') : t('greetEvening');
         const nameEl = document.getElementById('greetingName');
-        const name = nameEl ? nameEl.textContent : 'HAMS AI';
+        const name = nameEl ? nameEl.textContent : 'Zilf.ai';
         welcomeQ.innerHTML = `${greet}, <span class="greeting-name" id="greetingName">${name}</span>.<br />${t('welcomeQ')}`;
     }
 
@@ -1754,7 +1754,7 @@ const FAQ_DATA = [
     {
         cat: 'general',
         q: 'Bagaimana cara memilih model AI?',
-        a: 'Klik dropdown <strong>HAMS-MAX</strong> di topbar. Tersedia HAMS-MAX (routing otomatis ke 12 model), Gemini Flash (cepat & murah), Gemini Pro (paling pintar). Untuk tugas umum, HAMS-MAX sudah optimal.'
+        a: 'Klik dropdown <strong>ZILF-MAX</strong> di topbar. Tersedia ZILF-MAX (routing otomatis ke 12 model), Gemini Flash (cepat & murah), Gemini Pro (paling pintar). Untuk tugas umum, ZILF-MAX sudah optimal.'
     },
     {
         cat: 'general',
@@ -2214,9 +2214,9 @@ function exportChat() {
         return;
     }
 
-    let text = `HAMS.AI Chat Export\n${'='.repeat(40)}\n\n`;
+    let text = `Zilf.ai Chat Export\n${'='.repeat(40)}\n\n`;
     history.forEach(msg => {
-        const role = msg.role === 'user' ? '👤 You' : '🤖 HAMS AI';
+        const role = msg.role === 'user' ? '👤 You' : '🤖 Zilf AI';
         text += `${role}:\n${msg.content}\n\n${'─'.repeat(40)}\n\n`;
     });
 
@@ -2528,7 +2528,7 @@ async function sendMessage(overrideText) {
         clearcoat: 1.0,
         clearcoatRoughness: 0.1,
         envMapIntensity: 1.5,
-        emissive: 0x222222,  // Sedikit emissive agar tidak gelap
+        emissive: 0x003333,  // Teal emissive glow
         emissiveIntensity: 0.5
     });
 
@@ -2538,7 +2538,7 @@ async function sendMessage(overrideText) {
     // ── 3. INNER GLOW (PUTIH) ──────────────────────
     const glowGeo = new THREE.SphereGeometry(0.92, 32, 32);
     const glowMat = new THREE.MeshBasicMaterial({
-        color: 0xffffff,      // Glow Putih
+        color: 0x00f2ff,      // Glow Teal
         transparent: true,
         opacity: 0.15,
         side: THREE.BackSide
@@ -2551,7 +2551,7 @@ async function sendMessage(overrideText) {
     scene.add(ambient);
 
     // PointLight utama (mengikuti kursor)
-    const pointLight = new THREE.PointLight(0xffffff, 2.0, 100);
+    const pointLight = new THREE.PointLight(0x00f2ff, 2.0, 100);
     pointLight.position.set(5, 5, 5);
     scene.add(pointLight);
 
