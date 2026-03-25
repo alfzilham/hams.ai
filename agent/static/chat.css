@@ -107,6 +107,7 @@ body {
     display: flex;
     height: 100dvh;
     overflow: hidden;
+    margin: 0;
 }
 
 /* ── Background gradient ── */
@@ -114,16 +115,13 @@ body::before {
     display: none;
 }
 
-body>* {
-    position: relative;
-    z-index: 1;
-}
+/* body>* z-index removed — stacking controlled per-element */
 
 /* ── Aurora background ── */
 #auroraBg {
     position: fixed;
     inset: 0;
-    z-index: -10;
+    z-index: -1;
     pointer-events: none;
     opacity: 0.5;
     width: 100%;
@@ -143,6 +141,7 @@ body>* {
     height: 100%;
     transition: transform 0.28s cubic-bezier(.4, 0, .2, 1), width 0.28s;
     z-index: 50;
+    position: relative;
     box-shadow: 4px 0 32px rgba(0, 0, 0, 0.3);
 }
 
@@ -385,8 +384,10 @@ body>* {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     min-width: 0;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
 }
 
 /* ── Topbar ── */
@@ -398,12 +399,12 @@ body>* {
     gap: 8px;
     padding: 0 16px;
     border-bottom: 1px solid rgba(0, 229, 192, 0.08);
-    background: linear-gradient(145deg, rgba(0, 229, 192, 0.04) 0%, rgba(0, 229, 192, 0.01) 100%);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: inset 0 1px 0 rgba(0, 229, 192, 0.06), 0 4px 24px rgba(0, 0, 0, 0.2);
+    background: rgba(11, 18, 21, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     overflow: visible;
-    z-index: 100;
+    position: relative;
+    z-index: 40;
 }
 
 /* Hamburger (mobile) */
@@ -496,10 +497,9 @@ body>* {
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(0, 229, 192, 0.06);
-    z-index: 200;
+    z-index: 1000;
     overflow: hidden;
     padding: 6px;
-    z-index: 999;
 }
 
 .model-panel.open {
@@ -753,10 +753,11 @@ body>* {
    CONTENT AREA
 ════════════════════════════════════ */
 #content {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    min-height: 0;
 }
 
 #content::-webkit-scrollbar {
@@ -777,6 +778,7 @@ body>* {
     justify-content: center;
     padding: 32px 24px 16px;
     gap: 0;
+    margin: auto 0;
 }
 
 /* ── Professional Orb Enhancements ── */
@@ -1809,8 +1811,10 @@ body>* {
    INPUT AREA
 ════════════════════════════════════ */
 #inputArea {
-    padding: 0 20px 18px;
+    padding: 0 20px 20px;
     flex-shrink: 0;
+    position: relative;
+    z-index: 30;
 }
 
 .input-card {
@@ -2118,13 +2122,26 @@ body>* {
         position: fixed;
         top: 0;
         left: 0;
-        bottom: 0;
+        height: 100%;
         transform: translateX(-100%);
-        z-index: 50;
+        z-index: 999;
     }
 
     #sidebar.open {
         transform: translateX(0);
+    }
+
+    /* Sidebar overlay backdrop */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 998;
+    }
+
+    .sidebar-overlay.open {
+        display: block;
     }
 
     .hamburger {
