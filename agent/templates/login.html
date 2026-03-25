@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HAMS.AI — Login</title>
+    <title>Zilf.ai — Login</title>
     <link rel="icon" type="image/png" href="/static/favicon/apple-icon.png" />
     <link
         href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -16,29 +16,29 @@
            VARIABLES
         ══════════════════════════════════════════ */
         :root {
-            --bg: #07070d;
-            --bg-2: #0a0a12;
-            --surface: rgba(255, 255, 255, 0.03);
-            --surface-2: rgba(255, 255, 255, 0.06);
-            --border: rgba(255, 255, 255, 0.06);
-            --border-2: rgba(255, 255, 255, 0.10);
-            --border-focus: rgba(255, 255, 255, 0.22);
+            --bg: #050505;
+            --bg-2: #080808;
+            --surface: rgba(0, 242, 255, 0.03);
+            --surface-2: rgba(0, 242, 255, 0.06);
+            --border: rgba(0, 242, 255, 0.06);
+            --border-2: rgba(0, 242, 255, 0.10);
+            --border-focus: rgba(0, 242, 255, 0.35);
             --text: #f3f3f3;
             --text-2: #8a8a8a;
-            --text-3: #444;
-            --accent: #e8e8ee;
-            --accent-2: #c0c0cc;
-            --accent-glow: rgba(232, 232, 238, 0.15);
-            --accent-glow-2: rgba(232, 232, 238, 0.08);
+            --text-3: #555;
+            --accent: #00f2ff;
+            --accent-2: #008080;
+            --accent-glow: rgba(0, 242, 255, 0.15);
+            --accent-glow-2: rgba(0, 242, 255, 0.08);
             --red: #f87171;
             --red-bg: rgba(248, 113, 113, 0.08);
             --red-border: rgba(248, 113, 113, 0.25);
             --green: #4ade80;
             --green-bg: rgba(74, 222, 128, 0.08);
             --green-border: rgba(74, 222, 128, 0.25);
-            --glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            --glass-bg: linear-gradient(145deg, rgba(0, 242, 255, 0.05) 0%, rgba(0, 242, 255, 0.02) 100%);
+            --glass-border: rgba(0, 242, 255, 0.08);
+            --glass-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(0, 242, 255, 0.05);
         }
 
         [data-theme="light"] {
@@ -46,22 +46,22 @@
             --bg-2: #e8e8f0;
             --surface: rgba(255, 255, 255, 0.8);
             --surface-2: rgba(255, 255, 255, 0.9);
-            --border: rgba(0, 0, 0, 0.06);
-            --border-2: rgba(0, 0, 0, 0.10);
-            --border-focus: rgba(99, 102, 241, 0.4);
+            --border: rgba(0, 128, 128, 0.08);
+            --border-2: rgba(0, 128, 128, 0.12);
+            --border-focus: rgba(0, 128, 128, 0.4);
             --text: #1a1a2e;
             --text-2: #606080;
             --text-3: #9090a0;
-            --accent: #4a4a5a;
-            --accent-2: #2a2a3a;
-            --accent-glow: rgba(99, 102, 241, 0.15);
-            --accent-glow-2: rgba(99, 102, 241, 0.08);
+            --accent: #008080;
+            --accent-2: #006666;
+            --accent-glow: rgba(0, 128, 128, 0.15);
+            --accent-glow-2: rgba(0, 128, 128, 0.08);
             --red-bg: rgba(248, 113, 113, 0.06);
             --red-border: rgba(248, 113, 113, 0.2);
             --green-bg: rgba(74, 222, 128, 0.06);
             --green-border: rgba(74, 222, 128, 0.2);
             --glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
-            --glass-border: rgba(0, 0, 0, 0.08);
+            --glass-border: rgba(0, 128, 128, 0.08);
             --glass-shadow: 0 24px 80px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
         }
 
@@ -111,8 +111,8 @@
             position: absolute;
             inset: 0;
             background:
-                radial-gradient(ellipse at 30% 50%, rgba(129, 140, 248, 0.08) 0%, transparent 60%),
-                radial-gradient(ellipse at 70% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+                radial-gradient(ellipse at 30% 50%, rgba(0, 242, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(0, 128, 128, 0.05) 0%, transparent 50%);
             pointer-events: none;
         }
 
@@ -148,7 +148,7 @@
             /* Panjang garis */
             background: rgba(0, 0, 0, 0.95);
             border-radius:20px;
-            box-shadow: 0 0 8px rgba(30, 30, 30, 0.9), 0 0 16px rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 8px rgba(0, 242, 255, 0.5), 0 0 16px rgba(0, 242, 255, 0.3);
             transform: translate(-50%, -50%);
             /* Center default */
             transition: transform 0.06s linear;
@@ -490,7 +490,7 @@
             border-radius: 12px;
             border: none;
             background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-            color: #fff;
+            color: #050505;
             font-family: 'Sora', sans-serif;
             font-size: 0.88rem;
             font-weight: 700;
@@ -532,8 +532,8 @@
         .auth-submit .spinner {
             width: 16px;
             height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top-color: #fff;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+            border-top-color: #050505;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
         }
@@ -747,8 +747,8 @@
             <!-- Brand overlay -->
             <div class="visual-brand">
                 <div class="visual-brand-logo">
-                    <img src="/static/image/logo.png" alt="HAMS.AI" />
-                    <span>HAMS<span class="brand-dot">AI</span></span>
+                    <img src="/static/image/logo.png" alt="Zilf.ai" />
+                    <span>Zilf<span class="brand-dot">.ai</span></span>
                 </div>
                 <div class="visual-tagline">
                     Autonomous AI Assistant powered by multi-model intelligence.
@@ -764,12 +764,12 @@
             <div class="auth-form-inner">
                 <!-- Logo -->
                 <div class="auth-logo">
-                    <img src="/static/image/logo.png" alt="HAMS.AI" />
-                    <span class="auth-logo-text">HAMS<span class="auth-logo-dot">AI</span></span>
+                    <img src="/static/image/logo.png" alt="Zilf.ai" />
+                    <span class="auth-logo-text">Zilf<span class="auth-logo-dot">.ai</span></span>
                 </div>
 
                 <h1 class="auth-title">Welcome back</h1>
-                <p class="auth-sub">Login to your HAMS AI account</p>
+                <p class="auth-sub">Login to your Zilf.ai account</p>
 
                 <!-- Global error -->
                 <div class="auth-global-error" id="globalError" role="alert">
@@ -1012,7 +1012,7 @@
             // ── Main sphere ──
             const material = new THREE.MeshPhysicalMaterial({
                 color: new THREE.Color(0.95, 0.95, 0.97), // Silver White
-                emissive: new THREE.Color(0.2, 0.2, 0.25),
+                emissive: new THREE.Color(0.0, 0.2, 0.22),
                 emissiveIntensity: 0.4,
                 metalness: 0.85,
                 roughness: 0.08,
@@ -1028,7 +1028,7 @@
             // ── Inner glow ──
             const glowGeo = new THREE.SphereGeometry(0.9, 64, 64);
             const glowMat = new THREE.MeshBasicMaterial({
-                color: new THREE.Color(0.88, 0.88, 0.92),
+                color: new THREE.Color(0.0, 0.95, 1.0),
                 transparent: true,
                 opacity: 0.1,
             });
@@ -1038,7 +1038,7 @@
             // ── Outer glow ring ──
             const ringGeo = new THREE.TorusGeometry(1.6, 0.015, 16, 100);
             const ringMat = new THREE.MeshBasicMaterial({
-                color: new THREE.Color(0.80, 0.80, 0.88),
+                color: new THREE.Color(0.0, 0.75, 0.8),
                 transparent: true,
                 opacity: 0.15,
             });
@@ -1049,7 +1049,7 @@
             // Second ring
             const ring2Geo = new THREE.TorusGeometry(1.9, 0.008, 16, 100);
             const ring2Mat = new THREE.MeshBasicMaterial({
-                color: new THREE.Color(0.70, 0.70, 0.80),
+                color: new THREE.Color(0.0, 0.55, 0.6),
                 transparent: true,
                 opacity: 0.08,
             });
@@ -1059,21 +1059,21 @@
             scene.add(ring2);
 
             // ── Lights ──
-            const pointLight = new THREE.PointLight(new THREE.Color(1.0, 1.0, 1.0), 3.0, 12);
+            const pointLight = new THREE.PointLight(new THREE.Color(0.0, 0.95, 1.0), 3.0, 12);
             pointLight.position.set(2, 2, 3);
             scene.add(pointLight);
 
-            const fillLight = new THREE.PointLight(new THREE.Color(0.7, 0.7, 0.8), 1.0, 10);
+            const fillLight = new THREE.PointLight(new THREE.Color(0.0, 0.5, 0.55), 1.0, 10);
             fillLight.position.set(-2, -1, 2);
             scene.add(fillLight);
 
-            const ambientLight = new THREE.AmbientLight(new THREE.Color(0.1, 0.1, 0.2), 0.5);
+            const ambientLight = new THREE.AmbientLight(new THREE.Color(0.0, 0.1, 0.12), 0.5);
             scene.add(ambientLight);
 
             // ── Environment map ──
             const envScene = new THREE.Scene();
             const envGeo = new THREE.SphereGeometry(5, 32, 32);
-            const envMat = new THREE.MeshBasicMaterial({ color: 0x0a0a1a, side: THREE.BackSide });
+            const envMat = new THREE.MeshBasicMaterial({ color: 0x050a0a, side: THREE.BackSide });
             envScene.add(new THREE.Mesh(envGeo, envMat));
 
             for (let i = 0; i < 8; i++) {
