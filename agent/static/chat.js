@@ -2683,150 +2683,153 @@ async function sendMessage(overrideText) {
         renderer.setSize(newSize, newSize);
     });
 
-    // ═══════════════════════════════════════════════
-    // AUTO GENERATE CHAT TITLE — FIXED
-    // ═══════════════════════════════════════════════
-    window.generateSmartTitle = async function () {
-        if (history.length < 2 || !currentChatId) return;
+})();
 
-        const lastUserMsg = history[history.length - 2].content || "";
+// ═══════════════════════════════════════════════
+// AUTO GENERATE CHAT TITLE — FIXED
+// ═══════════════════════════════════════════════
+window.generateSmartTitle = async function () {
+    if (history.length < 2 || !currentChatId) return;
 
-        try {
-            const res = await fetch('/v1/chat/generate-title', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: lastUserMsg,
-                    history: history.slice(-6),
-                    provider: document.getElementById('modelSelect')?.value === 'nvidia' ? 'nvidia' : 'groq'
-                })
+    const lastUserMsg = history[history.length - 2].content || "";
+
+    try {
+        const res = await fetch('/v1/chat/generate-title', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: lastUserMsg,
+                history: history.slice(-6),
+                provider: document.getElementById('modelSelect')?.value === 'nvidia' ? 'nvidia' : 'groq'
+            })
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        let smartTitle = (data.title || '').trim();
+
+        if (!smartTitle) return;
+
+        // Update title di history
+        const chats = loadAllChats();
+        const idx = chats.findIndex(c => c.id === currentChatId);
+        if (idx !== -1) {
+            chats[idx].title = smartTitle;
+            chats[idx].updatedAt = new Date().toISOString();
+            saveAllChats(chats);
+            renderHistoryList();
+        }
+
+        console.log('%c[Smart Title] ' + smartTitle, 'color:#00ff9d;font-weight:bold');
+    } catch (err) {
+        console.warn('[generateSmartTitle] Gagal:', err.message);
+    }
+};
+
+// ═══════════════════════════════════════════════
+// MINIMAP PANEL
+// ═══════════════════════════════════════════════
+(function () {
+    const chatBox = document.getElementById('chatBox');
+    const lines = document.getElementById('minimapLines');
+    const viewport = document.getElementById('minimapViewport');
+    const pctLabel = document.getElementById('minimapPct');
+    const content = document.getElementById('content');
+
+    function buildMinimap() {
+        // Hapus semua kecuali viewport indicator
+        [...lines.children].forEach(el => { if (el !== viewport) el.remove(); });
+
+        const msgs = chatBox.querySelectorAll('.bubble');
+        if (!msgs.length) return;
+
+        msgs.forEach((msg, i) => {
+            const isUser = msg.classList.contains('user') ||
+                msg.querySelector('[class*="user"]') ||
+                msg.dataset.role === 'user';
+
+            const wrap = document.createElement('div');
+            wrap.className = 'mm-msg';
+            wrap.dataset.idx = i;
+
+            // Tooltip
+            const tip = document.createElement('div');
+            tip.className = 'mm-tooltip';
+            const role = document.createElement('div');
+            role.className = 'mm-tooltip-role';
+            role.style.color = isUser ? '#2dd4bf' : '#64748b';
+            role.textContent = isUser ? 'KAMU' : 'AI';
+            const preview = document.createElement('div');
+            preview.textContent = (msg.innerText || '').slice(0, 70) + '…';
+            tip.append(role, preview);
+            wrap.appendChild(tip);
+
+            // Baris-baris garis
+            const textLen = (msg.innerText || '').length;
+            const lineCount = isUser ? 1 : Math.min(3, Math.ceil(textLen / 120));
+            const widths = isUser
+                ? ['65%']
+                : ['88%', '62%', '45%'].slice(0, lineCount);
+
+            widths.forEach((w, li) => {
+                const line = document.createElement('div');
+                line.className = 'mm-line';
+                line.style.width = w;
+                line.style.marginLeft = isUser ? 'auto' : '0';
+                line.style.opacity = li === 0 ? '0.7' : li === 1 ? '0.4' : '0.2';
+                line.style.background = isUser
+                    ? 'linear-gradient(90deg,#5eead4,#2dd4bf)'
+                    : 'rgba(255,255,255,0.55)';
+                wrap.appendChild(line);
             });
 
-            if (!res.ok) return;
+            wrap.addEventListener('click', () => {
+                msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
 
-            const data = await res.json();
-            let smartTitle = (data.title || '').trim();
+            lines.appendChild(wrap);
+        });
 
-            if (!smartTitle) return;
+        updateViewport();
+    }
 
-            // Update title di history
-            const chats = loadAllChats();
-            const idx = chats.findIndex(c => c.id === currentChatId);
-            if (idx !== -1) {
-                chats[idx].title = smartTitle;
-                chats[idx].updatedAt = new Date().toISOString();
-                saveAllChats(chats);
-                renderHistoryList();
-            }
+    function updateViewport() {
+        const el = content;
+        const { scrollTop, scrollHeight, clientHeight } = el;
+        const max = scrollHeight - clientHeight;
+        const progress = max > 0 ? scrollTop / max : 1;
+        pctLabel.textContent = Math.round(progress * 100) + '%';
 
-            console.log('%c[Smart Title] ' + smartTitle, 'color:#00ff9d;font-weight:bold');
-        } catch (err) {
-            console.warn('[generateSmartTitle] Gagal:', err.message);
-        }
-    };
+        const totalH = lines.scrollHeight;
+        const vpH = Math.max(28, totalH * (clientHeight / scrollHeight));
+        const vpTop = progress * (totalH - vpH);
 
-    (function () {
-        const chatBox = document.getElementById('chatBox');
-        const lines = document.getElementById('minimapLines');
-        const viewport = document.getElementById('minimapViewport');
-        const pctLabel = document.getElementById('minimapPct');
-        const content = document.getElementById('content');
+        viewport.style.height = vpH + 'px';
+        viewport.style.top = vpTop + 'px';
 
-        function buildMinimap() {
-            // Hapus semua kecuali viewport indicator
-            [...lines.children].forEach(el => { if (el !== viewport) el.remove(); });
-
+        // Highlight visible messages
+        const msgEls = lines.querySelectorAll('.mm-msg');
+        msgEls.forEach((wrap, i) => {
             const msgs = chatBox.querySelectorAll('.bubble');
-            if (!msgs.length) return;
-
-            msgs.forEach((msg, i) => {
-                const isUser = msg.classList.contains('user') ||
-                    msg.querySelector('[class*="user"]') ||
-                    msg.dataset.role === 'user';
-
-                const wrap = document.createElement('div');
-                wrap.className = 'mm-msg';
-                wrap.dataset.idx = i;
-
-                // Tooltip
-                const tip = document.createElement('div');
-                tip.className = 'mm-tooltip';
-                const role = document.createElement('div');
-                role.className = 'mm-tooltip-role';
-                role.style.color = isUser ? '#2dd4bf' : '#64748b';
-                role.textContent = isUser ? 'KAMU' : 'AI';
-                const preview = document.createElement('div');
-                preview.textContent = (msg.innerText || '').slice(0, 70) + '…';
-                tip.append(role, preview);
-                wrap.appendChild(tip);
-
-                // Baris-baris garis
-                const textLen = (msg.innerText || '').length;
-                const lineCount = isUser ? 1 : Math.min(3, Math.ceil(textLen / 120));
-                const widths = isUser
-                    ? ['65%']
-                    : ['88%', '62%', '45%'].slice(0, lineCount);
-
-                widths.forEach((w, li) => {
-                    const line = document.createElement('div');
-                    line.className = 'mm-line';
-                    line.style.width = w;
-                    line.style.marginLeft = isUser ? 'auto' : '0';
-                    line.style.opacity = li === 0 ? '0.7' : li === 1 ? '0.4' : '0.2';
-                    line.style.background = isUser
-                        ? 'linear-gradient(90deg,#5eead4,#2dd4bf)'
-                        : 'rgba(255,255,255,0.55)';
-                    wrap.appendChild(line);
-                });
-
-                wrap.addEventListener('click', () => {
-                    msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                });
-
-                lines.appendChild(wrap);
+            const target = msgs[i];
+            if (!target) return;
+            const rect = target.getBoundingClientRect();
+            const inView = rect.top < window.innerHeight && rect.bottom > 0;
+            wrap.querySelectorAll('.mm-line').forEach(l => {
+                l.style.opacity = inView
+                    ? (l === wrap.querySelector('.mm-line') ? '1' : '0.55')
+                    : parseFloat(l.style.opacity) > 0.5 ? '0.35' : '0.15';
             });
+        });
+    }
 
-            updateViewport();
-        }
+    // Observe chatBox untuk pesan baru
+    new MutationObserver(buildMinimap).observe(chatBox, { childList: true, subtree: true });
 
-        function updateViewport() {
-            const el = content;
-            const { scrollTop, scrollHeight, clientHeight } = el;
-            const max = scrollHeight - clientHeight;
-            const progress = max > 0 ? scrollTop / max : 1;
-            pctLabel.textContent = Math.round(progress * 100) + '%';
+    // Scroll listener
+    content.addEventListener('scroll', updateViewport, { passive: true });
 
-            const totalH = lines.scrollHeight;
-            const vpH = Math.max(28, totalH * (clientHeight / scrollHeight));
-            const vpTop = progress * (totalH - vpH);
-
-            viewport.style.height = vpH + 'px';
-            viewport.style.top = vpTop + 'px';
-
-            // Highlight visible messages
-            const msgEls = lines.querySelectorAll('.mm-msg');
-            msgEls.forEach((wrap, i) => {
-                const msgs = chatBox.querySelectorAll('.bubble');
-                const target = msgs[i];
-                if (!target) return;
-                const rect = target.getBoundingClientRect();
-                const inView = rect.top < window.innerHeight && rect.bottom > 0;
-                wrap.querySelectorAll('.mm-line').forEach(l => {
-                    l.style.opacity = inView
-                        ? (l === wrap.querySelector('.mm-line') ? '1' : '0.55')
-                        : parseFloat(l.style.opacity) > 0.5 ? '0.35' : '0.15';
-                });
-            });
-        }
-
-        // Observe chatBox untuk pesan baru
-        new MutationObserver(buildMinimap).observe(chatBox, { childList: true, subtree: true });
-
-        // Scroll listener
-        content.addEventListener('scroll', updateViewport, { passive: true });
-
-        // Init
-        buildMinimap();
-    })();
-
+    // Init
+    buildMinimap();
 })();
