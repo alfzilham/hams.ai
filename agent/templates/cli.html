@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id" data-theme="dark">
 
 <head>
@@ -712,6 +712,109 @@
 
         .info-box p code {
             font-size: 0.75em;
+        }
+
+        /* ════════════════════════════════════
+           RESPONSIVE — TABLET & MOBILE
+        ════════════════════════════════════ */
+
+        @media (max-width: 1024px) {
+            .cli-layout {
+                flex-direction: column;
+                padding: 24px 20px;
+                gap: 32px;
+            }
+
+            .toc {
+                width: 100%;
+                position: static;
+                border-bottom: 1px solid var(--border2);
+                padding-bottom: 16px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .toc-title {
+                width: 100%;
+                margin-bottom: 12px;
+            }
+
+            .toc-item,
+            .toc-sub {
+                border: 1px solid var(--border2);
+                border-radius: 8px;
+                padding: 8px 14px;
+                margin: 0;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                font-size: 0.85rem;
+            }
+
+            .toc-sub {
+                padding-left: 14px;
+            }
+
+            .doc-hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .doc-hero p {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 767px) {
+            #topbar {
+                padding: 0 16px;
+            }
+
+            .cli-layout {
+                padding: 20px 16px;
+            }
+
+            .doc-hero h1 {
+                font-size: 1.5rem;
+            }
+
+            .doc-section-title {
+                font-size: 1rem;
+            }
+
+            .doc-text {
+                font-size: 0.95rem;
+                line-height: 1.6;
+            }
+
+            .code-wrap pre {
+                font-size: 0.85rem;
+                padding: 12px;
+            }
+
+            .intro-title {
+                font-size: 1.8rem;
+            }
+
+            .intro-ticket {
+                width: 100%;
+            }
+
+            /* Optimization for touch targets */
+            .copy-btn,
+            .intro-cta,
+            .tb-back {
+                min-height: 44px;
+                min-width: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .intro-cta {
+                width: 100%;
+                padding: 14px;
+            }
         }
     </style>
 </head>

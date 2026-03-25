@@ -34,8 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     applyLanguage(currentLang);
 
-    renderRightHistory();
-
     // Search input
     document.getElementById('searchInput')?.addEventListener('input', e => {
         const q = e.target.value.toLowerCase();
@@ -793,7 +791,6 @@ async function sendChat(content, model) {   // content bisa string atau array
         // Simpan dulu dengan judul sementara (seperti sebelumnya)
         const tempTitle = history.find(m => m.role === 'user')?.content?.slice(0, 50) || userTextForHistory.slice(0, 50);
         saveChatToHistory(tempTitle, history);
-        renderRightHistory();
 
         // === AUTO GENERATE JUDUL PINTAR ===
         if (history.length === 2) {           // hanya pada percakapan pertama
@@ -993,7 +990,6 @@ function handleAgentEvent(ev, block, statusBanner, taskText) {
 
         const tempTitle = (taskText || ev.answer || '').slice(0, 50);
         saveChatToHistory(tempTitle, history);
-        renderRightHistory();
 
         // === AUTO GENERATE JUDUL PINTAR ===
         if (history.length === 2) {
@@ -2729,39 +2725,108 @@ async function sendMessage(overrideText) {
         }
     };
 
-    // Toggle Right History Panel
-    function toggleRightPanel() {
-        const panel = document.getElementById('rightHistoryPanel');
-        panel.classList.toggle('open');
-    }
+    (function () {
+        const chatBox = document.getElementById('chatBox');
+        const lines = document.getElementById('minimapLines');
+        const viewport = document.getElementById('minimapViewport');
+        const pctLabel = document.getElementById('minimapPct');
+        const content = document.getElementById('content');
 
-    // Render Right Panel History
-    function renderRightHistory() {
-        const container = document.getElementById('rightHistoryList');
-        if (!container) return;
+        function buildMinimap() {
+            // Hapus semua kecuali viewport indicator
+            [...lines.children].forEach(el => { if (el !== viewport) el.remove(); });
 
-        const chats = loadAllChats();
-        container.innerHTML = '';
+            const msgs = chatBox.querySelectorAll('.bubble');
+            if (!msgs.length) return;
 
-        chats.forEach(chat => {
-            const item = document.createElement('div');
-            item.className = `right-history-item ${chat.id === currentChatId ? 'active' : ''}`;
-            item.innerHTML = `
-            <div class="right-history-title">${escHtml(chat.title)}</div>
-            <div class="right-history-date">${getDateLabel(chat.updatedAt || chat.createdAt)}</div>
-        `;
-            item.addEventListener('click', () => {
-                restoreChat(chat.id);
-                toggleRightPanel(); // tutup panel setelah klik
+            msgs.forEach((msg, i) => {
+                const isUser = msg.classList.contains('user') ||
+                    msg.querySelector('[class*="user"]') ||
+                    msg.dataset.role === 'user';
+
+                const wrap = document.createElement('div');
+                wrap.className = 'mm-msg';
+                wrap.dataset.idx = i;
+
+                // Tooltip
+                const tip = document.createElement('div');
+                tip.className = 'mm-tooltip';
+                const role = document.createElement('div');
+                role.className = 'mm-tooltip-role';
+                role.style.color = isUser ? '#2dd4bf' : '#64748b';
+                role.textContent = isUser ? 'KAMU' : 'AI';
+                const preview = document.createElement('div');
+                preview.textContent = (msg.innerText || '').slice(0, 70) + '…';
+                tip.append(role, preview);
+                wrap.appendChild(tip);
+
+                // Baris-baris garis
+                const textLen = (msg.innerText || '').length;
+                const lineCount = isUser ? 1 : Math.min(3, Math.ceil(textLen / 120));
+                const widths = isUser
+                    ? ['65%']
+                    : ['88%', '62%', '45%'].slice(0, lineCount);
+
+                widths.forEach((w, li) => {
+                    const line = document.createElement('div');
+                    line.className = 'mm-line';
+                    line.style.width = w;
+                    line.style.marginLeft = isUser ? 'auto' : '0';
+                    line.style.opacity = li === 0 ? '0.7' : li === 1 ? '0.4' : '0.2';
+                    line.style.background = isUser
+                        ? 'linear-gradient(90deg,#5eead4,#2dd4bf)'
+                        : 'rgba(255,255,255,0.55)';
+                    wrap.appendChild(line);
+                });
+
+                wrap.addEventListener('click', () => {
+                    msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+
+                lines.appendChild(wrap);
             });
-            container.appendChild(item);
-        });
 
-        if (chats.length === 0) {
-            container.innerHTML = `<div style="text-align:center; color:#64748b; padding:40px 20px;">Belum ada riwayat obrolan</div>`;
+            updateViewport();
         }
-    }
 
-    // Panggil fungsi ini setiap kali history berubah
+        function updateViewport() {
+            const el = content;
+            const { scrollTop, scrollHeight, clientHeight } = el;
+            const max = scrollHeight - clientHeight;
+            const progress = max > 0 ? scrollTop / max : 1;
+            pctLabel.textContent = Math.round(progress * 100) + '%';
+
+            const totalH = lines.scrollHeight;
+            const vpH = Math.max(28, totalH * (clientHeight / scrollHeight));
+            const vpTop = progress * (totalH - vpH);
+
+            viewport.style.height = vpH + 'px';
+            viewport.style.top = vpTop + 'px';
+
+            // Highlight visible messages
+            const msgEls = lines.querySelectorAll('.mm-msg');
+            msgEls.forEach((wrap, i) => {
+                const msgs = chatBox.querySelectorAll('.bubble');
+                const target = msgs[i];
+                if (!target) return;
+                const rect = target.getBoundingClientRect();
+                const inView = rect.top < window.innerHeight && rect.bottom > 0;
+                wrap.querySelectorAll('.mm-line').forEach(l => {
+                    l.style.opacity = inView
+                        ? (l === wrap.querySelector('.mm-line') ? '1' : '0.55')
+                        : parseFloat(l.style.opacity) > 0.5 ? '0.35' : '0.15';
+                });
+            });
+        }
+
+        // Observe chatBox untuk pesan baru
+        new MutationObserver(buildMinimap).observe(chatBox, { childList: true, subtree: true });
+
+        // Scroll listener
+        content.addEventListener('scroll', updateViewport, { passive: true });
+
+        // Init
+        buildMinimap();
+    })();
 
 })();
