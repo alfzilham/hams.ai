@@ -412,7 +412,7 @@ function parseMarkdown(raw) {
         if (!window.__markedConfigured) {
             // Konfigurasi custom code block renderer agar tombol Copy & Preview tetap berfungsi
             const renderer = new marked.Renderer();
-            renderer.code = function(code, language, isEscaped) {
+            renderer.code = function (code, language, isEscaped) {
                 return buildCodeBlock({ lang: language || 'text', code: code });
             };
             marked.setOptions({
@@ -780,7 +780,7 @@ async function sendChat(content, model) {   // content bisa string atau array
 
         const reply = fullReply || 'Tidak ada respons.';
         let userTextForHistory = typeof content === 'string' ? content : (Array.isArray(content) ? content.find(c => c.type === 'text')?.text || '📎 Attached files' : '📎 Attached files');
-        
+
         // TRUNCATE text before saving to history to avoid localStorage QuotaExceededError (5MB limit)
         if (userTextForHistory.length > 1500) {
             userTextForHistory = userTextForHistory.substring(0, 1400) + '\n...\n[FILE CONTENT TRUNCATED DARI HISTORY]';
@@ -2372,7 +2372,7 @@ async function processDOCX(file) {
     try {
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer });
-        
+
         const idx = attachedFiles.findIndex(f => f.id === fileId);
         if (idx !== -1) {
             attachedFiles[idx] = { id: fileId, type: 'docx', name: file.name, size: file.size, content: result.value.trim(), loading: false };
@@ -2519,28 +2519,28 @@ async function sendMessage(overrideText) {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
 
-    // ── 2. ORB MATERIAL (PUTIH-SILVER) ─────────────
+    // ── 2. ORB MATERIAL (BLUE-TEAL → BLACK) ────────
     const geometry = new THREE.SphereGeometry(1, 64, 64);
     const material = new THREE.MeshPhysicalMaterial({
-        color: 0xffffff,      // Putih Silver
-        metalness: 0.9,       // Metallic tinggi
-        roughness: 0.1,       // Sedikit kasar untuk difusi cahaya
+        color: 0x004d5c,      // Mid teal (matches avatar-orb-mini)
+        metalness: 0.25,      // Sedikit glossy
+        roughness: 0.18,      // Sharp highlight
         clearcoat: 1.0,
         clearcoatRoughness: 0.1,
-        envMapIntensity: 1.5,
-        emissive: 0x003333,  // Teal emissive glow
-        emissiveIntensity: 0.5
+        envMapIntensity: 0.7,
+        emissive: 0x001e2b,  // Dark teal-black
+        emissiveIntensity: 1.8
     });
 
     const orb = new THREE.Mesh(geometry, material);
     scene.add(orb);
 
-    // ── 3. INNER GLOW (PUTIH) ──────────────────────
+    // ── 3. INNER GLOW (BLUE-TEAL) ──────────────────
     const glowGeo = new THREE.SphereGeometry(0.92, 32, 32);
     const glowMat = new THREE.MeshBasicMaterial({
-        color: 0x00f2ff,      // Glow Teal
+        color: 0x00c8d4,      // Blue-Teal Glow (matches CSS gradient top)
         transparent: true,
-        opacity: 0.15,
+        opacity: 0.22,
         side: THREE.BackSide
     });
     const glowMesh = new THREE.Mesh(glowGeo, glowMat);
