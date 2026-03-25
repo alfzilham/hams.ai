@@ -2745,9 +2745,7 @@ window.generateSmartTitle = async function () {
         if (!msgs.length) return;
 
         msgs.forEach((msg, i) => {
-            const isUser = msg.classList.contains('user') ||
-                msg.querySelector('[class*="user"]') ||
-                msg.dataset.role === 'user';
+            const isUser = msg.classList.contains('user');
 
             const wrap = document.createElement('div');
             wrap.className = 'mm-msg';
@@ -2801,7 +2799,8 @@ window.generateSmartTitle = async function () {
         const progress = max > 0 ? scrollTop / max : 1;
         pctLabel.textContent = Math.round(progress * 100) + '%';
 
-        const totalH = lines.scrollHeight;
+        const mmMsgs = lines.querySelectorAll('.mm-msg');
+        const totalH = mmMsgs.length * 18;
         const vpH = Math.max(28, totalH * (clientHeight / scrollHeight));
         const vpTop = progress * (totalH - vpH);
 
@@ -2825,7 +2824,11 @@ window.generateSmartTitle = async function () {
     }
 
     // Observe chatBox untuk pesan baru
-    new MutationObserver(buildMinimap).observe(chatBox, { childList: true, subtree: true });
+    let mmTimer;
+    new MutationObserver(() => {
+        clearTimeout(mmTimer);
+        mmTimer = setTimeout(buildMinimap, 300);
+    }).observe(chatBox, { childList: true, subtree: true });
 
     // Scroll listener
     content.addEventListener('scroll', updateViewport, { passive: true });
