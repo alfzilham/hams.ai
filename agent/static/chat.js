@@ -2730,59 +2730,64 @@ window.generateSmartTitle = async function () {
 // ═══════════════════════════════════════════════
 // MINIMAP PANEL
 // ═══════════════════════════════════════════════
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     const chatBox = document.getElementById('chatBox');
     const lines = document.getElementById('minimapLines');
     const viewport = document.getElementById('minimapViewport');
     const pctLabel = document.getElementById('minimapPct');
     const content = document.getElementById('content');
 
-    function buildMinimap() {
-        // Hapus semua kecuali viewport indicator
-        [...lines.children].forEach(el => { if (el !== viewport) el.remove(); });
+    if (!chatBox || !lines || !viewport || !content) {
+        console.warn('[Minimap] Elemen tidak ditemukan');
+        return;
+    }
 
-        const msgs = chatBox.querySelectorAll('.bubble');
+    function buildMinimap() {
+        // Bersihkan semua kecuali viewport
+        Array.from(lines.children).forEach(el => {
+            if (el.id !== 'minimapViewport') el.remove();
+        });
+
+        const msgs = chatBox.querySelectorAll('.bubble.user, .bubble.ai');
         if (!msgs.length) return;
 
-        msgs.forEach((msg, i) => {
+        msgs.forEach(function (msg) {
             const isUser = msg.classList.contains('user');
 
             const wrap = document.createElement('div');
             wrap.className = 'mm-msg';
-            wrap.dataset.idx = i;
 
             // Tooltip
             const tip = document.createElement('div');
             tip.className = 'mm-tooltip';
-            const role = document.createElement('div');
-            role.className = 'mm-tooltip-role';
-            role.style.color = isUser ? '#2dd4bf' : '#64748b';
-            role.textContent = isUser ? 'KAMU' : 'AI';
+            const roleEl = document.createElement('div');
+            roleEl.className = 'mm-tooltip-role';
+            roleEl.style.color = isUser ? '#2dd4bf' : '#64748b';
+            roleEl.textContent = isUser ? 'KAMU' : 'AI';
             const preview = document.createElement('div');
-            preview.textContent = (msg.innerText || '').slice(0, 70) + '…';
-            tip.append(role, preview);
+            const rawText = msg.innerText || '';
+            preview.textContent = rawText.slice(0, 70) + (rawText.length > 70 ? '…' : '');
+            tip.appendChild(roleEl);
+            tip.appendChild(preview);
             wrap.appendChild(tip);
 
-            // Baris-baris garis
-            const textLen = (msg.innerText || '').length;
-            const lineCount = isUser ? 1 : Math.min(3, Math.ceil(textLen / 120));
-            const widths = isUser
-                ? ['65%']
-                : ['88%', '62%', '45%'].slice(0, lineCount);
+            // Garis-garis
+            const textLen = rawText.length;
+            const lineCount = isUser ? 1 : Math.min(3, Math.max(1, Math.ceil(textLen / 150)));
+            const widths = ['88%', '65%', '45%'];
 
-            widths.forEach((w, li) => {
+            for (let i = 0; i < lineCount; i++) {
                 const line = document.createElement('div');
                 line.className = 'mm-line';
-                line.style.width = w;
-                line.style.marginLeft = isUser ? 'auto' : '0';
-                line.style.opacity = li === 0 ? '0.7' : li === 1 ? '0.4' : '0.2';
+                line.style.width = isUser ? '60%' : widths[i];
+                line.style.opacity = i === 0 ? '0.75' : i === 1 ? '0.45' : '0.22';
                 line.style.background = isUser
-                    ? 'linear-gradient(90deg,#5eead4,#2dd4bf)'
-                    : 'rgba(255,255,255,0.55)';
+                    ? 'linear-gradient(90deg, #5eead4, #2dd4bf)'
+                    : 'rgba(255,255,255,0.6)';
                 wrap.appendChild(line);
-            });
+            }
 
-            wrap.addEventListener('click', () => {
+            wrap.addEventListener('click', function () {
                 msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
             });
 
@@ -2793,46 +2798,48 @@ window.generateSmartTitle = async function () {
     }
 
     function updateViewport() {
-        const el = content;
-        const { scrollTop, scrollHeight, clientHeight } = el;
+        const scrollTop = content.scrollTop;
+        const scrollHeight = content.scrollHeight;
+        const clientHeight = content.clientHeight;
         const max = scrollHeight - clientHeight;
-        const progress = max > 0 ? scrollTop / max : 1;
-        pctLabel.textContent = Math.round(progress * 100) + '%';
+        const progress = max > 0 ? scrollTop / max : 0;
 
-        const mmMsgs = lines.querySelectorAll('.mm-msg');
-        const totalH = mmMsgs.length * 18;
-        const vpH = Math.max(28, totalH * (clientHeight / scrollHeight));
-        const vpTop = progress * (totalH - vpH);
+        if (pctLabel) pctLabel.textContent = Math.round(progress * 100) + '%';
+
+        const allMsgs = lines.querySelectorAll('.mm-msg');
+        const count = allMsgs.length;
+        if (!count) return;
+
+        const itemH = 18;
+        const totalH = count * itemH;
+        const vpH = Math.max(20, Math.round(totalH * clientHeight / Math.max(scrollHeight, 1)));
+        const vpTop = Math.round(progress * (totalH - vpH));
 
         viewport.style.height = vpH + 'px';
         viewport.style.top = vpTop + 'px';
 
-        // Highlight visible messages
-        const msgEls = lines.querySelectorAll('.mm-msg');
-        msgEls.forEach((wrap, i) => {
-            const msgs = chatBox.querySelectorAll('.bubble');
-            const target = msgs[i];
+        // Highlight pesan yang sedang terlihat
+        const chatMsgs = chatBox.querySelectorAll('.bubble.user, .bubble.ai');
+        allMsgs.forEach(function (wrap, i) {
+            const target = chatMsgs[i];
             if (!target) return;
             const rect = target.getBoundingClientRect();
-            const inView = rect.top < window.innerHeight && rect.bottom > 0;
-            wrap.querySelectorAll('.mm-line').forEach(l => {
+            const inView = rect.bottom > 0 && rect.top < window.innerHeight;
+            const mmLines = wrap.querySelectorAll('.mm-line');
+            mmLines.forEach(function (l, li) {
                 l.style.opacity = inView
-                    ? (l === wrap.querySelector('.mm-line') ? '1' : '0.55')
-                    : parseFloat(l.style.opacity) > 0.5 ? '0.35' : '0.15';
+                    ? (li === 0 ? '1' : li === 1 ? '0.6' : '0.35')
+                    : (li === 0 ? '0.25' : '0.1');
             });
         });
     }
 
-    // Observe chatBox untuk pesan baru
-    let mmTimer;
-    new MutationObserver(() => {
+    // Debounced observer
+    let mmTimer = null;
+    new MutationObserver(function () {
         clearTimeout(mmTimer);
-        mmTimer = setTimeout(buildMinimap, 300);
-    }).observe(chatBox, { childList: true, subtree: true });
+        mmTimer = setTimeout(buildMinimap, 250);
+    }).observe(chatBox, { childList: true, subtree: false });
 
-    // Scroll listener
     content.addEventListener('scroll', updateViewport, { passive: true });
-
-    // Init
-    buildMinimap();
-})();
+});
