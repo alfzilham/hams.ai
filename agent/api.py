@@ -211,31 +211,42 @@ def _build_llm(model: str = "zilf-max", extended: bool = False):
     - Frontend modelSelect default = "zilf-max"
     - _FRONTEND_TO_ZILFMAX["zilf-max"] = ("llama-3.3-70b-versatile", "groq")
     """
-    # Gemini models → langsung pakai GoogleLLM
-    if model.startswith("gemini-"):
+    # Mapping untuk ZILF-PRO (mengarahkan ke Qwen untuk chat biasa)
+    if model == "zilf-pro":
+        model = "Qwen/Qwen2.5-Coder-32B-Instruct"
+
+    # Routing
+    if "gemini" in model.lower():
         from agent.llm.google_provider import GoogleLLM
         return GoogleLLM(model=model)
-
-    # Semua model lain → ZilfMax routing
-    if extended:
-        from agent.llm.zilf_max_thinking import ZilfMaxThinkingLLM
-        return ZilfMaxThinkingLLM(model=model)
+    elif "claude" in model.lower():
+        from agent.llm.anthropic_provider import AnthropicLLM
+        return AnthropicLLM(model=model)
+    elif "qwen" in model.lower() or "llama" in model.lower() or "mixtral" in model.lower():
+        from agent.llm.together_provider import TogetherLLM
+        return TogetherLLM(model=model)
+    elif model == "zilf-max":
+        if extended:
+            from agent.llm.zilf_max_thinking import ZilfMaxThinkingLLM
+            return ZilfMaxThinkingLLM(model=model)
+        else:
+            from agent.llm.zilf_max_chat import ZilfMaxChatLLM
+            return ZilfMaxChatLLM(model=model)
     else:
-        from agent.llm.zilf_max_chat import ZilfMaxChatLLM
-        return ZilfMaxChatLLM(model=model)
+        from agent.llm.groq_provider import GroqLLM
+        return GroqLLM(model=model)
 
 
 # ---------------------------------------------------------------------------
 # Zilf Action Engine Integration
 # ---------------------------------------------------------------------------
-def _create_zilf_action_orchestrator(model: str = "claude-3-7-sonnet-20250219", max_steps: int = 30):
-    from agent.llm.anthropic_provider import AnthropicLLM
+def _create_zilf_action_orchestrator(model: str = "Qwen/Qwen2.5-Coder-32B-Instruct", max_steps: int = 30):
     from agent.llm.together_provider import TogetherLLM
     from agent.core.zilf_action import ZilfActionOrchestrator
     from agent.tools.registry import ToolRegistry
     
-    # 1. Planner & Verifier: Smartest Model (Claude 3.7)
-    planner_llm = AnthropicLLM(model="claude-3-7-sonnet-20250219", temperature=0.0)
+    # 1. Planner & Verifier: Smartest Model (We'll use Qwen via Together for ZILF-PRO)
+    planner_llm = TogetherLLM(model="Qwen/Qwen2.5-Coder-32B-Instruct", temperature=0.0)
     
     # 2. Executor: Coding/Action Model (Qwen2.5-Coder via Together)
     executor_llm = TogetherLLM(model="Qwen/Qwen2.5-Coder-32B-Instruct", temperature=0.0)
@@ -263,7 +274,7 @@ def _create_agent(model: str, max_steps: int, step_callback: Any = None):
     from agent.tools.registry import ToolRegistry
     from agent.core.agent import Agent
 
-    if model == "zilf-action":
+    if model == "zilf-pro":
         return _create_zilf_action_orchestrator(max_steps=max_steps)
 
     registry = ToolRegistry.default()
@@ -736,7 +747,7 @@ async def onboarding_suggestions_page() -> FileResponse:
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
 async def chat(req: ChatRequest) -> ChatResponse:
     session_id = req.session_id or str(uuid.uuid4())
-    model      = req.model or "zilf-max"
+    model = req.model or "zilf-max"
 
     # A2 FIX: Build proper message list instead of manual prompt string.
     # This lets ZilfMaxBase._build_payload() handle system prompt as
@@ -963,7 +974,7 @@ async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
     - Workers (router) → execute subtasks
     - Editor (Groq) → merge/refine
     """
-    if req.model == "zilf-action":
+    if req.model == "zilf-pro":
         agent = _create_zilf_action_orchestrator(max_steps=req.max_steps)
         t0 = time.perf_counter()
         try:
@@ -979,7 +990,7 @@ async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
             steps=[],
             steps_taken=0,
             duration_seconds=round(elapsed, 2),
-            model_used="zilf-action"
+            model_used="zilf-pro"
         )
 
     from agent.multi_agent.message_bus import MessageBus
