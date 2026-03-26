@@ -55,6 +55,8 @@ _STATIC_DIR    = os.path.join(os.path.dirname(__file__), "static")
 _TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 _DATA_DIR      = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(_DATA_DIR, exist_ok=True)
+_UPLOADS_DIR   = os.path.join(_DATA_DIR, "uploads")
+os.makedirs(_UPLOADS_DIR, exist_ok=True)
 _FEEDBACK_DB   = os.path.join(_DATA_DIR, "feedback.db")
 _feedback_streams: dict[str, list[asyncio.Queue]] = {}
 
@@ -71,7 +73,7 @@ def _init_feedback_db():
 _init_feedback_db()
 
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
-app.mount("/static/feedback_files", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "data", "uploads")), name="feedback_files")
+app.mount("/static/feedback_files", StaticFiles(directory=_UPLOADS_DIR), name="feedback_files")
 app.include_router(auth_router)
 
 # ---------------------------------------------------------------------------
