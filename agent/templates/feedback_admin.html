@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Feedback</title>
+<link rel="stylesheet" href="/static/chat.css"/>
+</head>
+<body>
+<div id="main" style="display:flex;height:100vh;">
+  <div id="fbSidebar" style="width:300px;border-right:1px solid rgba(255,255,255,0.08);padding:12px;overflow:auto;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <a href="/chat-ui" class="ext-pill"><i class="bi bi-arrow-left"></i><span>Chat</span></a>
+      <input id="fbSearch" class="ext-pill" placeholder="Cari thread..." style="flex:1;padding:6px 10px;border:none;background:transparent;"/>
+    </div>
+    <div id="fbThreadList"></div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;">
+    <div style="display:flex;gap:8px;padding:12px;border-bottom:1px solid rgba(255,255,255,0.08);align-items:center;">
+      <div id="fbHeader" style="flex:1">Pilih thread</div>
+      <button id="fbResolve" class="input-action-btn"><i class="bi bi-check2-circle"></i><span>Resolved</span></button>
+      <button id="fbExport" class="input-action-btn"><i class="bi bi-download"></i><span>CSV</span></button>
+    </div>
+    <div id="fbAdminChat" style="flex:1;overflow:auto;padding:16px;">
+      <div class="md-body" id="fbAdminMessages" style="white-space:pre-wrap;"></div>
+    </div>
+    <div class="input-card" style="border-radius:0;">
+      <textarea id="fbAdminText" rows="2" placeholder="Balas feedback..." style="width:100%;resize:vertical;padding:14px 16px;"></textarea>
+      <div class="input-actions">
+        <div class="input-actions-spacer"></div>
+        <button id="fbAdminSend" class="input-action-btn"><i class="bi bi-send"></i><span>Kirim</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/static/feedback.js"></script>
+</body>
+</html>

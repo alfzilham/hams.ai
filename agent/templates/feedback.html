@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Feedback</title>
+<link rel="stylesheet" href="/static/chat.css"/>
+</head>
+<body>
+<div id="main" style="padding:20px;max-width:920px;margin:0 auto;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+    <a href="/chat-ui" class="ext-pill"><i class="bi bi-arrow-left"></i><span>Kembali</span></a>
+    <h2 style="margin:0;">Kirim Feedback</h2>
+  </div>
+
+  <div class="input-card" style="margin-bottom:12px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:12px;">
+      <select id="fbCategory" class="ext-pill">
+        <option value="bug">Bug</option>
+        <option value="fitur">Fitur</option>
+        <option value="ux">UX</option>
+      </select>
+      <select id="fbRating" class="ext-pill">
+        <option value="">Rating</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+      <input id="fbEmail" class="ext-pill" placeholder="Email Anda" style="padding:6px 10px;border:none;background:transparent;"/>
+      <button id="fbAttach" class="input-icon-btn" title="Lampirkan"><i class="bi bi-paperclip"></i></button>
+      <input id="fbFile" type="file" multiple style="display:none" accept=".png,.jpg,.jpeg,.gif,.webp,.txt,.log,.md,.pdf"/>
+    </div>
+    <textarea id="fbText" rows="3" placeholder="Tulis feedback Anda..." style="width:100%;resize:vertical;padding:14px 16px;"></textarea>
+    <div class="input-actions">
+      <div class="input-actions-spacer"></div>
+      <button id="fbSend" class="input-action-btn"><i class="bi bi-send"></i><span>Kirim</span></button>
+    </div>
+  </div>
+
+  <div id="fbThread" class="bubble ai" style="min-height:220px;">
+    <div class="md-body" id="fbMessages">Belum ada pesan.</div>
+  </div>
+</div>
+<script src="/static/feedback.js"></script>
+</body>
+</html>

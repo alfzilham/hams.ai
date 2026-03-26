@@ -30,7 +30,8 @@ from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, Response
+from fastapi import UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -52,8 +53,25 @@ app.add_middleware(
 
 _STATIC_DIR    = os.path.join(os.path.dirname(__file__), "static")
 _TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+_DATA_DIR      = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(_DATA_DIR, exist_ok=True)
+_FEEDBACK_DB   = os.path.join(_DATA_DIR, "feedback.db")
+_feedback_streams: dict[str, list[asyncio.Queue]] = {}
+
+def _init_feedback_db():
+    import sqlite3
+    conn = sqlite3.connect(_FEEDBACK_DB)
+    c = conn.cursor()
+    c.execute("CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,user_id INTEGER,email TEXT NOT NULL,tags TEXT DEFAULT '',resolved INTEGER DEFAULT 0,created_at TEXT,updated_at TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,thread_id TEXT NOT NULL,sender TEXT NOT NULL,message TEXT NOT NULL,rating INTEGER,category TEXT,created_at TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS attachments(id TEXT PRIMARY KEY,message_id TEXT NOT NULL,path TEXT NOT NULL,mime TEXT,size INTEGER)")
+    conn.commit()
+    conn.close()
+
+_init_feedback_db()
 
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+app.mount("/static/feedback_files", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "data", "uploads")), name="feedback_files")
 app.include_router(auth_router)
 
 # ---------------------------------------------------------------------------
@@ -71,6 +89,13 @@ class HealthResponse(BaseModel):
     version: str
     timestamp: str
     uptime_seconds: float
+
+class FeedbackMessageIn(BaseModel):
+    email: str
+    message: str
+    rating: int | None = None
+    category: str | None = None
+    thread_id: str | None = None
 
 
 class ChatMessage(BaseModel):
@@ -275,6 +300,147 @@ async def health() -> HealthResponse:
         timestamp=datetime.now(timezone.utc).isoformat(),
         uptime_seconds=round(time.time() - _start_time, 1),
     )
+
+def _feedback_db_conn():
+    import sqlite3
+    return sqlite3.connect(_FEEDBACK_DB)
+
+def _feedback_broadcast(thread_id: str, event: dict):
+    qs = _feedback_streams.get(thread_id, [])
+    for q in qs:
+        try:
+            q.put_nowait(event)
+        except Exception:
+            pass
+
+@app.get("/feedback", include_in_schema=False)
+async def feedback_page(request: Request):
+    _get_current_user(request)
+    return FileResponse(os.path.join(_TEMPLATES_DIR, "feedback.html"), media_type="text/html")
+
+@app.get("/admin/feedback", include_in_schema=False)
+async def feedback_admin_page(request: Request):
+    _get_current_user(request)
+    return FileResponse(os.path.join(_TEMPLATES_DIR, "feedback_admin.html"), media_type="text/html")
+
+@app.post("/api/feedback/messages", tags=["feedback"])
+async def feedback_post(request: Request, data: FeedbackMessageIn):
+    user = _get_current_user(request)
+    if not data.email or not data.message:
+        raise HTTPException(status_code=400, detail="Email and message required")
+    import uuid
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _feedback_db_conn()
+    c = conn.cursor()
+    tid = data.thread_id or str(uuid.uuid4())
+    c.execute("SELECT id FROM threads WHERE id=?", (tid,))
+    if c.fetchone() is None:
+        c.execute("INSERT INTO threads(id,user_id,email,tags,resolved,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
+                  (tid, user.get("id"), data.email, "", 0, now, now))
+    mid = str(uuid.uuid4())
+    c.execute("INSERT INTO messages(id,thread_id,sender,message,rating,category,created_at) VALUES(?,?,?,?,?,?,?)",
+              (mid, tid, "user", data.message, data.rating, data.category, now))
+    c.execute("UPDATE threads SET updated_at=? WHERE id=?", (now, tid))
+    conn.commit()
+    conn.close()
+    _feedback_broadcast(tid, {"type":"message","sender":"user","message":data.message,"created_at":now,"rating":data.rating,"category":data.category})
+    return {"ok": True, "thread_id": tid, "message_id": mid}
+
+@app.get("/api/feedback/threads", tags=["feedback"])
+async def feedback_threads(request: Request, q: str | None = None):
+    _get_current_user(request)
+    conn = _feedback_db_conn()
+    c = conn.cursor()
+    if q:
+        like = f"%{q}%"
+        c.execute("SELECT id,email,tags,resolved,created_at,updated_at FROM threads WHERE email LIKE ? OR tags LIKE ? ORDER BY updated_at DESC", (like, like))
+    else:
+        c.execute("SELECT id,email,tags,resolved,created_at,updated_at FROM threads ORDER BY updated_at DESC")
+    rows = c.fetchall()
+    conn.close()
+    return [{"id":r[0],"email":r[1],"tags":r[2],"resolved":bool(r[3]),"created_at":r[4],"updated_at":r[5]} for r in rows]
+
+@app.get("/api/feedback/messages", tags=["feedback"])
+async def feedback_messages(request: Request, thread_id: str):
+    _get_current_user(request)
+    conn = _feedback_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT id,sender,message,rating,category,created_at FROM messages WHERE thread_id=? ORDER BY created_at ASC", (thread_id,))
+    rows = c.fetchall()
+    conn.close()
+    return [{"id":r[0],"sender":r[1],"message":r[2],"rating":r[3],"category":r[4],"created_at":r[5]} for r in rows]
+
+@app.patch("/api/feedback/threads/{thread_id}/resolve", tags=["feedback"])
+async def feedback_resolve(request: Request, thread_id: str, resolved: bool = True):
+    _get_current_user(request)
+    conn = _feedback_db_conn()
+    c = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    c.execute("UPDATE threads SET resolved=?, updated_at=? WHERE id=?", (1 if resolved else 0, now, thread_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@app.patch("/api/feedback/threads/{thread_id}/tags", tags=["feedback"])
+async def feedback_tags(request: Request, thread_id: str, tags: str):
+    _get_current_user(request)
+    conn = _feedback_db_conn()
+    c = conn.cursor()
+    now = datetime.now(timezone.utc).isoformat()
+    c.execute("UPDATE threads SET tags=?, updated_at=? WHERE id=?", (tags, now, thread_id))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+@app.get("/api/feedback/stream", tags=["feedback"])
+async def feedback_stream(request: Request, thread_id: str):
+    _get_current_user(request)
+    async def es():
+        q: asyncio.Queue = asyncio.Queue()
+        _feedback_streams.setdefault(thread_id, []).append(q)
+        try:
+            while True:
+                ev = await q.get()
+                yield f"data: {json.dumps(ev)}\n\n"
+        except asyncio.CancelledError:
+            ...
+        finally:
+            try:
+                _feedback_streams[thread_id].remove(q)
+            except Exception:
+                ...
+    return StreamingResponse(es(), media_type="text/event-stream", headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+
+@app.get("/api/feedback/export.csv", tags=["feedback"])
+async def feedback_export(request: Request):
+    _get_current_user(request)
+    import csv, io
+    conn = _feedback_db_conn()
+    c = conn.cursor()
+    c.execute("SELECT t.id,t.email,t.tags,t.resolved,m.created_at,m.sender,m.message,m.rating,m.category FROM messages m JOIN threads t ON m.thread_id=t.id ORDER BY t.updated_at DESC,m.created_at ASC")
+    rows = c.fetchall()
+    conn.close()
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["thread_id","email","tags","resolved","created_at","sender","message","rating","category"])
+    for r in rows:
+        w.writerow(r)
+    return Response(content=buf.getvalue(), media_type="text/csv")
+
+@app.post("/api/feedback/upload", tags=["feedback"])
+async def feedback_upload(request: Request, thread_id: str = Form(...), files: list[UploadFile] = File(...)):
+    _get_current_user(request)
+    upload_dir = os.path.join(_DATA_DIR, "uploads", thread_id)
+    os.makedirs(upload_dir, exist_ok=True)
+    saved = []
+    for f in files:
+        ext = os.path.splitext(f.filename)[1]
+        name = str(uuid.uuid4()) + ext
+        path = os.path.join(upload_dir, name)
+        with open(path, "wb") as w:
+            w.write(await f.read())
+        saved.append({"name": f.filename, "path": f"/static/feedback_files/{thread_id}/{name}"})
+    return {"files": saved}
 
 
 # ---------------------------------------------------------------------------
