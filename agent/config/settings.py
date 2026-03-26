@@ -100,11 +100,11 @@ class Settings(BaseSettings):
     # --- API Keys ---
     groq_api_key: SecretStr = Field(default=SecretStr(""), alias="GROQ_API_KEY")
     google_api_key: SecretStr = Field(default=SecretStr(""), alias="GOOGLE_API_KEY")
+    glm_api_key: SecretStr = Field(default=SecretStr(""), alias="GLM_API_KEY")
     tavily_api_key: SecretStr = Field(default=SecretStr(""), alias="TAVILY_API_KEY")
     hf_token: SecretStr = Field(default=SecretStr(""), alias="HF_TOKEN")
     zilf_max_api_key: SecretStr | None = None
     qwen_api_key: SecretStr | None = None
-    together_api_key: SecretStr | None = None
 
     # --- Ollama ---
     ollama_base_url: str = Field("http://localhost:11434", alias="OLLAMA_BASE_URL")
