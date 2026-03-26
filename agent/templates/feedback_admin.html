@@ -34,21 +34,21 @@
 
 <div id="main" style="display:flex;height:100vh;position:relative;z-index:10;">
   <!-- Sidebar -->
-  <div id="fbSidebar" style="width:300px; border-right:1px solid rgba(255,255,255,0.08); padding:20px 16px; overflow:auto; background:rgba(0,0,0,0.4); backdrop-filter:blur(10px); display:flex; flex-direction:column; gap:16px;">
+  <div id="fbSidebar" style="width:300px; border-right:1px solid var(--glass-border); padding:20px 16px; overflow:auto; background:var(--glass-bg); backdrop-filter:blur(10px); display:flex; flex-direction:column; gap:16px;">
     <div style="display:flex;align-items:center;gap:12px;">
       <a href="/chat-ui" class="ext-pill" style="text-decoration:none;"><i class="bi bi-arrow-left"></i><span>Chat</span></a>
-      <input id="fbSearch" class="ext-pill" placeholder="Cari thread..." style="flex:1;padding:8px 12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:var(--text-1);font-family:'Sora', sans-serif;outline:none;"/>
+      <input id="fbSearch" class="ext-pill" placeholder="Cari thread..." style="flex:1;padding:8px 12px;border:1px solid var(--glass-border);background:var(--bg-2);color:var(--text-1);font-family:'Sora', sans-serif;outline:none;"/>
     </div>
     <div id="fbThreadList" style="display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 
   <!-- Main Chat Area -->
-  <div style="flex:1;display:flex;flex-direction:column; background:rgba(0,0,0,0.2); backdrop-filter:blur(5px);">
+  <div style="flex:1;display:flex;flex-direction:column; background:var(--bg-1);">
     <!-- Header -->
-    <div style="display:flex;gap:12px;padding:16px 24px;border-bottom:1px solid rgba(255,255,255,0.08);align-items:center;background:rgba(0,0,0,0.3);">
-      <div id="fbHeader" style="flex:1;font-weight:600;font-size:1.1rem;">Pilih thread</div>
-      <button id="fbResolve" class="input-action-btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text-1);border-radius:20px;padding:6px 16px;"><i class="bi bi-check2-circle" style="color:var(--green)"></i><span>Resolved</span></button>
-      <button id="fbExport" class="input-action-btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--text-1);border-radius:20px;padding:6px 16px;"><i class="bi bi-download"></i><span>CSV</span></button>
+    <div style="display:flex;gap:12px;padding:16px 24px;border-bottom:1px solid var(--glass-border);align-items:center;background:var(--glass-bg);">
+      <div id="fbHeader" style="flex:1;font-weight:600;font-size:1.1rem;color:var(--text-1);">Pilih thread</div>
+      <button id="fbResolve" class="input-action-btn" style="background:var(--bg-2);border:1px solid var(--glass-border);color:var(--text-1);border-radius:20px;padding:6px 16px;"><i class="bi bi-check2-circle" style="color:var(--green)"></i><span>Resolved</span></button>
+      <button id="fbExport" class="input-action-btn" style="background:var(--bg-2);border:1px solid var(--glass-border);color:var(--text-1);border-radius:20px;padding:6px 16px;"><i class="bi bi-download"></i><span>CSV</span></button>
     </div>
 
     <!-- Chat Messages -->
@@ -58,7 +58,7 @@
 
     <!-- Input Box -->
     <div style="padding:20px;max-width:900px;margin:0 auto;width:100%;box-sizing:border-box;">
-      <div class="input-card" style="border-radius:20px;padding:8px;">
+      <div class="input-card" style="border-radius:20px;padding:8px;background:var(--glass-bg);border:1px solid var(--glass-border);">
         <textarea id="fbAdminText" rows="2" placeholder="Balas feedback..." style="width:100%;resize:none;padding:12px 16px;background:transparent;border:none;color:var(--text-1);font-family:'Sora', sans-serif;outline:none;font-size:1rem;box-sizing:border-box;"></textarea>
         <div class="input-actions" style="padding:8px 16px;">
           <div class="input-actions-spacer"></div>
@@ -70,6 +70,10 @@
 </div>
 
 <script>
+    // Theme initialization
+    const theme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+
     (function () {
         const canvas = document.getElementById('auroraBg');
         const gl = canvas.getContext('webgl2');
