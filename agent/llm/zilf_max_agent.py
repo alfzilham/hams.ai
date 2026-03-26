@@ -198,7 +198,7 @@ class ZilfMaxAgentLLM(ZilfMaxBase):
         payload = self._build_payload(messages, system=react_system)
         # B18 FIX: track tokens
         raw_text, input_tokens, output_tokens = await self._call_api_with_fallback(
-            payload, track_tokens=True
+            payload, per_model_timeout=60.0, track_tokens=True
         )
 
         logger.debug(f"[zilf-max/agent] Raw (first 300): {raw_text[:300]}")

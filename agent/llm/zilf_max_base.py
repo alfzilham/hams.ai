@@ -298,7 +298,7 @@ class ZilfMaxBase(BaseLLM):
                 return result
 
             except asyncio.TimeoutError as exc:
-                last_error = exc
+                last_error = RuntimeError(f"timeout after {per_model_timeout}s on {frontend_key}")
                 logger.warning(
                     f"[zilf-max] timeout on {frontend_key} after {per_model_timeout}s, next..."
                 )

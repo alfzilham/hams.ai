@@ -1023,6 +1023,53 @@ function handleAgentEvent(ev, block, statusBanner, taskText) {
     if (ev.type === 'start') {
         if (st) st.textContent = `Agent berjalan dengan ${ev.model}...`;
 
+    } else if (ev.type === 'plan') {
+        if (st) st.textContent = 'Plan siap • menugaskan subtasks...';
+        const card = document.createElement('div');
+        card.className = 'step-card plan-card';
+        const items = (ev.subtasks || []).map(s =>
+            `<li data-subtask="${escHtml(s.id)}"><strong>${escHtml(s.title)}</strong><br><span class="s-desc">${escHtml(s.description).slice(0, 160)}</span></li>`
+        ).join('');
+        card.innerHTML = `
+          <div class="step-header">
+            <div class="step-num">Plan</div>
+            <div class="step-label">Subtasks</div>
+          </div>
+          <div class="step-body"><ol class="plan-list">${items}</ol></div>`;
+        block.insertBefore(card, statusBanner);
+        card._planMap = {};
+        (ev.subtasks || []).forEach(s => card._planMap[s.id] = card.querySelector(`[data-subtask="${CSS.escape(s.id)}"]`));
+
+    } else if (ev.type === 'subtask_assigned') {
+        const plan = block.querySelector('.plan-card');
+        if (plan && plan._planMap && plan._planMap[ev.subtask_id]) {
+            const el = plan._planMap[ev.subtask_id];
+            el.querySelector('.s-desc')?.insertAdjacentHTML('beforeend', ` <em style="color:var(--text-3)">· assigned to ${escHtml(ev.worker_id)} (${escHtml(ev.role)})</em>`);
+        }
+        if (st) st.textContent = `Menjalankan: ${ev.title}`;
+
+    } else if (ev.type === 'subtask_result' || ev.type === 'subtask_failed') {
+        const ok = ev.type === 'subtask_result' && ev.success;
+        const plan = block.querySelector('.plan-card');
+        if (plan && plan._planMap && plan._planMap[ev.subtask_id]) {
+            const el = plan._planMap[ev.subtask_id];
+            const mark = ok ? '✅' : '❌';
+            el.insertAdjacentHTML('beforeend', ` <span class="st-mark">${mark}</span>`);
+        }
+        const card = document.createElement('div');
+        card.className = 'step-card';
+        card.innerHTML = `
+          <div class="step-header">
+            <div class="step-num">${ok ? '✓' : '×'}</div>
+            <div class="step-label">${escHtml(ev.title || ev.subtask_id)}</div>
+            <div class="step-tools-summary">${ok ? 'done' : 'failed'}</div>
+          </div>
+          <div class="step-body">
+            ${ev.excerpt ? `<div class="tool-result-body">${escHtml(ev.excerpt)}</div>` : ''}
+            ${ev.error ? `<div class="tool-result-body error">${escHtml(ev.error)}</div>` : ''}
+          </div>`;
+        block.insertBefore(card, statusBanner);
+
     } else if (ev.type === 'step') {
         if (st) st.textContent = `Step ${ev.step} — ${ev.tools?.length ? 'tool call...' : 'thinking...'}`;
 

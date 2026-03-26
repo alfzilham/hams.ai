@@ -533,39 +533,51 @@ async def _team_refine_agent_answer(
 
 @app.post("/agent/run", response_model=AgentRunResponse, tags=["agent"])
 async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
-    model = req.model or "zilf-max"  # B3 FIX
-    t0    = time.perf_counter()
+    """
+    Hierarchical + Sequential orchestration:
+    - Planner (Groq) → plan
+    - Workers (router) → execute subtasks
+    - Editor (Groq) → merge/refine
+    """
+    from agent.multi_agent.message_bus import MessageBus
+    from agent.multi_agent.supervisor import SupervisorAgent
+    from agent.multi_agent.worker import WorkerAgent
+    from agent.tools.registry import ToolRegistry
+    from agent.llm.zilf_max_chat import ZilfMaxChatLLM
+    from agent.llm.zilf_max_agent import ZilfMaxAgentLLM
+
+    t0 = time.perf_counter()
+    planner_llm = ZilfMaxChatLLM(model="llama-3.3-70b-versatile")
+    worker_llm  = ZilfMaxAgentLLM(model=req.model or "zilf-max")
+
+    bus = MessageBus()
+    registry = ToolRegistry.default()
+    supervisor = SupervisorAgent(llm=planner_llm, bus=bus, timeout_per_subtask=90.0)
+    supervisor.add_worker(WorkerAgent("coder_1", "coder", worker_llm, registry, bus, max_steps=req.max_steps))
+    supervisor.add_worker(WorkerAgent("reviewer_1", "reviewer", worker_llm, registry, bus, max_steps=max(8, req.max_steps - 2)))
+    supervisor.add_worker(WorkerAgent("documenter_1", "documenter", worker_llm, registry, bus, max_steps=6))
 
     try:
-        agent    = _build_agent(
-                        model=model,
-            max_steps=req.max_steps,
-            extended=req.extended,
-        )
-        response = await agent.run(req.task)
+        result = await supervisor.run(req.task)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    elapsed = time.perf_counter() - t0
-    steps   = [_serialize_step(s) for s in (response._state.steps or [])]
+    draft_md = result.to_markdown()
     refined = await _team_refine_agent_answer(
-        req.task,
-        response.final_answer or "",
-        response._state.steps or [],
-        lang="id",
-        review_timeout_s=8.0,
-        edit_timeout_s=10.0,
+        req.task, draft_md, steps=None, lang="id",
+        review_timeout_s=8.0, edit_timeout_s=10.0
     )
 
+    elapsed = time.perf_counter() - t0
     return AgentRunResponse(
-        run_id=response.run_id,
-        status=response.status.value,
+        run_id=result.run_id,
+        status="success" if result.success else "partial",
         final_answer=refined,
-        error=response.error,
-        steps=steps,
-        steps_taken=response.steps_taken,
+        error=None if result.success else ("Some subtasks failed" if result.failed_subtasks else None),
+        steps=[],
+        steps_taken=result.total_steps,
         duration_seconds=round(elapsed, 2),
-        model_used=model,
+        model_used=req.model or "zilf-max",
     )
 
 
@@ -575,68 +587,53 @@ async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
 
 @app.post("/agent/stream", tags=["agent"])
 async def agent_stream(req: AgentRunRequest) -> StreamingResponse:
-    model = req.model or "zilf-max"  # B3 FIX
+    model = req.model or "zilf-max"
 
     async def event_stream() -> AsyncIterator[str]:
-        queue: asyncio.Queue[dict] = asyncio.Queue()
-        step_store: list[Any] = []
+        from agent.multi_agent.message_bus import MessageBus
+        from agent.multi_agent.supervisor import SupervisorAgent
+        from agent.multi_agent.worker import WorkerAgent
+        from agent.tools.registry import ToolRegistry
+        from agent.llm.zilf_max_chat import ZilfMaxChatLLM
+        from agent.llm.zilf_max_agent import ZilfMaxAgentLLM
 
-        async def on_step(step: Any) -> None:
-            step_store.append(step)
-            await queue.put({
-                "type":    "step",
-                "step":    step.step_number,
-                "thought": step.thought or "",
-                "tools":   [{"name": tc.tool_name, "args": tc.tool_input} for tc in (step.tool_calls or [])],
-                "results": [
-                    {
-                        "tool":    tr.tool_name,
-                        "output":  tr.output[:400] if tr.output else "",
-                        "success": tr.success,
-                    }
-                    for tr in (step.tool_results or [])
-                ],
-                "is_final": bool(step.final_answer),
-            })
+        queue: asyncio.Queue[dict] = asyncio.Queue()
+
+        async def progress_cb(ev: dict) -> None:
+            await queue.put(ev)
+
+        planner_llm = ZilfMaxChatLLM(model="llama-3.3-70b-versatile")
+        worker_llm  = ZilfMaxAgentLLM(model=model)
+
+        bus = MessageBus()
+        registry = ToolRegistry.default()
+        supervisor = SupervisorAgent(llm=planner_llm, bus=bus, timeout_per_subtask=90.0, progress_cb=progress_cb)
+        supervisor.add_worker(WorkerAgent("coder_1", "coder", worker_llm, registry, bus, max_steps=req.max_steps))
+        supervisor.add_worker(WorkerAgent("reviewer_1", "reviewer", worker_llm, registry, bus, max_steps=max(8, req.max_steps - 2)))
+        supervisor.add_worker(WorkerAgent("documenter_1", "documenter", worker_llm, registry, bus, max_steps=6))
 
         yield f"data: {json.dumps({'type': 'start', 'task': req.task, 'model': model})}\n\n"
 
-        t0 = time.perf_counter()
-
-        async def run_agent():
+        async def run_team():
             try:
-                agent    = _build_agent(
-                    model=model,
-                    max_steps=req.max_steps,
-                    step_callback=on_step,
-                    extended=req.extended,
+                result = await supervisor.run(req.task)
+                draft_md = result.to_markdown()
+                refined = await _team_refine_agent_answer(
+                    req.task, draft_md, steps=None, lang="id",
+                    review_timeout_s=3.0, edit_timeout_s=4.0
                 )
-                response = await agent.run(req.task)
-                elapsed  = round(time.perf_counter() - t0, 2)
-
-                if response.success:
-                    refined = await _team_refine_agent_answer(
-                        req.task,
-                        response.final_answer or "",
-                        step_store,
-                        lang="id",
-                        review_timeout_s=3.0,
-                        edit_timeout_s=4.0,
-                    )
-                    await queue.put({
-                        "type":        "final",
-                        "answer":      refined,
-                        "steps_taken": response.steps_taken,
-                        "duration":    elapsed,
-                    })
-                else:
-                    await queue.put({"type": "error", "message": response.error or "Agent failed"})
+                await queue.put({
+                    "type": "final",
+                    "answer": refined,
+                    "steps_taken": result.total_steps,
+                    "duration": 0,
+                })
             except Exception as e:
                 await queue.put({"type": "error", "message": str(e)})
             finally:
                 await queue.put({"type": "__done__"})
 
-        task = asyncio.create_task(run_agent())
+        task = asyncio.create_task(run_team())
 
         while True:
             try:
@@ -644,12 +641,9 @@ async def agent_stream(req: AgentRunRequest) -> StreamingResponse:
             except asyncio.TimeoutError:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'Timeout'})}\n\n"
                 break
-
             if event.get("type") == "__done__":
                 break
-
             yield f"data: {json.dumps(event)}\n\n"
-
             if event.get("type") in ("final", "error"):
                 break
 

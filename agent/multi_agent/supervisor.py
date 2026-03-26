@@ -30,7 +30,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from loguru import logger
 
@@ -134,6 +134,7 @@ class SupervisorAgent:
         llm: Any,
         bus: MessageBus,
         timeout_per_subtask: float = 120.0,
+        progress_cb: Callable[[dict], Awaitable[None]] | None = None,
     ) -> None:
         self.llm = llm
         self.bus = bus
@@ -141,6 +142,7 @@ class SupervisorAgent:
         self._workers: dict[str, WorkerAgent] = {}   # worker_id → WorkerAgent
         self._role_pool: dict[str, list[str]] = {}   # role → [worker_ids]
         self._subscription: Any = None
+        self._progress_cb = progress_cb
 
     # -----------------------------------------------------------------------
     # Worker management
@@ -157,9 +159,9 @@ class SupervisorAgent:
         pool = self._role_pool.get(role, []) or self._role_pool.get("coder", [])
         if not pool:
             return None
-        # Simple round-robin: rotate the list
+        # Simple round-robin: rotate the list on the role key itself
         worker_id = pool[0]
-        self._role_pool[pool[0][0] if pool else role] = pool[1:] + [pool[0]]
+        self._role_pool[role] = pool[1:] + [pool[0]]
         return worker_id
 
     # -----------------------------------------------------------------------
@@ -184,6 +186,8 @@ class SupervisorAgent:
         # Plan the task
         subtasks = await self._plan(task, run_id)
         logger.info(f"[supervisor:{run_id}] Plan: {len(subtasks)} subtasks")
+        if self._progress_cb:
+            await self._progress_cb({"type": "plan", "subtasks": subtasks})
 
         # Assign subtasks to workers
         assignments: dict[str, dict[str, Any]] = {}
@@ -210,6 +214,14 @@ class SupervisorAgent:
                 "role": role,
                 "done": False,
             }
+            if self._progress_cb:
+                await self._progress_cb({
+                    "type": "subtask_assigned",
+                    "subtask_id": st["id"],
+                    "title": st["title"],
+                    "role": role,
+                    "worker_id": worker_id,
+                })
 
         # Collect results
         outcomes = await self._collect_results(assignments)
@@ -304,6 +316,15 @@ class SupervisorAgent:
                         steps=msg.payload.get("steps", 0),
                         tokens=msg.payload.get("tokens", 0),
                     ))
+                    if self._progress_cb:
+                        await self._progress_cb({
+                            "type": "subtask_result",
+                            "subtask_id": sid,
+                            "title": a["title"],
+                            "worker_id": msg.payload.get("worker", a["worker_id"]),
+                            "success": msg.payload.get("success", False),
+                            "excerpt": (msg.payload.get("result", "") or "")[:240],
+                        })
 
             elif msg.type == MessageType.TASK_FAILED:
                 sid = msg.payload.get("subtask_id", "")
@@ -318,6 +339,14 @@ class SupervisorAgent:
                         result="",
                         error=msg.payload.get("error", "Unknown error"),
                     ))
+                    if self._progress_cb:
+                        await self._progress_cb({
+                            "type": "subtask_failed",
+                            "subtask_id": sid,
+                            "title": a["title"],
+                            "worker_id": msg.payload.get("worker", a["worker_id"]),
+                            "error": msg.payload.get("error", "Unknown error")[:240],
+                        })
 
         return outcomes
 
