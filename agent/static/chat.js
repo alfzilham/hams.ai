@@ -61,7 +61,92 @@ document.addEventListener('DOMContentLoaded', () => {
             fileInput.value = ''; // reset agar bisa upload ulang file yang sama
         });
     }
+
+    // === VOICE INPUT (Web Speech API) — frontend only ===
+    initVoiceInput();
 });
+
+function initVoiceInput() {
+    const voiceBtn = document.getElementById('voiceBtn');
+    const input = document.getElementById('userInput');
+    if (!voiceBtn || !input) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        voiceBtn.addEventListener('click', () => {
+            showToast('🎙️ Voice input belum didukung di browser ini.');
+        });
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    let isListening = false;
+    let baseText = '';
+
+    function setListening(state) {
+        isListening = state;
+        voiceBtn.classList.toggle('listening', state);
+        voiceBtn.title = state ? 'Stop voice input' : 'Voice input';
+        voiceBtn.setAttribute('aria-pressed', state ? 'true' : 'false');
+    }
+
+    voiceBtn.addEventListener('click', () => {
+        try {
+            if (isListening) {
+                recognition.stop();
+                setListening(false);
+                return;
+            }
+
+            recognition.lang = (typeof currentLang === 'string' && currentLang) ? currentLang : (navigator.language || 'en-US');
+            baseText = input.value ? (input.value.trimEnd() + (input.value.endsWith('\n') || input.value.endsWith(' ') ? '' : ' ')) : '';
+            setListening(true);
+            recognition.start();
+        } catch (e) {
+            setListening(false);
+            showToast('🎙️ Tidak bisa memulai voice input.');
+        }
+    });
+
+    recognition.onresult = (event) => {
+        let interim = '';
+        let finalText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const res = event.results[i];
+            const txt = (res && res[0] && res[0].transcript) ? res[0].transcript : '';
+            if (res.isFinal) finalText += txt;
+            else interim += txt;
+        }
+
+        const combined = (baseText + finalText + interim).replace(/\s+/g, ' ').trimStart();
+        input.value = combined;
+        autoResize(input);
+    };
+
+    recognition.onerror = (event) => {
+        setListening(false);
+        const code = event?.error || '';
+        if (code === 'not-allowed' || code === 'service-not-allowed') {
+            showToast('🎙️ Izin mikrofon ditolak. Izinkan mic di browser lalu coba lagi.');
+            return;
+        }
+        if (code === 'no-speech') {
+            showToast('🎙️ Tidak ada suara terdeteksi.');
+            return;
+        }
+        showToast('🎙️ Voice input error.');
+    };
+
+    recognition.onend = () => {
+        setListening(false);
+        input.focus();
+    };
+}
 
 // ── Auth Guard + Google OAuth Token Extraction ──
 (function () {

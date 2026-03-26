@@ -1730,6 +1730,29 @@ body>* {
     color: var(--text);
 }
 
+#voiceBtn.listening {
+    border-color: rgba(0, 242, 255, 0.35);
+    color: var(--accent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 3px rgba(0, 242, 255, 0.12);
+}
+
+#voiceBtn.listening i {
+    animation: voicePulse 1.1s ease-in-out infinite;
+}
+
+@keyframes voicePulse {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.85;
+    }
+
+    50% {
+        transform: scale(1.12);
+        opacity: 1;
+    }
+}
+
 .input-actions-spacer {
     flex: 1;
 }
