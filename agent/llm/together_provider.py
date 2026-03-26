@@ -38,27 +38,40 @@ class TogetherLLM(BaseLLM):
         self,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
-        stop_sequences: list[str] | None = None,
+        system: str | None = None,
+        **kwargs: Any,
     ) -> LLMResponse:
-        
+        """
+        Agentic generation with tool call support (via JSON mode prompting).
+        """
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
+        # Build full prompt with system message and tool schemas
+        full_system = system or ""
+        if tools:
+            # We use JSON mode for tools on Together models for better reliability
+            full_system += "\n\nAvailable tools:\n" + json.dumps(tools, indent=2)
+            full_system += "\n\nRespond with a JSON object in one of these two formats:\n"
+            full_system += '{"action": "tool_call", "tool": "<name>", "input": {<args>}, "thought": "<reasoning>"}\n'
+            full_system += '{"action": "final_answer", "answer": "<response>", "thought": "<reasoning>"}\n'
+
+        api_messages = []
+        if full_system:
+            api_messages.append({"role": "system", "content": full_system})
+        
+        # Add conversation history
+        for msg in messages:
+            api_messages.append(msg)
+
         payload: dict[str, Any] = {
             "model": self.model,
-            "messages": messages,
+            "messages": api_messages,
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
         }
-
-        if tools:
-            payload["tools"] = tools
-            payload["tool_choice"] = "auto"
-            
-        if stop_sequences:
-            payload["stop"] = stop_sequences
 
         logger.debug(f"[TogetherLLM] Generating with {self.model}")
 
@@ -67,23 +80,119 @@ class TogetherLLM(BaseLLM):
             response.raise_for_status()
             data = response.json()
 
-        choice = data["choices"][0]
-        message = choice.get("message", {})
+        content = data["choices"][0]["message"]["content"] or ""
         
-        content = message.get("content") or ""
-        tool_calls = message.get("tool_calls")
+        # Parse JSON response if tools were provided
+        if tools:
+            try:
+                # Find JSON block
+                import re
+                match = re.search(r"\{.*\}", content, re.DOTALL)
+                if match:
+                    json_data = json.loads(match.group())
+                    thought = json_data.get("thought", "")
+                    
+                    if json_data.get("action") == "tool_call":
+                        return LLMResponse(
+                            thought=thought,
+                            action_type="tool_call",
+                            tool_calls=[{
+                                "id": f"call_{os.urandom(4).hex()}",
+                                "type": "function",
+                                "function": {
+                                    "name": json_data["tool"],
+                                    "arguments": json.dumps(json_data["input"])
+                                }
+                            }],
+                            raw=data
+                        )
+                    else:
+                        return LLMResponse(
+                            thought=thought,
+                            action_type="final_answer",
+                            final_answer=json_data.get("answer", ""),
+                            raw=data
+                        )
+            except Exception as e:
+                logger.warning(f"[TogetherLLM] Failed to parse JSON response: {e}")
 
+        # Fallback to plain text if not tools or parsing failed
         return LLMResponse(
-            content=content,
-            tool_calls=tool_calls,
-            raw_response=data,
+            thought="",
+            action_type="final_answer",
+            final_answer=content,
+            raw=data
         )
 
-    async def generate_stream(
+    async def generate_text(
         self,
         messages: list[dict[str, Any]],
-        tools: list[dict[str, Any]] | None = None,
+        system: str | None = None,
+        max_tokens: int = 1024,
+        **kwargs: Any,
+    ) -> str:
+        """Simple text generation."""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        api_messages = []
+        if system:
+            api_messages.append({"role": "system", "content": system})
+        api_messages.extend(messages)
+
+        payload = {
+            "model": self.model,
+            "messages": api_messages,
+            "max_tokens": max_tokens,
+            "temperature": self.temperature,
+        }
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(self.BASE_URL, headers=headers, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"] or ""
+
+    async def stream(
+        self,
+        messages: list[dict[str, Any]],
+        system: str | None = None,
+        **kwargs: Any,
     ) -> AsyncIterator[str]:
-        # Basic fallback, no actual streaming implemented yet
-        resp = await self.generate(messages, tools)
-        yield resp.content
+        """Streaming text generation."""
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        api_messages = []
+        if system:
+            api_messages.append({"role": "system", "content": system})
+        api_messages.extend(messages)
+
+        payload = {
+            "model": self.model,
+            "messages": api_messages,
+            "max_tokens": self.max_tokens,
+            "temperature": self.temperature,
+            "stream": True,
+        }
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            async with client.stream("POST", self.BASE_URL, headers=headers, json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line.strip() or line.strip() == "data: [DONE]":
+                        continue
+                    
+                    if line.startswith("data: "):
+                        try:
+                            data = json.loads(line[6:])
+                            delta = data["choices"][0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                yield content
+                        except Exception:
+                            continue
