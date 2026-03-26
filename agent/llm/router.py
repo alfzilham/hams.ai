@@ -98,6 +98,20 @@ class LLMRouter(BaseLLM):
             except ImportError:
                 pass
 
+        elif provider_name == "anthropic":
+            try:
+                from agent.llm.anthropic_provider import AnthropicLLM
+                primary = AnthropicLLM(model=model or "claude-3-7-sonnet-20250219")
+            except ImportError:
+                pass
+
+        elif provider_name == "together":
+            try:
+                from agent.llm.together_provider import TogetherLLM
+                primary = TogetherLLM(model=model or "Qwen/Qwen2.5-Coder-32B-Instruct")
+            except ImportError:
+                pass
+
         elif provider_name == "ollama":
             primary = OllamaLLM(model=model or "deepseek-coder")
 

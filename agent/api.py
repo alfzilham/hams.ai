@@ -225,12 +225,34 @@ def _build_llm(model: str = "zilf-max", extended: bool = False):
         return ZilfMaxChatLLM(model=model)
 
 
-def _build_agent(
-    model: str = "zilf-max",
-    max_steps: int = 15,
-    step_callback=None,
-    extended: bool = False,
-):
+# ---------------------------------------------------------------------------
+# Zilf Action Engine Integration
+# ---------------------------------------------------------------------------
+def _create_zilf_action_orchestrator(model: str = "claude-3-7-sonnet-20250219", max_steps: int = 30):
+    from agent.llm.anthropic_provider import AnthropicLLM
+    from agent.llm.together_provider import TogetherLLM
+    from agent.core.zilf_action import ZilfActionOrchestrator
+    from agent.tools.registry import ToolRegistry
+    
+    # 1. Planner & Verifier: Smartest Model (Claude 3.7)
+    planner_llm = AnthropicLLM(model="claude-3-7-sonnet-20250219", temperature=0.0)
+    
+    # 2. Executor: Coding/Action Model (Qwen2.5-Coder via Together)
+    executor_llm = TogetherLLM(model="Qwen/Qwen2.5-Coder-32B-Instruct", temperature=0.0)
+    
+    # 3. Tool Registry
+    registry = ToolRegistry.default()
+    
+    # 4. Orchestrator
+    orchestrator = ZilfActionOrchestrator(
+        planner_llm=planner_llm,
+        executor_llm=executor_llm,
+        tool_registry=registry,
+        max_steps=max_steps
+    )
+    return orchestrator
+
+def _create_agent(model: str, max_steps: int, step_callback: Any = None):
     """
     Build Agent instance untuk agent mode.
 
@@ -238,12 +260,29 @@ def _build_agent(
     B11 FIX: step_callback passed via Agent.__init__() parameter,
              not via agent._loop.step_callback (private attribute access).
     """
-    from agent.llm.zilf_max_agent import ZilfMaxAgentLLM
     from agent.tools.registry import ToolRegistry
     from agent.core.agent import Agent
 
-    llm = ZilfMaxAgentLLM(model=model)
+    if model == "zilf-action":
+        return _create_zilf_action_orchestrator(max_steps=max_steps)
+
     registry = ToolRegistry.default()
+
+    if model == "zilf-max":
+        from agent.llm.zilf_max_agent import ZilfMaxAgentLLM
+        llm = ZilfMaxAgentLLM(model=model)
+    elif "gemini" in model.lower():
+        from agent.llm.google_provider import GoogleLLM
+        llm = GoogleLLM(model=model)
+    elif "claude" in model.lower():
+        from agent.llm.anthropic_provider import AnthropicLLM
+        llm = AnthropicLLM(model=model)
+    elif "qwen" in model.lower() or "llama" in model.lower() or "mixtral" in model.lower():
+        from agent.llm.together_provider import TogetherLLM
+        llm = TogetherLLM(model=model)
+    else:
+        from agent.llm.groq_provider import GroqLLM
+        llm = GroqLLM(model=model)
 
     # B11 FIX: step_callback sebagai parameter resmi
     agent = Agent(
@@ -924,6 +963,25 @@ async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
     - Workers (router) → execute subtasks
     - Editor (Groq) → merge/refine
     """
+    if req.model == "zilf-action":
+        agent = _create_zilf_action_orchestrator(max_steps=req.max_steps)
+        t0 = time.perf_counter()
+        try:
+            result_data = await agent.run(req.task)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+        elapsed = time.perf_counter() - t0
+        return AgentRunResponse(
+            run_id=str(uuid.uuid4()),
+            status="complete" if result_data.get("success") else "failed",
+            final_answer=result_data.get("summary", "Done."),
+            error=result_data.get("error"),
+            steps=[],
+            steps_taken=0,
+            duration_seconds=round(elapsed, 2),
+            model_used="zilf-action"
+        )
+
     from agent.multi_agent.message_bus import MessageBus
     from agent.multi_agent.supervisor import SupervisorAgent
     from agent.multi_agent.worker import WorkerAgent
