@@ -402,6 +402,127 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
 # /agent/run — agentic blocking
 # ---------------------------------------------------------------------------
 
+async def _team_refine_agent_answer(
+    task: str,
+    draft_answer: str,
+    steps: list[Any] | None,
+    *,
+    lang: str = "id",
+) -> str:
+    if not draft_answer.strip():
+        return draft_answer
+
+    from agent.llm.zilf_max_chat import ZilfMaxChatLLM
+
+    max_chars = 4500
+    ctx_parts: list[str] = []
+    if steps:
+        for s in steps:
+            try:
+                if getattr(s, "thought", None):
+                    thought = (s.thought or "").strip()
+                    if thought:
+                        ctx_parts.append(f"Thought: {thought[:220]}")
+                for tc in (getattr(s, "tool_calls", None) or []):
+                    name = getattr(tc, "tool_name", "") or ""
+                    args = getattr(tc, "tool_input", None)
+                    ctx_parts.append(f"Tool: {name} args={json.dumps(args)[:260]}")
+                for tr in (getattr(s, "tool_results", None) or []):
+                    name = getattr(tr, "tool_name", "") or ""
+                    out = (getattr(tr, "output", "") or "").strip()
+                    if out:
+                        ctx_parts.append(f"Result: {name} -> {out[:320]}")
+            except Exception:
+                continue
+            if sum(len(x) for x in ctx_parts) > max_chars:
+                break
+
+    evidence = "\n".join(ctx_parts)[:max_chars]
+
+    if lang.lower().startswith("id"):
+        reviewer_system = (
+            "Kamu adalah reviewer senior. Beri feedback kritis dan konkret, "
+            "fokus pada: keakuratan, struktur, kelengkapan langkah, keamanan, dan kejelasan."
+        )
+        editor_system = (
+            "Kamu adalah editor final yang menyusun jawaban paling optimal dan profesional. "
+            "Output harus Markdown rapi, actionable, tidak bertele-tele, dan konsisten."
+        )
+        review_prompt = (
+            f"TUGAS:\n{task}\n\n"
+            f"BUKTI/KONTEKS (ringkas):\n{evidence}\n\n"
+            f"DRAFT JAWABAN:\n{draft_answer}\n\n"
+            "Buat:\n"
+            "1) Daftar masalah/risiko (bullet)\n"
+            "2) Saran perbaikan (bullet)\n"
+            "3) Versi jawaban yang sudah ditulis ulang (Markdown)\n"
+        )
+        merge_prompt = (
+            f"TUGAS:\n{task}\n\n"
+            f"DRAFT AWAL:\n{draft_answer}\n\n"
+            "MASUKAN TIM:\n"
+            "{REVIEWS}\n\n"
+            "Tulis jawaban final terbaik dalam Markdown. Jangan tampilkan proses berpikir."
+        )
+    else:
+        reviewer_system = (
+            "You are a senior reviewer. Give concrete, critical feedback focusing on accuracy, "
+            "structure, completeness, safety, and clarity."
+        )
+        editor_system = (
+            "You are the final editor producing the most optimal, professional answer. "
+            "Output must be clean Markdown, actionable, and concise."
+        )
+        review_prompt = (
+            f"TASK:\n{task}\n\n"
+            f"EVIDENCE/CONTEXT (brief):\n{evidence}\n\n"
+            f"DRAFT ANSWER:\n{draft_answer}\n\n"
+            "Provide:\n"
+            "1) Issues/Risks (bullets)\n"
+            "2) Improvements (bullets)\n"
+            "3) Rewritten answer (Markdown)\n"
+        )
+        merge_prompt = (
+            f"TASK:\n{task}\n\n"
+            f"ORIGINAL DRAFT:\n{draft_answer}\n\n"
+            "TEAM FEEDBACK:\n"
+            "{REVIEWS}\n\n"
+            "Write the best final answer in Markdown. Do not include chain-of-thought."
+        )
+
+    reviewer_models = [
+        "nvidia/nemotron-super-3",
+        "nvidia/deepseek-v3.2",
+        "nvidia/qwen-3.5",
+    ]
+    editor_model = "llama-3.3-70b-versatile"
+
+    async def run_review(model_key: str) -> str | None:
+        try:
+            llm = ZilfMaxChatLLM(model=model_key)
+            return await llm.generate_text(
+                messages=[{"role": "user", "content": review_prompt}],
+                system=reviewer_system,
+            )
+        except Exception:
+            return None
+
+    reviews_raw = await asyncio.gather(*(run_review(m) for m in reviewer_models))
+    reviews = "\n\n---\n\n".join([r for r in reviews_raw if r and r.strip()])
+    if not reviews.strip():
+        return draft_answer
+
+    try:
+        llm = ZilfMaxChatLLM(model=editor_model)
+        refined = await llm.generate_text(
+            messages=[{"role": "user", "content": merge_prompt.replace("{REVIEWS}", reviews)}],
+            system=editor_system,
+        )
+        return refined.strip() or draft_answer
+    except Exception:
+        return draft_answer
+
+
 @app.post("/agent/run", response_model=AgentRunResponse, tags=["agent"])
 async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
     model = req.model or "zilf-max"  # B3 FIX
@@ -419,11 +540,17 @@ async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
 
     elapsed = time.perf_counter() - t0
     steps   = [_serialize_step(s) for s in (response._state.steps or [])]
+    refined = await _team_refine_agent_answer(
+        req.task,
+        response.final_answer or "",
+        response._state.steps or [],
+        lang="id",
+    )
 
     return AgentRunResponse(
         run_id=response.run_id,
         status=response.status.value,
-        final_answer=response.final_answer,
+        final_answer=refined,
         error=response.error,
         steps=steps,
         steps_taken=response.steps_taken,
@@ -442,8 +569,10 @@ async def agent_stream(req: AgentRunRequest) -> StreamingResponse:
 
     async def event_stream() -> AsyncIterator[str]:
         queue: asyncio.Queue[dict] = asyncio.Queue()
+        step_store: list[Any] = []
 
         async def on_step(step: Any) -> None:
+            step_store.append(step)
             await queue.put({
                 "type":    "step",
                 "step":    step.step_number,
@@ -476,9 +605,15 @@ async def agent_stream(req: AgentRunRequest) -> StreamingResponse:
                 elapsed  = round(time.perf_counter() - t0, 2)
 
                 if response.success:
+                    refined = await _team_refine_agent_answer(
+                        req.task,
+                        response.final_answer or "",
+                        step_store,
+                        lang="id",
+                    )
                     await queue.put({
                         "type":        "final",
-                        "answer":      response.final_answer or "",
+                        "answer":      refined,
                         "steps_taken": response.steps_taken,
                         "duration":    elapsed,
                     })
