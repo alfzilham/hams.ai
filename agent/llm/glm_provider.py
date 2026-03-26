@@ -4,6 +4,7 @@ GLM (Zhipu AI) LLM Provider
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from typing import Any, AsyncIterator
@@ -13,6 +14,7 @@ from loguru import logger
 
 from agent.llm.base import BaseLLM, LLMResponse
 from agent.config.settings import get_settings
+from agent.llm.groq_provider import GroqLLM
 
 
 class GLMLLM(BaseLLM):
@@ -79,10 +81,11 @@ class GLMLLM(BaseLLM):
 
         logger.debug(f"[GLMLLM] Generating with {self.model}")
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(self.BASE_URL, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        try:
+            data = await self._post_with_retries(payload, timeout=120.0)
+        except Exception as exc:
+            logger.warning(f"[GLM] primary call failed ({exc}); falling back to Groq")
+            return await self._fallback_groq_generate(messages, tools, system)
 
         choice = data["choices"][0]
         message = choice.get("message", {})
@@ -130,11 +133,13 @@ class GLMLLM(BaseLLM):
             "temperature": self.temperature,
         }
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(self.BASE_URL, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        try:
+            data = await self._post_with_retries(payload, timeout=60.0)
             return data["choices"][0]["message"]["content"] or ""
+        except Exception as exc:
+            logger.warning(f"[GLM] generate_text failed ({exc}); falling back to Groq")
+            groq = GroqLLM()
+            return await groq.generate_text(messages, system=system, max_tokens=max_tokens)
 
     async def stream(
         self,
@@ -158,19 +163,60 @@ class GLMLLM(BaseLLM):
             "stream": True,
         }
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            async with client.stream("POST", self.BASE_URL, headers=headers, json=payload) as response:
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    if not line.strip() or line.strip() == "data: [DONE]":
-                        continue
-                    
-                    if line.startswith("data: "):
-                        try:
-                            data = json.loads(line[6:])
-                            delta = data["choices"][0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                yield content
-                        except Exception:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream("POST", self.BASE_URL, headers=headers, json=payload) as response:
+                    if response.status_code == 429:
+                        await asyncio.sleep(self._retry_after_seconds(response) or 1.5)
+                        async for chunk in GroqLLM().stream(messages, system=system):
+                            yield chunk
+                        return
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        if not line.strip() or line.strip() == "data: [DONE]":
                             continue
+                        if line.startswith("data: "):
+                            try:
+                                data = json.loads(line[6:])
+                                delta = data["choices"][0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                            except Exception:
+                                continue
+        except Exception as exc:
+            logger.warning(f"[GLM] stream failed ({exc}); falling back to Groq (non-stream)")
+            result = await GroqLLM().generate(messages, system=system)
+            if result.final_answer:
+                yield result.final_answer
+
+    async def _post_with_retries(self, payload: dict, timeout: float = 120.0, attempts: int = 4) -> dict:
+        delay = 1.5
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            for i in range(attempts):
+                response = await client.post(self.BASE_URL, headers=self._get_headers(), json=payload)
+                if response.status_code == 429:
+                    wait = self._retry_after_seconds(response) or delay * (i + 1)
+                    await asyncio.sleep(wait)
+                    continue
+                response.raise_for_status()
+                return response.json()
+        raise httpx.HTTPStatusError("429 Too Many Requests", request=None, response=response)
+
+    def _retry_after_seconds(self, response: httpx.Response) -> float | None:
+        h = response.headers.get("Retry-After")
+        if not h:
+            return None
+        try:
+            return float(h)
+        except Exception:
+            return None
+
+    async def _fallback_groq_generate(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None,
+        system: str | None,
+    ) -> LLMResponse:
+        groq = GroqLLM()
+        return await groq.generate(messages=messages, tools=tools, system=system)
