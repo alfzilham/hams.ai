@@ -1351,20 +1351,6 @@ async def cli_page() -> FileResponse:
     return FileResponse(html_path, media_type="text/html")
 
 
-
-@app.post("/admin/doku/register-rdl", tags=["admin"])
-async def register_rdl(request: Request):
-    _require_dashboard_access(request)
-    from agent.doku_payout import register_rdl_and_get_account_id
-    result = await register_rdl_and_get_account_id(
-        customer_id="ZILF-MERCHANT-001",
-        customer_name="Zilf AI",
-        email="alfiz.ilham09@gmail.com",      # ← ganti
-        phone="6287822065257",             # ← ganti nomor HP kamu
-    )
-    return result
-
-
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
