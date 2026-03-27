@@ -24,7 +24,6 @@ from fastapi import Request, HTTPException, Depends
 # GOPAY_ENV           = sandbox | production
 
 DATABASE_URL           = os.getenv("DATABASE_URL", "")
-DASHBOARD_ACCESS_TOKEN = os.getenv("DASHBOARD_ACCESS_TOKEN", "changeme")
 GOPAY_CLIENT_ID        = os.getenv("GOPAY_CLIENT_ID", "")
 GOPAY_CLIENT_SECRET    = os.getenv("GOPAY_CLIENT_SECRET", "")
 GOPAY_PHONE_DEFAULT    = os.getenv("GOPAY_PHONE", "")
@@ -77,10 +76,23 @@ async def db_execute(query: str, *args):
 # AUTH MIDDLEWARE
 # =================================================================
 def require_dashboard_token(request: Request):
-    token = request.headers.get("X-Dashboard-Token", "")
-    if token != DASHBOARD_ACCESS_TOKEN:
-        raise HTTPException(status_code=403, detail="Invalid dashboard token")
-    return token
+    """Token check yang konsisten dengan _require_dashboard_access di api.py"""
+    # Ambil token dari environment variable (Railway)
+    expected_token = os.environ.get("DASHBOARD_ACCESS_TOKEN", "").strip()
+    
+    # Jika tidak ada token di Railway → tidak wajib (untuk development)
+    if not expected_token:
+        return None
+    
+    # Ambil token yang dikirim user dari header
+    provided_token = request.headers.get("X-Dashboard-Token", "").strip()
+    
+    if not provided_token or provided_token != expected_token:
+        raise HTTPException(
+            status_code=401, 
+            detail="Dashboard token invalid or missing"
+        )
+    return provided_token
 
 # =================================================================
 # ROUTER SETUP
