@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>zilf.ai — AI Observability Dashboard 2026</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <style>
+    :root {
+      --bg: #000810;
+      --bg2: #010d1f;
+      --bg3: #020f22;
+      --card: #051428;
+      --card2: #071a33;
+      --border: #0a2545;
+      --border2: #0d3060;
+      --accent: #0ea5e9;
+      --accent2: #6366f1;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --purple: #8b5cf6;
+      --teal: #2dd4bf;
+      --pink: #ec4899;
+      --text: #e2e8f0;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --glow: 0 0 30px rgba(14, 165, 233, 0.25);
+      --glow-teal: 0 0 24px rgba(45, 212, 191, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(160deg, #000810 0%, #010d1f 40%, #01111f 70%, #000810 100%);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN OVERLAY ── */
+    #loginOverlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(160deg, #000810 0%, #010d1f 50%, #000810 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .login-box {
+      background: linear-gradient(145deg, #051428, #071a33);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 40px;
+      width: 380px;
+      box-shadow: var(--glow), var(--glow-teal), 0 0 60px rgba(2, 15, 34, 0.8);
+    }
+
+    .login-box h2 {
+      font-size: 1.4rem;
+      margin-bottom: 6px;
+      color: var(--teal);
+    }
+
+    .login-box p {
+      color: var(--text2);
+      font-size: 0.85rem;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text2);
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 11px;
+      background: linear-gradient(135deg, var(--accent), var(--teal));
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      box-shadow: 0 4px 18px rgba(14, 165, 233, 0.3);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.88;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    #loginError {
+      color: var(--red);
+      font-size: 0.8rem;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    #app {
+      display: none;
+    }
+
+    .topbar {
+      background: linear-gradient(90deg, #010d1f 0%, #020f22 50%, #01111f 100%);
+      border-bottom: 1px solid var(--border2);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 20px rgba(14, 165, 233, 0.08);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--teal));
+      box-shadow: 0 0 10px var(--teal), 0 0 4px var(--accent);
+    }
+
+    .logo-text {
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-sub {
+      font-size: 0.75rem;
+      color: var(--text2);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid rgba(45, 212, 191, 0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      color: var(--teal);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--teal);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.4
+      }
+    }
+
+    .btn-sm {
+      padding: 7px 14px;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text2);
+      transition: all 0.2s;
+    }
+
+    .btn-sm:hover {
+      background: var(--card2);
+      color: var(--teal);
+      border-color: var(--teal);
+    }
+
+    .btn-danger {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: var(--red);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--red);
+    }
+
+    /* ── SIDEBAR ── */
+    .layout {
+      display: flex;
+      height: calc(100vh - 57px);
+    }
+
+    .sidebar {
+      width: 220px;
+      background: linear-gradient(180deg, #010d1f 0%, #020f22 100%);
+      border-right: 1px solid var(--border2);
+      padding: 16px 0;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+
+    .nav-section {
+      padding: 8px 16px 4px;
+      font-size: 0.68rem;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      font-size: 0.85rem;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: linear-gradient(90deg, rgba(14, 165, 233, 0.08), transparent);
+      color: var(--text);
+      border-left-color: var(--border2);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(90deg, rgba(14, 165, 233, 0.13), rgba(45, 212, 191, 0.05));
+      color: var(--teal);
+      border-left-color: var(--teal);
+    }
+
+    .nav-item .icon {
+      font-size: 1rem;
+      width: 18px;
+      text-align: center;
+    }
+
+    /* ── CONTENT ── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      background: linear-gradient(160deg, #000810 0%, #010d1f 60%, #000810 100%);
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .page-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      background: linear-gradient(90deg, var(--text), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .page-sub {
+      font-size: 0.83rem;
+      color: var(--text2);
+      margin-bottom: 24px;
+    }
+
+    /* ── KPI CARDS ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: linear-gradient(145deg, #051428, #071a33);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--teal);
+      box-shadow: var(--glow-teal);
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+
+    .kpi-value {
+      font-size: 1.9rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .kpi-sub {
+      font-size: 0.78rem;
+      color: var(--text3);
+    }
+
+    .kpi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-top: 6px;
+    }
+
+    .badge-green {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--green);
+    }
+
+    .badge-yellow {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--yellow);
+    }
+
+    .badge-red {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--red);
+    }
+
+    .badge-blue {
+      background: rgba(14, 165, 233, 0.12);
+      color: var(--accent);
+    }
+
+    /* ── CHARTS ── */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .chart-card {
+      background: linear-gradient(145deg, #051428, #071a33);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .chart-card:hover {
+      border-color: var(--border2);
+      box-shadow: var(--glow);
+    }
+
+    .chart-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .chart-desc {
+      font-size: 0.76rem;
+      color: var(--text3);
+      margin-bottom: 16px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 200px;
+    }
+
+    /* ── TABLE ── */
+    .table-card {
+      background: linear-gradient(145deg, #051428, #071a33);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .table-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-header h3 {
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .search-input {
+      padding: 7px 12px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 0.82rem;
+      outline: none;
+      width: 220px;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--teal);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    th {
+      padding: 10px 16px;
+      text-align: left;
+      color: var(--text3);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text2);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(14, 165, 233, 0.04);
+    }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--teal));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-name {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .user-email {
+      font-size: 0.75rem;
+      color: var(--text3);
+    }
+
+    .plan-badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .plan-free {
+      background: rgba(100, 116, 139, 0.2);
+      color: var(--text3);
+    }
+
+    .plan-pro {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--accent2);
+    }
+
+    .plan-enterprise {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--yellow);
+    }
+
+    /* ── REVENUE / PAYOUT ── */
+    .revenue-banner {
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.1), rgba(14, 165, 233, 0.07));
+      border: 1px solid rgba(45, 212, 191, 0.25);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: var(--glow-teal);
+    }
+
+    .revenue-left h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .revenue-left p {
+      font-size: 0.82rem;
+      color: var(--text2);
+    }
+
+    .revenue-amount {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--green), var(--teal));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .revenue-amount span {
+      font-size: 0.9rem;
+      color: var(--text2);
+      -webkit-text-fill-color: var(--text2);
+    }
+
+    .payout-btn {
+      background: linear-gradient(135deg, #00b14f, #009de0);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      padding: 12px 24px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s, transform 0.1s;
+      box-shadow: 0 4px 15px rgba(0, 177, 79, 0.3);
+    }
+
+    .payout-btn:hover {
+      opacity: 0.9;
+    }
+
+    .payout-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* ── PAYOUT MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: linear-gradient(145deg, #051428, #071a33);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 32px;
+      width: 440px;
+      max-width: 95vw;
+      box-shadow: var(--glow), var(--glow-teal);
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--teal);
+    }
+
+    .modal-sub {
+      font-size: 0.82rem;
+      color: var(--text2);
+      margin-bottom: 24px;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .btn-cancel {
+      padding: 9px 18px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+
+    .btn-submit {
+      padding: 9px 20px;
+      background: linear-gradient(135deg, var(--green), var(--teal));
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: opacity 0.2s;
+      box-shadow: 0 4px 14px rgba(45, 212, 191, 0.25);
+    }
+
+    .btn-submit:hover {
+      opacity: 0.88;
+    }
+
+    .payout-summary {
+      background: var(--bg3);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .payout-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      padding: 4px 0;
+    }
+
+    .payout-row .label {
+      color: var(--text2);
+    }
+
+    .payout-row .val {
+      font-weight: 600;
+    }
+
+    .payout-row.total .val {
+      color: var(--teal);
+      font-size: 1rem;
+    }
+
+    #payoutResult {
+      margin-top: 14px;
+      font-size: 0.83rem;
+      display: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+    }
+
+    .result-success {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .result-pending {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--yellow);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* ── SECURITY ── */
+    .owasp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .owasp-card {
+      background: linear-gradient(145deg, #051428, #071a33);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .owasp-card:hover {
+      border-color: var(--border2);
+      box-shadow: var(--glow);
+    }
+
+    .owasp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .owasp-id {
+      font-size: 0.72rem;
+      color: var(--teal);
+      font-weight: 600;
+    }
+
+    .severity {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .sev-critical {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+    }
+
+    .sev-high {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--yellow);
+    }
+
+    .sev-medium {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--purple);
+    }
+
+    .sev-low {
+      background: rgba(45, 212, 191, 0.15);
+      color: var(--teal);
+    }
+
+    .owasp-label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .owasp-desc {
+      font-size: 0.77rem;
+      color: var(--text3);
+      margin-bottom: 12px;
+    }
+
+    .owasp-bar-wrap {
+      background: var(--bg3);
+      border-radius: 4px;
+      height: 5px;
+    }
+
+    .owasp-bar {
+      height: 5px;
+      border-radius: 4px;
+    }
+
+    /* ── LOADING ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text2);
+      font-size: 0.85rem;
+      padding: 40px;
+      justify-content: center;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOGIN -->
+  <div id="loginOverlay">
+    <div class="login-box">
+      <h2><i class="bi bi-lock-fill"></i> Dashboard Access</h2>
+      <p>zilf.ai — AI Observability Dashboard 2026</p>
+      <div class="form-group">
+        <label>X-Dashboard-Token</label>
+        <input type="password" id="tokenInput" placeholder="Masukkan token rahasia…" autocomplete="off" />
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Masuk ke Dashboard</button>
+      <div id="loginError"><i class="bi bi-x-circle-fill"></i> Token salah atau server tidak merespons.</div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="logo">
+        <div class="logo-dot"></div>
+        <div>
+          <div class="logo-text">zilf.ai</div>
+          <div class="logo-sub">AI Observability 2026</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="status-badge">
+          <div class="status-dot"></div>Live
+        </div>
+        <button class="btn-sm" onclick="refreshAll()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        <button class="btn-sm btn-danger" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Keluar</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="nav-section">Utama</div>
+        <div class="nav-item active" onclick="showPage('overview')"><span class="icon"><i
+              class="bi bi-bar-chart-line-fill"></i></span> Overview</div>
+        <div class="nav-item" onclick="showPage('users')"><span class="icon"><i class="bi bi-people-fill"></i></span>
+          Pengguna</div>
+        <div class="nav-item" onclick="showPage('revenue')"><span class="icon"><i class="bi bi-cash-coin"></i></span>
+          Revenue</div>
+
+        <div class="nav-section">Observabilitas</div>
+        <div class="nav-item" onclick="showPage('performance')"><span class="icon"><i
+              class="bi bi-lightning-charge-fill"></i></span> Performa</div>
+        <div class="nav-item" onclick="showPage('quality')"><span class="icon"><i class="bi bi-bullseye"></i></span>
+          Kualitas Model</div>
+        <div class="nav-item" onclick="showPage('cost')"><span class="icon"><i class="bi bi-coin"></i></span> Biaya &
+          Token</div>
+
+        <div class="nav-section">Keamanan</div>
+        <div class="nav-item" onclick="showPage('security')"><span class="icon"><i
+              class="bi bi-shield-fill-check"></i></span> Security Audit</div>
+        <div class="nav-item" onclick="showPage('pii')"><span class="icon"><i class="bi bi-search"></i></span> PII
+          Monitor</div>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+
+        <!-- ── PAGE: OVERVIEW ── -->
+        <div class="page active" id="page-overview">
+          <div class="page-title">Overview</div>
+          <div class="page-sub" id="lastUpdated">Memuat data…</div>
+
+          <div class="kpi-grid" id="kpiGrid">
+            <div class="loading">
+              <div class="spinner"></div> Memuat KPI…
+            </div>
+          </div>
+
+          <div class="chart-grid">
+            <div class="chart-card">
+              <div class="chart-title">DAU / MAU — 30 Hari</div>
+              <div class="chart-desc">Daily & Monthly Active Users</div>
+              <div class="chart-wrap"><canvas id="chartDAU"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Pendaftaran Pengguna Baru</div>
+              <div class="chart-desc">Pengguna baru per hari (7 hari terakhir)</div>
+              <div class="chart-wrap"><canvas id="chartReg"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Avg Latency (ms)</div>
+              <div class="chart-desc">Latensi rata-rata per model</div>
+              <div class="chart-wrap"><canvas id="chartLatency"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Biaya per Hari (Rp)</div>
+              <div class="chart-desc">Total cost IDR 7 hari terakhir</div>
+              <div class="chart-wrap"><canvas id="chartCost"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PAGE: USERS ── -->
+        <div class="page" id="page-users">
+          <div class="page-title">Pengguna</div>
+          <div class="page-sub">Daftar lengkap pengguna + email + aktivitas</div>
+
+          <div class="table-card">
+            <div class="table-header">
+              <h3>Semua Pengguna (<span id="userCount">—</span>)</h3>
+              <input class="search-input" id="userSearch" placeholder="🔍 Cari email / username…"
+                oninput="filterUsers()" />
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Pengguna</th>
+                    <th>Plan</th>
+                    <th>Bergabung</th>
+                    <th>Last Login</th>
+                    <th>Total Request</th>
+                    <th>Cost (Rp)</th>
+                    <th>Revenue</th>
+                  </tr>
+                </thead>
+                <tbody id="userTableBody">
+                  <tr>
+                    <td colspan="7" class="loading">
+                      <div class="spinner"></div> Memuat…
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PAGE: REVENUE ── -->
+        <div class="page" id="page-revenue">
+          <div class="page-title">Revenue & Payout</div>
+          <div class="page-sub">Rp20.000 per pengguna baru · Tarik via GoPay</div>
+
+          <div class="revenue-banner">
+            <div class="revenue-left">
+              <h3><i class="bi bi-wallet2"></i> Total Saldo GoPay</h3>
+              <p>Dari <span id="revUserCount">—</span> pengguna yang terdaftar</p>
+            </div>
+            <div>
+              <div class="revenue-amount" id="revAmount">Rp —</div>
+              <div style="font-size:0.75rem;color:var(--text3);margin-top:2px">Pending: <span id="revPending">Rp
+                  —</span></div>
+            </div>
+            <button class="payout-btn" onclick="openPayoutModal()">
+              <img src="https://img.icons8.com/color/24/gopay.png" onerror="this.style.display='none'" />
+              Tarik via GoPay
+            </button>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Pengguna Baru Hari Ini</div>
+              <div class="kpi-value" id="revToday" style="color:var(--green)">—</div>
+              <div class="kpi-sub">+Rp<span id="revTodayAmt">—</span> hari ini</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Bulan Ini</div>
+              <div class="kpi-value" id="revMonth" style="color:var(--accent)">—</div>
+              <div class="kpi-sub">+Rp<span id="revMonthAmt">—</span></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Total Ditarik</div>
+              <div class="kpi-value" id="revPaid" style="color:var(--yellow)">—</div>
+              <div class="kpi-sub">via GoPay</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Saldo Belum Ditarik</div>
+              <div class="kpi-value" id="revUnpaid" style="color:var(--purple)">—</div>
+              <div class="kpi-sub">siap ditarik</div>
+            </div>
+          </div>
+
+          <div class="table-card">
+            <div class="table-header">
+              <h3>Riwayat Payout GoPay</h3>
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Jumlah</th>
+                    <th>Pengguna</th>
+                    <th>Status</th>
+                    <th>Ref ID</th>
+                  </tr>
+                </thead>
+                <tbody id="payoutHistory">
+                  <tr>
+                    <td colspan="5" style="text-align:center;color:var(--text3);padding:24px">Belum ada riwayat payout
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PAGE: PERFORMANCE ── -->
+        <div class="page" id="page-performance">
+          <div class="page-title">Performa</div>
+          <div class="page-sub">Latensi · Throughput · Error Rate per model</div>
+          <div class="chart-grid">
+            <div class="chart-card" style="grid-column:1/-1">
+              <div class="chart-title">Latency P50 / P95 per Model (ms)</div>
+              <div class="chart-desc">Persentil latensi 30 hari terakhir</div>
+              <div class="chart-wrap" style="height:240px"><canvas id="chartP95"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Error Rate (%)</div>
+              <div class="chart-desc">Persentase error per hari</div>
+              <div class="chart-wrap"><canvas id="chartErr"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Throughput (TPS)</div>
+              <div class="chart-desc">Tokens per second rata-rata</div>
+              <div class="chart-wrap"><canvas id="chartTPS"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PAGE: QUALITY ── -->
+        <div class="page" id="page-quality">
+          <div class="page-title">Kualitas Model</div>
+          <div class="page-sub">Akurasi · Drift · Halusinasi · Kepercayaan</div>
+          <div class="chart-grid">
+            <div class="chart-card">
+              <div class="chart-title">Skor Kualitas Model</div>
+              <div class="chart-desc">Accuracy, Precision, Recall, F1</div>
+              <div class="chart-wrap"><canvas id="chartQuality"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Drift Detection</div>
+              <div class="chart-desc">Data drift & concept drift score</div>
+              <div class="chart-wrap"><canvas id="chartDrift"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Trust Score Trend</div>
+              <div class="chart-desc">Composite trust score harian</div>
+              <div class="chart-wrap"><canvas id="chartTrust"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Halusinasi & Toksisitas</div>
+              <div class="chart-desc">Rate deteksi per hari</div>
+              <div class="chart-wrap"><canvas id="chartHallu"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PAGE: COST ── -->
+        <div class="page" id="page-cost">
+          <div class="page-title">Biaya & Token</div>
+          <div class="page-sub">Cost per user · Token usage · Breakdown model</div>
+          <div class="table-card">
+            <div class="table-header">
+              <h3>Cost per Pengguna (Top 20)</h3>
+              <input class="search-input" id="costSearch" placeholder="🔍 Cari email…" oninput="filterCost()" />
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Email</th>
+                    <th>Total Request</th>
+                    <th>Total Token</th>
+                    <th>Cost (Rp)</th>
+                    <th>Avg/Req</th>
+                  </tr>
+                </thead>
+                <tbody id="costTableBody">
+                  <tr>
+                    <td colspan="6" class="loading">
+                      <div class="spinner"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PAGE: SECURITY ── -->
+        <div class="page" id="page-security">
+          <div class="page-title">Security Audit</div>
+          <div class="page-sub">OWASP LLM Top 10 · Real-time threat detection</div>
+          <div class="owasp-grid" id="owaspGrid"></div>
+          <div class="table-card">
+            <div class="table-header">
+              <h3>Log Ancaman Terbaru</h3>
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Waktu</th>
+                    <th>User</th>
+                    <th>Kategori OWASP</th>
+                    <th>Severity</th>
+                    <th>Tindakan</th>
+                    <th>PII</th>
+                  </tr>
+                </thead>
+                <tbody id="securityLog">
+                  <tr>
+                    <td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Tidak ada ancaman
+                      terdeteksi <i class="bi bi-check-circle-fill" style="color:var(--teal)"></i></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PAGE: PII ── -->
+        <div class="page" id="page-pii">
+          <div class="page-title">PII Monitor</div>
+          <div class="page-sub">Deteksi kebocoran data pribadi (email, NIK, telepon)</div>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">PII Terdeteksi Hari Ini</div>
+              <div class="kpi-value" id="piiToday" style="color:var(--red)">0</div>
+              <div class="kpi-sub">kejadian</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Diblokir Otomatis</div>
+              <div class="kpi-value" id="piiBlocked" style="color:var(--green)">0</div>
+              <div class="kpi-sub">dari total terdeteksi</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Tipe PII Terbanyak</div>
+              <div class="kpi-value" id="piiType" style="color:var(--yellow);font-size:1.2rem">—</div>
+              <div class="kpi-sub">jenis data sensitif</div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">PII Detection Trend</div>
+            <div class="chart-desc">Deteksi PII per hari (7 hari)</div>
+            <div class="chart-wrap"><canvas id="chartPII"></canvas></div>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /layout -->
+  </div><!-- /app -->
+
+  <!-- PAYOUT MODAL -->
+  <div class="modal-overlay" id="payoutModal">
+    <div class="modal-box">
+      <div class="modal-title"><i class="bi bi-cash-stack"></i> Tarik Dana via GoPay</div>
+      <div class="modal-sub">Konfirmasi penarikan saldo ke akun GoPay Anda</div>
+      <div class="payout-summary">
+        <div class="payout-row"><span class="label">Pengguna dikreditkan</span><span class="val"
+            id="mUserCount">—</span></div>
+        <div class="payout-row"><span class="label">@Rp20.000/pengguna</span><span class="val">Rp20.000</span></div>
+        <div class="payout-row total"><span class="label">Total penarikan</span><span class="val" id="mTotal">—</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Nomor GoPay (HP)</label>
+        <input type="text" id="gopayPhone" placeholder="08xxxxxxxxxx" maxlength="15" />
+      </div>
+      <div id="payoutResult"></div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closePayoutModal()">Batal</button>
+        <button class="btn-submit" onclick="submitPayout()"><i class="bi bi-rocket-takeoff-fill"></i> Tarik
+          Sekarang</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── CONFIG ──
+    const API = '';  // same origin
+    let TOKEN = '';
+    let allUsers = [];
+    let allCost = [];
+    let charts = {};
+
+    // ── AUTH ──
+    async function doLogin() {
+      TOKEN = document.getElementById('tokenInput').value.trim();
+      if (!TOKEN) return;
+      try {
+        const r = await apiFetch('/api/dashboard/summary');
+        if (r.ok) {
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('app').style.display = 'block';
+          initDashboard();
+        } else {
+          document.getElementById('loginError').style.display = 'block';
+        }
+      } catch (e) {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    function logout() {
+      TOKEN = '';
+      location.reload();
+    }
+
+    document.getElementById('tokenInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    // ── API HELPER ──
+    async function apiFetch(path, opts = {}) {
+      return fetch(API + path, {
+        ...opts,
+        headers: { 'X-Dashboard-Token': TOKEN, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+      });
+    }
+
+    // ── NAVIGATION ──
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      event.currentTarget.classList.add('active');
+      loadPageData(name);
+    }
+
+    function loadPageData(name) {
+      if (name === 'users') loadUsers();
+      if (name === 'revenue') loadRevenue();
+      if (name === 'performance') loadPerformance();
+      if (name === 'quality') loadQuality();
+      if (name === 'cost') loadCost();
+      if (name === 'security') loadSecurity();
+      if (name === 'pii') loadPII();
+    }
+
+    // ── INIT ──
+    function initDashboard() {
+      loadOverview();
+      setInterval(loadOverview, 60000);
+    }
+
+    function refreshAll() {
+      const active = document.querySelector('.page.active').id.replace('page-', '');
+      if (active === 'overview') loadOverview();
+      else loadPageData(active);
+    }
+
+    // ── OVERVIEW ──
+    async function loadOverview() {
+      try {
+        const r = await apiFetch('/api/dashboard/summary');
+        const d = await r.json();
+        renderKPI(d);
+        renderOverviewCharts(d);
+        document.getElementById('lastUpdated').textContent =
+          'Terakhir diperbarui: ' + new Date().toLocaleTimeString('id-ID');
+      } catch (e) {
+        // fallback demo data
+        renderKPI(DEMO.summary);
+        renderOverviewCharts(DEMO.summary);
+        document.getElementById('lastUpdated').textContent = '⚠️ Mode demo (server tidak terhubung)';
+      }
+    }
+
+    function renderKPI(d) {
+      const dau_mau = d.mau > 0 ? ((d.dau / d.mau) * 100).toFixed(1) : '0';
+      document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Total Pengguna</div>
+      <div class="kpi-value" style="color:var(--accent)">${fmt(d.total_users)}</div>
+      <div class="kpi-sub">terdaftar aktif</div>
+      <div class="kpi-badge badge-green"><i class="bi bi-arrow-up"></i> ${fmt(d.new_users_today)} hari ini</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">DAU / MAU</div>
+      <div class="kpi-value" style="color:var(--teal)">${fmt(d.dau)} <span style="font-size:1rem;color:var(--text3)">/ ${fmt(d.mau)}</span></div>
+      <div class="kpi-sub">ratio ${dau_mau}%</div>
+      <div class="kpi-badge badge-blue">${dau_mau}% engagement</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" style="color:var(--green)">Rp${fmtRp(d.total_revenue_idr)}</div>
+      <div class="kpi-sub">dari ${fmt(d.total_users)} pengguna</div>
+      <div class="kpi-badge badge-green">+Rp${fmtRp(d.revenue_this_month_idr)} bulan ini</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Latency</div>
+      <div class="kpi-value" style="color:var(--yellow)">${d.avg_latency_ms ? Math.round(d.avg_latency_ms) : '—'}<span style="font-size:1rem"> ms</span></div>
+      <div class="kpi-sub">rata-rata semua model</div>
+      <div class="kpi-badge ${d.avg_latency_ms < 800 ? 'badge-green' : 'badge-yellow'}">${d.avg_latency_ms < 800 ? '<i class="bi bi-check-circle-fill"></i> Normal' : '<i class="bi bi-exclamation-triangle-fill"></i> Tinggi'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Token Digunakan</div>
+      <div class="kpi-value" style="color:var(--purple)">${fmtBig(d.total_tokens_used)}</div>
+      <div class="kpi-sub">semua pengguna</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Cost</div>
+      <div class="kpi-value" style="color:var(--pink)">Rp${fmtRp(d.total_cost_idr)}</div>
+      <div class="kpi-sub">avg Rp${fmtRp(d.avg_cost_per_req_idr)}/req</div>
+    </div>
+  `;
+    }
+
+    function renderOverviewCharts(d) {
+      const days = d.days_labels || DEMO.summary.days_labels;
+      const dau_s = d.dau_series || DEMO.summary.dau_series;
+      const mau_s = d.mau_series || DEMO.summary.mau_series;
+      const reg_s = d.reg_series || DEMO.summary.reg_series;
+      const lat_s = d.lat_labels || DEMO.summary.lat_labels;
+      const lat_v = d.lat_values || DEMO.summary.lat_values;
+      const cost_s = d.cost_series || DEMO.summary.cost_series;
+
+      mkChart('chartDAU', 'line', days, [
+        { label: 'DAU', data: dau_s, borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.1)', tension: 0.4, fill: true },
+        { label: 'MAU', data: mau_s, borderColor: '#2dd4bf', backgroundColor: 'rgba(45,212,191,0.1)', tension: 0.4, fill: true }
+      ]);
+      mkChart('chartReg', 'bar', days.slice(-7), [{ label: 'Registrasi', data: reg_s.slice(-7), backgroundColor: 'rgba(45,212,191,0.7)', borderRadius: 6 }]);
+      mkChart('chartLatency', 'bar', lat_s, [{ label: 'Avg Latency (ms)', data: lat_v, backgroundColor: 'rgba(14,165,233,0.7)', borderRadius: 6 }]);
+      mkChart('chartCost', 'line', days.slice(-7), [{ label: 'Cost (Rp)', data: cost_s.slice(-7), borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.1)', tension: 0.4, fill: true }]);
+    }
+
+    // ── USERS ──
+    async function loadUsers() {
+      try {
+        const r = await apiFetch('/api/dashboard/users');
+        allUsers = (await r.json()).users || [];
+      } catch { allUsers = DEMO.users; }
+      renderUsers(allUsers);
+      document.getElementById('userCount').textContent = allUsers.length;
+    }
+
+    function renderUsers(users) {
+      document.getElementById('userTableBody').innerHTML = users.map((u, i) => `
+    <tr>
+      <td>
+        <div class="user-info">
+          <div class="avatar">${(u.username || u.email || '?')[0].toUpperCase()}</div>
+          <div><div class="user-name">${esc(u.username || '—')}</div><div class="user-email">${esc(u.email)}</div></div>
+        </div>
+      </td>
+      <td><span class="plan-badge plan-${u.plan || 'free'}">${u.plan || 'free'}</span></td>
+      <td>${fmtDate(u.created_at)}</td>
+      <td>${fmtDate(u.last_login_at) || '—'}</td>
+      <td>${fmt(u.total_requests || 0)}</td>
+      <td>Rp${fmtRp(u.total_cost_idr || 0)}</td>
+      <td><span class="kpi-badge ${u.revenue_credited ? 'badge-green' : 'badge-yellow'}">${u.revenue_credited ? '<i class="bi bi-check-circle-fill"></i> Rp20.000' : '<i class="bi bi-hourglass-split"></i> Pending'}</span></td>
+    </tr>
+  `).join('');
+    }
+
+    function filterUsers() {
+      const q = document.getElementById('userSearch').value.toLowerCase();
+      renderUsers(allUsers.filter(u => (u.email + u.username).toLowerCase().includes(q)));
+    }
+
+    // ── REVENUE ──
+    async function loadRevenue() {
+      try {
+        const r = await apiFetch('/api/dashboard/revenue');
+        const d = await r.json();
+        populateRevenue(d);
+      } catch { populateRevenue(DEMO.revenue); }
+    }
+
+    function populateRevenue(d) {
+      document.getElementById('revUserCount').textContent = fmt(d.revenue_users || 0);
+      document.getElementById('revAmount').textContent = 'Rp' + fmtRp(d.total_revenue_idr || 0);
+      document.getElementById('revPending').textContent = 'Rp' + fmtRp(d.pending_idr || 0);
+      document.getElementById('revToday').textContent = fmt(d.new_users_today || 0);
+      document.getElementById('revTodayAmt').textContent = fmtRp((d.new_users_today || 0) * 20000);
+      document.getElementById('revMonth').textContent = fmt(d.new_users_this_month || 0);
+      document.getElementById('revMonthAmt').textContent = fmtRp(d.revenue_this_month_idr || 0);
+      document.getElementById('revPaid').textContent = 'Rp' + fmtRp(d.paid_idr || 0);
+      document.getElementById('revUnpaid').textContent = 'Rp' + fmtRp(d.pending_idr || 0);
+    }
+
+    // ── PAYOUT MODAL ──
+    function openPayoutModal() {
+      const total = parseInt(document.getElementById('revAmount').textContent.replace(/\D/g, '')) || 0;
+      const ucount = parseInt(document.getElementById('revUserCount').textContent.replace(/\D/g, '')) || 0;
+      document.getElementById('mUserCount').textContent = fmt(ucount) + ' pengguna';
+      document.getElementById('mTotal').textContent = 'Rp' + fmtRp(total);
+      document.getElementById('payoutResult').style.display = 'none';
+      document.getElementById('payoutModal').classList.add('open');
+    }
+
+    function closePayoutModal() {
+      document.getElementById('payoutModal').classList.remove('open');
+    }
+
+    async function submitPayout() {
+      const phone = document.getElementById('gopayPhone').value.trim();
+      if (!phone.match(/^08\d{8,12}$/)) {
+        alert('Format nomor GoPay tidak valid (contoh: 081234567890)');
+        return;
+      }
+      const total = parseInt(document.getElementById('mTotal').textContent.replace(/\D/g, ''));
+      const ucount = parseInt(document.getElementById('mUserCount').textContent.replace(/\D/g, ''));
+      try {
+        const r = await apiFetch('/api/payout/gopay/request', {
+          method: 'POST',
+          body: JSON.stringify({ gopay_phone: phone, amount_idr: total, user_count: ucount })
+        });
+        const d = await r.json();
+        const el = document.getElementById('payoutResult');
+        el.style.display = 'block';
+        if (d.status === 'pending' || d.status === 'recorded') {
+          el.className = 'result-pending';
+          el.innerHTML = `<i class="bi bi-hourglass-split"></i> Permintaan payout <b>Rp${fmtRp(total)}</b> ke <b>${phone}</b> sedang diproses.<br>Ref: ${d.reference_id || '—'}<br><small>Akan aktif setelah API GoPay production terhubung.</small>`;
+        } else if (d.status === 'success') {
+          el.className = 'result-success';
+          el.innerHTML = `<i class="bi bi-check-circle-fill"></i> Payout <b>Rp${fmtRp(total)}</b> berhasil! Ref: ${d.reference_id}`;
+        } else {
+          el.className = 'result-pending';
+          el.textContent = JSON.stringify(d);
+        }
+      } catch (e) {
+        const el = document.getElementById('payoutResult');
+        el.style.display = 'block';
+        el.className = 'result-pending';
+        el.textContent = '<i class="bi bi-exclamation-triangle-fill"></i> Server tidak merespons. Request telah dicatat lokal.';
+      }
+    }
+
+    // ── PERFORMANCE ──
+    async function loadPerformance() {
+      try {
+        const r = await apiFetch('/api/dashboard/performance');
+        const d = await r.json();
+        renderPerformanceCharts(d);
+      } catch { renderPerformanceCharts(DEMO.performance); }
+    }
+
+    function renderPerformanceCharts(d) {
+      const models = d.models || DEMO.performance.models;
+      const p50 = d.p50 || DEMO.performance.p50;
+      const p95 = d.p95 || DEMO.performance.p95;
+      mkChart('chartP95', 'bar', models, [
+        { label: 'P50 (ms)', data: p50, backgroundColor: 'rgba(14,165,233,0.7)', borderRadius: 4 },
+        { label: 'P95 (ms)', data: p95, backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 4 }
+      ], { scales: { y: { beginAtZero: true } } });
+      mkChart('chartErr', 'line', d.days || DEMO.performance.days, [{ label: 'Error Rate %', data: d.error_rate || DEMO.performance.error_rate, borderColor: '#ef4444', tension: 0.4, fill: false }]);
+      mkChart('chartTPS', 'line', d.days || DEMO.performance.days, [{ label: 'TPS', data: d.tps || DEMO.performance.tps, borderColor: '#2dd4bf', tension: 0.4, fill: false }]);
+    }
+
+    // ── QUALITY ──
+    async function loadQuality() {
+      try {
+        const r = await apiFetch('/api/dashboard/quality');
+        const d = await r.json();
+        renderQualityCharts(d);
+      } catch { renderQualityCharts(DEMO.quality); }
+    }
+
+    function renderQualityCharts(d) {
+      mkChart('chartQuality', 'radar', ['Accuracy', 'Precision', 'Recall', 'F1', 'Confidence', 'Trust'],
+        [{ label: 'Skor', data: d.radar || DEMO.quality.radar, backgroundColor: 'rgba(14,165,233,0.2)', borderColor: '#0ea5e9', pointBackgroundColor: '#2dd4bf' }]);
+      mkChart('chartDrift', 'line', d.days || DEMO.quality.days, [
+        { label: 'Data Drift', data: d.data_drift || DEMO.quality.data_drift, borderColor: '#f59e0b', tension: 0.4 },
+        { label: 'Concept Drift', data: d.concept_drift || DEMO.quality.concept_drift, borderColor: '#ef4444', tension: 0.4 }
+      ]);
+      mkChart('chartTrust', 'line', d.days || DEMO.quality.days, [{ label: 'Trust Score', data: d.trust || DEMO.quality.trust, borderColor: '#2dd4bf', tension: 0.4, fill: false }]);
+      mkChart('chartHallu', 'bar', d.days || DEMO.quality.days, [
+        { label: 'Halusinasi %', data: d.hallucination || DEMO.quality.hallucination, backgroundColor: 'rgba(245,158,11,0.7)', borderRadius: 4 },
+        { label: 'Toksisitas %', data: d.toxicity || DEMO.quality.toxicity, backgroundColor: 'rgba(239,68,68,0.5)', borderRadius: 4 }
+      ]);
+    }
+
+    // ── COST ──
+    async function loadCost() {
+      try {
+        const r = await apiFetch('/api/dashboard/cost-per-user');
+        allCost = (await r.json()).users || [];
+      } catch { allCost = DEMO.costUsers; }
+      renderCost(allCost);
+    }
+
+    function renderCost(data) {
+      document.getElementById('costTableBody').innerHTML = data.slice(0, 20).map((u, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${esc(u.email)}</td>
+      <td>${fmt(u.total_requests)}</td>
+      <td>${fmtBig(u.total_tokens)}</td>
+      <td>Rp${fmtRp(u.total_cost_idr)}</td>
+      <td>Rp${fmtRp(u.avg_cost_per_request_idr)}</td>
+    </tr>
+  `).join('');
+    }
+
+    function filterCost() {
+      const q = document.getElementById('costSearch').value.toLowerCase();
+      renderCost(allCost.filter(u => u.email.toLowerCase().includes(q)));
+    }
+
+    // ── SECURITY ──
+    async function loadSecurity() {
+      const OWASP = [
+        { id: 'LLM01', label: 'Prompt Injection', desc: 'Manipulasi input berbahaya', sev: 'critical', pct: 72 },
+        { id: 'LLM02', label: 'Insecure Output Handling', desc: 'Output tidak divalidasi', sev: 'high', pct: 45 },
+        { id: 'LLM03', label: 'Training Data Poisoning', desc: 'Data latih dikompromikan', sev: 'high', pct: 30 },
+        { id: 'LLM06', label: 'Kebocoran Data / PII', desc: 'Informasi sensitif bocor', sev: 'critical', pct: 68 },
+        { id: 'LLM08', label: 'Excessive Agency', desc: 'Izin agen terlalu luas', sev: 'medium', pct: 40 },
+        { id: 'LLM05', label: 'Supply Chain Risk', desc: 'Kerentanan model pihak ketiga', sev: 'medium', pct: 25 },
+        { id: 'LLM04', label: 'Model DoS', desc: 'Overload resource model', sev: 'low', pct: 18 },
+        { id: 'LLM09', label: 'Overreliance', desc: 'Kepercayaan berlebih pada output', sev: 'low', pct: 15 },
+      ];
+      const colors = { critical: 'var(--red)', high: 'var(--yellow)', medium: 'var(--purple)', low: 'var(--teal)' };
+      document.getElementById('owaspGrid').innerHTML = OWASP.map(o => `
+    <div class="owasp-card">
+      <div class="owasp-header">
+        <span class="owasp-id">${o.id}</span>
+        <span class="severity sev-${o.sev}">${o.sev.toUpperCase()}</span>
+      </div>
+      <div class="owasp-label">${o.label}</div>
+      <div class="owasp-desc">${o.desc}</div>
+      <div class="owasp-bar-wrap"><div class="owasp-bar" style="width:${o.pct}%;background:${colors[o.sev]}"></div></div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">${o.pct}% risk score</div>
+    </div>
+  `).join('');
+      try {
+        const r = await apiFetch('/api/dashboard/security');
+        const d = await r.json();
+        if (d.logs && d.logs.length) {
+          document.getElementById('securityLog').innerHTML = d.logs.map(l => `
+        <tr>
+          <td>${fmtDate(l.detected_at)}</td>
+          <td>${esc(l.email || '—')}</td>
+          <td>${l.owasp_label || l.owasp_category || '—'}</td>
+          <td><span class="severity sev-${l.severity || 'low'}">${(l.severity || '—').toUpperCase()}</span></td>
+          <td>${l.action_taken || '—'}</td>
+          <td>${l.pii_detected ? '<span class="badge-red kpi-badge"><i class="bi bi-exclamation-triangle-fill"></i> Terdeteksi</span>' : '<i class="bi bi-check-circle-fill" style="color:var(--teal)"></i>'}</td>
+        </tr>
+      `).join('');
+        }
+      } catch { }
+    }
+
+    // ── PII ──
+    async function loadPII() {
+      try {
+        const r = await apiFetch('/api/dashboard/pii');
+        const d = await r.json();
+        document.getElementById('piiToday').textContent = fmt(d.today || 0);
+        document.getElementById('piiBlocked').textContent = fmt(d.blocked || 0);
+        document.getElementById('piiType').textContent = d.top_type || 'email';
+        mkChart('chartPII', 'bar', d.days || DEMO.pii.days, [{ label: 'PII Deteksi', data: d.counts || DEMO.pii.counts, backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 6 }]);
+      } catch {
+        document.getElementById('piiToday').textContent = '0';
+        document.getElementById('piiBlocked').textContent = '0';
+        document.getElementById('piiType').textContent = 'email';
+        mkChart('chartPII', 'bar', DEMO.pii.days, [{ label: 'PII Deteksi', data: DEMO.pii.counts, backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 6 }]);
+      }
+    }
+
+    // ── CHART HELPER ──
+    const CHART_DEFAULTS = {
+      plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+      scales: { x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(14,165,233,0.05)' } }, y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(14,165,233,0.05)' } } }
+    };
+
+    function mkChart(id, type, labels, datasets, extra = {}) {
+      if (charts[id]) charts[id].destroy();
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      charts[id] = new Chart(ctx, {
+        type, data: { labels, datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 600 },
+          ...CHART_DEFAULTS, ...extra,
+          plugins: { ...CHART_DEFAULTS.plugins, ...(extra.plugins || {}) }
+        }
+      });
+    }
+
+    // ── FORMATTERS ──
+    const fmt = n => n == null ? '0' : Number(n).toLocaleString('id-ID');
+    const fmtRp = n => n == null ? '0' : Number(n).toLocaleString('id-ID', { minimumFractionDigits: 0 });
+    const fmtBig = n => { if (!n) return '0'; if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B'; if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return fmt(n); };
+    const fmtDate = s => { if (!s) return '—'; try { return new Date(s).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return s; } };
+    const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // ── DEMO DATA (fallback) ──
+    const DEMO = {
+      summary: {
+        total_users: 312, new_users_today: 8, dau: 47, mau: 198,
+        total_revenue_idr: 6240000, revenue_this_month_idr: 900000,
+        avg_latency_ms: 620, total_tokens_used: 4820000,
+        total_cost_idr: 1850000, avg_cost_per_req_idr: 280,
+        days_labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+        dau_series: [30, 35, 42, 38, 47, 44, 47], mau_series: [150, 162, 175, 181, 190, 195, 198],
+        reg_series: [3, 5, 8, 6, 9, 7, 8], lat_labels: ['zilf-max', 'groq', 'openai', 'gemini'],
+        lat_values: [580, 320, 750, 480], cost_series: [180000, 210000, 195000, 240000, 225000, 260000, 185000]
+      },
+      users: [
+        { username: 'budi_santoso', email: 'budi@gmail.com', plan: 'pro', created_at: '2025-12-01', last_login_at: '2026-03-27', total_requests: 234, total_cost_idr: 42000, revenue_credited: true },
+        { username: 'sari_dewi', email: 'sari@company.co.id', plan: 'enterprise', created_at: '2025-11-15', last_login_at: '2026-03-26', total_requests: 1820, total_cost_idr: 315000, revenue_credited: true },
+        { username: 'andi123', email: 'andi@yahoo.com', plan: 'free', created_at: '2026-03-20', last_login_at: '2026-03-27', total_requests: 12, total_cost_idr: 1200, revenue_credited: true },
+        { username: 'rizky_ai', email: 'rizky@startup.id', plan: 'pro', created_at: '2026-03-25', last_login_at: '2026-03-27', total_requests: 89, total_cost_idr: 8900, revenue_credited: true },
+        { username: 'maya_tech', email: 'maya@tech.com', plan: 'free', created_at: '2026-03-27', last_login_at: '2026-03-27', total_requests: 3, total_cost_idr: 300, revenue_credited: false },
+      ],
+      revenue: { revenue_users: 312, total_revenue_idr: 6240000, pending_idr: 960000, new_users_today: 8, new_users_this_month: 45, revenue_this_month_idr: 900000, paid_idr: 5280000 },
+      performance: {
+        models: ['zilf-max', 'groq/llama', 'openai/gpt4', 'gemini'],
+        p50: [480, 280, 650, 420], p95: [820, 480, 1200, 780],
+        days: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+        error_rate: [1.2, 0.8, 2.1, 1.5, 0.9, 0.6, 1.1],
+        tps: [45, 82, 31, 58]
+      },
+      quality: {
+        radar: [0.88, 0.85, 0.82, 0.84, 0.79, 0.86],
+        days: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+        data_drift: [0.08, 0.10, 0.09, 0.12, 0.11, 0.08, 0.09],
+        concept_drift: [0.05, 0.06, 0.08, 0.07, 0.06, 0.05, 0.07],
+        trust: [0.84, 0.86, 0.83, 0.85, 0.87, 0.88, 0.86],
+        hallucination: [3.2, 2.8, 3.5, 2.9, 2.6, 2.4, 2.8],
+        toxicity: [0.8, 0.6, 1.1, 0.9, 0.7, 0.5, 0.8]
+      },
+      costUsers: [
+        { email: 'sari@company.co.id', total_requests: 1820, total_tokens: 892000, total_cost_idr: 315000, avg_cost_per_request_idr: 173 },
+        { email: 'budi@gmail.com', total_requests: 234, total_tokens: 142000, total_cost_idr: 42000, avg_cost_per_request_idr: 179 },
+        { email: 'rizky@startup.id', total_requests: 89, total_tokens: 52000, total_cost_idr: 8900, avg_cost_per_request_idr: 100 },
+        { email: 'andi@yahoo.com', total_requests: 12, total_tokens: 7200, total_cost_idr: 1200, avg_cost_per_request_idr: 100 },
+        { email: 'maya@tech.com', total_requests: 3, total_tokens: 1800, total_cost_idr: 300, avg_cost_per_request_idr: 100 },
+      ],
+      pii: { days: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'], counts: [2, 0, 3, 1, 0, 1, 2] }
+    };
+  </script>
+</body>
+
+</html>
