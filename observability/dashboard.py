@@ -1,5 +1,5 @@
-﻿"""
-Dashboard — optional Streamlit dashboard for live agent trace viewing.
+"""
+Dashboard � optional Streamlit dashboard for live agent trace viewing.
 
 Shows:
   - Real-time step-by-step agent progress
@@ -39,12 +39,12 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
         sys.exit(1)
 
     st.set_page_config(
-        page_title="Zilf AI — Dashboard",
-        page_icon="🤖",
+        page_title="Zilf AI � Dashboard",
+        page_icon="??",
         layout="wide",
     )
 
-    st.title("🤖 Zilf AI — Live Dashboard")
+    st.title("?? Zilf AI � Live Dashboard")
     st.markdown(
         """
         <style>
@@ -76,10 +76,10 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
         st.info("Run an agent task first to populate the dashboard.")
         return
 
-    # ── Sidebar: controls ──────────────────────────────────────────────
+    # -- Sidebar: controls ----------------------------------------------
     with st.sidebar:
         st.header("Controls")
-        refresh = st.button("🔄 Refresh")
+        refresh = st.button("?? Refresh")
         selected_log = st.selectbox(
             "Log file",
             options=sorted(log_path.glob("*_audit.jsonl"), reverse=True),
@@ -87,13 +87,13 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
         )
         default_db = Path(__file__).resolve().parents[1] / "data" / "zilf.db"
         db_path_str = st.text_input("Database (SQLite)", str(default_db))
-        gopay_phone = st.text_input("Nomor GoPay untuk penarikan", "")
+        doku_wallet_phone = st.text_input("Nomor DOKU Wallet (628xxx)", "")
 
     if not selected_log:
         st.info("No audit logs found.")
         return
 
-    # ── Load events ────────────────────────────────────────────────────
+    # -- Load events ----------------------------------------------------
     events: list[dict] = []
     for line in Path(selected_log).read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -107,7 +107,7 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
         st.warning("No events in selected log.")
         return
 
-    # ── Summary metrics ────────────────────────────────────────────────
+    # -- Summary metrics ------------------------------------------------
     tool_calls  = [e for e in events if e.get("event_type") == "tool_call"]
     llm_calls   = [e for e in events if e.get("event_type") == "llm_call"]
     sec_events  = [e for e in events if e.get("event_type") == "security_event"]
@@ -121,15 +121,15 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
     total_tokens = sum(e.get("total_tokens", 0) for e in llm_calls)
     col4.metric("Total Tokens", f"{total_tokens:,}")
 
-    # ── Lifecycle ──────────────────────────────────────────────────────
+    # -- Lifecycle ------------------------------------------------------
     if lifecycle:
         st.subheader("Lifecycle")
         for ev in lifecycle:
             stage = ev.get("stage", "?")
             ts = ev.get("timestamp", "")[:19]
-            st.write(f"`{ts}` — **{stage}**")
+            st.write(f"`{ts}` � **{stage}**")
 
-    # ── Tool call timeline ─────────────────────────────────────────────
+    # -- Tool call timeline ---------------------------------------------
     if tool_calls:
         st.subheader("Tool Call Timeline")
         import pandas as pd  # type: ignore[import]
@@ -143,7 +143,7 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
             })
         st.dataframe(pd.DataFrame(rows), use_container_width=True)
 
-    # ── Token usage ────────────────────────────────────────────────────
+    # -- Token usage ----------------------------------------------------
     if llm_calls:
         st.subheader("Token Usage per Step")
         import pandas as pd  # type: ignore[import]
@@ -160,14 +160,14 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
         df = pd.DataFrame(rows)
         st.bar_chart(df.set_index("Step")[["Input", "Output"]])
 
-    # ── Security events ────────────────────────────────────────────────
+    # -- Security events ------------------------------------------------
     if sec_events:
-        st.subheader("⚠️ Security Events")
+        st.subheader("?? Security Events")
         for ev in sec_events:
             severity = ev.get("severity", "medium")
-            color = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}.get(severity, "⚪")
+            color = {"critical": "??", "high": "??", "medium": "??", "low": "??"}.get(severity, "?")
             st.write(
-                f"{color} **{ev.get('event_name', '?')}** — {ev.get('detail', '')[:200]}"
+                f"{color} **{ev.get('event_name', '?')}** � {ev.get('detail', '')[:200]}"
             )
 
     st.header("AI Observability 2026")
@@ -287,10 +287,10 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
             colA, colB = st.columns(2)
             colA.metric("Total Pengguna", cnt)
             colB.metric("Saldo Monetisasi (Rp)", f"{saldo:,}")
-            tarik = st.button("Tarik Rp1000/pengguna via GoPay")
+            tarik = st.button("Tarik via DOKU Wallet")
             if tarik:
-                if gopay_phone.strip():
-                    st.success(f"Permintaan penarikan dikirim ke GoPay {gopay_phone}. Integrasi API diperlukan untuk menyelesaikan transaksi.")
+                if doku_wallet_phone.strip():
+                    st.success(f"Permintaan penarikan dikirim ke DOKU Wallet {doku_wallet_phone}. Integrasi API diperlukan untuk menyelesaikan transaksi.")
                 else:
                     st.warning("Masukkan nomor GoPay terlebih dahulu di sidebar.")
         elif conn and _table_exists(conn, "users"):
@@ -301,10 +301,10 @@ def _run_dashboard(log_dir: str = ".agent_logs") -> None:
             colA, colB = st.columns(2)
             colA.metric("Total Pengguna", cnt)
             colB.metric("Saldo Monetisasi (Rp)", f"{saldo:,}")
-            tarik = st.button("Tarik Rp1000/pengguna via GoPay")
+            tarik = st.button("Tarik via DOKU Wallet")
             if tarik:
-                if gopay_phone.strip():
-                    st.success(f"Permintaan penarikan dikirim ke GoPay {gopay_phone}. Integrasi API diperlukan untuk menyelesaikan transaksi.")
+                if doku_wallet_phone.strip():
+                    st.success(f"Permintaan penarikan dikirim ke DOKU Wallet {doku_wallet_phone}. Integrasi API diperlukan untuk menyelesaikan transaksi.")
                 else:
                     st.warning("Masukkan nomor GoPay terlebih dahulu di sidebar.")
         else:

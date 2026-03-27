@@ -382,21 +382,21 @@ async def dashboard_pii(_: str = Depends(require_dashboard_token)):
 
 # ====================== PAYOUT DOKU RDL → GoPay ======================
 
-class GoPayPayoutIn(BaseModel):
-    gopay_phone: str
+class DokuPayoutIn(BaseModel):
+    doku_wallet_phone: str
 
 
 @payout_router.post("/gopay/request")
 async def payout_gopay_request(
-    payload: GoPayPayoutIn,
+    payload: DokuPayoutIn,
     _: str = Depends(require_dashboard_token)
 ):
-    """Proses payout ke GoPay via DOKU RDL Disbursement."""
-    phone = payload.gopay_phone.strip()
-    if not phone or not phone.startswith("08") or len(phone) < 10:
+    """Proses payout ke DOKU Wallet via RDL Disbursement."""
+    wallet_phone = payload.doku_wallet_phone.strip()
+    if not wallet_phone.startswith("62") or len(wallet_phone) < 10:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Nomor GoPay tidak valid. Format: 08xxxxxxxxxx"
+            status_code=400,
+            detail="Nomor DOKU Wallet tidak valid. Format: 628xxxxxxxxx"
         )
 
     # Hitung total berdasarkan pengguna aktif
@@ -412,19 +412,17 @@ async def payout_gopay_request(
             detail="Tidak ada saldo yang bisa ditarik."
         )
 
-    # Simpan record payout ke DB terlebih dahulu
     payout_id = f"zilf-{uuid.uuid4().hex[:12]}"
     await db_execute("""
         INSERT INTO payout_requests (id, provider, to_account, amount_idr, total_users, status)
-        VALUES ($1, 'doku_rdl', $2, $3, $4, 'pending')
-    """, payout_id, phone, amount_idr, total_users)
+        VALUES ($1, 'doku_wallet', $2, $3, $4, 'pending')
+    """, payout_id, wallet_phone, amount_idr, total_users)
 
     # Jalankan DOKU RDL
     try:
-        from agent.doku_payout import doku_rdl_payout_to_gopay
-        result = await doku_rdl_payout_to_gopay(
+        from agent.doku_payout import doku_payout_to_wallet
+        result = await doku_payout_to_wallet(
             amount_idr=amount_idr,
-            gopay_phone=phone,
             notes=f"Zilf.ai payout — {total_users} users"
         )
         payout_status = "success" if result.get("status_code") in (200, 201) else "pending"

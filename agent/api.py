@@ -1,15 +1,15 @@
 ﻿"""
-HTTP API for the Zilf AI — v0.3.0
+HTTP API for the Zilf AI � v0.3.0
 
 Endpoints:
-  GET  /health            — liveness probe
-  GET  /chat-ui           — web chat interface
-  POST /chat              — multitask chat (simple + extended thinking)
-  POST /agent/run         — agentic run, blocking
-  POST /agent/stream      — agentic run, real-time SSE
-  POST /run               — legacy agent run (blocking)
-  POST /run/stream        — legacy agent run (SSE)
-  GET  /status/{run_id}   — check task status
+  GET  /health            � liveness probe
+  GET  /chat-ui           � web chat interface
+  POST /chat              � multitask chat (simple + extended thinking)
+  POST /agent/run         � agentic run, blocking
+  POST /agent/stream      � agentic run, real-time SSE
+  POST /run               � legacy agent run (blocking)
+  POST /run/stream        � legacy agent run (SSE)
+  GET  /status/{run_id}   � check task status
 """
 
 from __future__ import annotations
@@ -135,7 +135,7 @@ class ChatRequest(BaseModel):
     model: str | None = Field(default="zilf-max")  # B3 FIX
     extended: bool = Field(
         default=False,
-        description="Aktifkan Extended Thinking — AI menampilkan proses berpikirnya sebelum menjawab"
+        description="Aktifkan Extended Thinking � AI menampilkan proses berpikirnya sebelum menjawab"
     )
 
 
@@ -200,26 +200,26 @@ _MULTITASK_SYSTEM = """CRITICAL: Always output blank lines between sections. Nev
 a heading immediately after a sentence on the same line. Never run
 bullet points together without blank lines separating them from headings.
 
-Kamu adalah ZILF.AI — asisten AI serba bisa yang powerful dan cerdas. You are a helpful AI assistant. Always format your responses using proper Markdown.
+Kamu adalah ZILF.AI � asisten AI serba bisa yang powerful dan cerdas. You are a helpful AI assistant. Always format your responses using proper Markdown.
 
 Formatting rules:
 - Always add a blank line before any heading (##, ###)
 - Always add a blank line before any bullet list (-)
-- Never place a heading inline after a sentence — always start it on a new line
+- Never place a heading inline after a sentence � always start it on a new line
 - Use **bold** for emphasis, not ALL CAPS
 - Use bullet points (-) for lists, never run them together in one sentence
 - Separate each section with a blank line
 
 ## KEMAMPUAN UTAMA
-1. **Website & UI** — HTML/CSS/JS lengkap, landing page, dashboard, game web, animasi
-2. **Kode Program** — Python, JS, SQL, Bash, API, algoritma, lengkap dengan komentar
-3. **Konten** — Artikel, blog, copywriting, esai, email profesional
-4. **Analisis** — Perbandingan teknologi, strategi, tabel, breakdown konsep kompleks
+1. **Website & UI** � HTML/CSS/JS lengkap, landing page, dashboard, game web, animasi
+2. **Kode Program** � Python, JS, SQL, Bash, API, algoritma, lengkap dengan komentar
+3. **Konten** � Artikel, blog, copywriting, esai, email profesional
+4. **Analisis** � Perbandingan teknologi, strategi, tabel, breakdown konsep kompleks
 
 ## ATURAN
 - Kode HTML/CSS/JS: tulis LENGKAP dalam satu blok, siap digunakan
 - Artikel/konten: gunakan heading yang jelas
-- Tulis SEMUA kode — jangan potong dengan "// ... tambahkan sendiri"
+- Tulis SEMUA kode � jangan potong dengan "// ... tambahkan sendiri"
 - Ikuti bahasa pengguna (Indonesia atau Inggris)
 - Langsung berikan hasilnya"""
 
@@ -312,7 +312,7 @@ def _create_agent(model: str, max_steps: int, step_callback: Any = None):
         max_steps=max_steps,
         use_planner=True,
         verbose=False,
-        step_callback=step_callback,  # ✅ Proper parameter, bukan _loop access
+        step_callback=step_callback,  # ? Proper parameter, bukan _loop access
     )
 
     return agent
@@ -868,38 +868,6 @@ async def dashboard_security_summary(request: Request) -> dict:
         conn.close()
 
 
-async def payout_gopay_request(request: Request, body: GoPayPayoutIn) -> dict:
-    _require_dashboard_access(request)
-    gopay_phone = body.gopay_phone.strip()
-    if not gopay_phone:
-        raise HTTPException(status_code=400, detail="Nomor GoPay wajib diisi")
-    conn = _zilf_db_conn()
-    try:
-        total_users = int((conn.execute("SELECT COUNT(1) AS c FROM users").fetchone() or {"c": 0})["c"])
-        amount_idr = total_users * 20000
-        payout_id = str(uuid.uuid4())
-        conn.execute(
-            """
-            INSERT INTO payout_requests (id, provider, to_account, amount_idr, total_users, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (payout_id, "gopay", gopay_phone, amount_idr, total_users, "recorded"),
-        )
-        conn.commit()
-        integration_configured = bool(os.environ.get("GOPAY_API_KEY", "").strip())
-        return {
-            "payout_id": payout_id,
-            "provider": "gopay",
-            "to_account": gopay_phone,
-            "amount_idr": amount_idr,
-            "total_users": total_users,
-            "integration_configured": integration_configured,
-        }
-    finally:
-        conn.close()
-
-
-
 @app.get("/chat-ui", tags=["chat"], include_in_schema=False)
 async def chat_ui() -> FileResponse:
     html_path = os.path.join(_TEMPLATES_DIR, "chat.html")
@@ -933,7 +901,7 @@ async def onboarding_suggestions_page() -> FileResponse:
 
 
 # ---------------------------------------------------------------------------
-# /chat — multitask dengan Extended Thinking
+# /chat � multitask dengan Extended Thinking
 # ---------------------------------------------------------------------------
 
 
@@ -955,14 +923,14 @@ async def chat(req: ChatRequest) -> ChatResponse:
         llm = _build_llm(model, extended=req.extended)
 
         if req.extended:
-            # Extended thinking — use generate_text with system prompt
+            # Extended thinking � use generate_text with system prompt
             raw = await llm.generate_text(
                 messages=messages,
                 system=_MULTITASK_SYSTEM,
                 max_tokens=4096,
             )
         else:
-            # Normal chat — use generate_text with system prompt
+            # Normal chat � use generate_text with system prompt
             raw = await llm.generate_text(
                 messages=messages,
                 system=_MULTITASK_SYSTEM,
@@ -993,9 +961,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
     )
 
 
-# ══════════════════════════════════════════════════════════════
+# --------------------------------------------------------------
 # /chat/stream juga perlu A2 FIX yang sama
-# ══════════════════════════════════════════════════════════════
+# --------------------------------------------------------------
 
 
 
@@ -1030,7 +998,7 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
 
 
 # ---------------------------------------------------------------------------
-# /agent/run — agentic blocking
+# /agent/run � agentic blocking
 # ---------------------------------------------------------------------------
 
 async def _team_refine_agent_answer(
@@ -1168,9 +1136,9 @@ async def _team_refine_agent_answer(
 async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
     """
     Hierarchical + Sequential orchestration:
-    - Planner (Groq) → plan
-    - Workers (router) → execute subtasks
-    - Editor (Groq) → merge/refine
+    - Planner (Groq) ? plan
+    - Workers (router) ? execute subtasks
+    - Editor (Groq) ? merge/refine
     """
     if req.model == "zilf-pro":
         agent = _create_zilf_action_orchestrator(max_steps=req.max_steps)
@@ -1234,7 +1202,7 @@ async def agent_run(req: AgentRunRequest) -> AgentRunResponse:
 
 
 # ---------------------------------------------------------------------------
-# /agent/stream — agentic SSE
+# /agent/stream � agentic SSE
 # ---------------------------------------------------------------------------
 
 
@@ -1381,6 +1349,20 @@ async def get_status(run_id: str) -> dict[str, Any]:
 async def cli_page() -> FileResponse:
     html_path = os.path.join(_TEMPLATES_DIR, "cli.html")
     return FileResponse(html_path, media_type="text/html")
+
+
+
+@app.post("/admin/doku/register-rdl", tags=["admin"])
+async def register_rdl(request: Request):
+    _require_dashboard_access(request)
+    from agent.doku_payout import register_rdl_and_get_account_id
+    result = await register_rdl_and_get_account_id(
+        customer_id="ZILF-MERCHANT-001",
+        customer_name="Zilf AI",
+        email="alfiz.ilham09@gmail.com",      # ← ganti
+        phone="6287822065257",             # ← ganti nomor HP kamu
+    )
+    return result
 
 
 # ---------------------------------------------------------------------------

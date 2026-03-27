@@ -1022,7 +1022,7 @@
             </div>
             <button class="payout-btn" onclick="openPayoutModal()">
               <img src="https://img.icons8.com/color/24/gopay.png" onerror="this.style.display='none'" />
-              Tarik via GoPay
+              Tarik via DOKU
             </button>
           </div>
 
@@ -1040,7 +1040,7 @@
             <div class="kpi-card">
               <div class="kpi-label">Total Ditarik</div>
               <div class="kpi-value" id="revPaid" style="color:var(--yellow)">—</div>
-              <div class="kpi-sub">via GoPay</div>
+              <div class="kpi-sub">via DOKU</div>
             </div>
             <div class="kpi-card">
               <div class="kpi-label">Saldo Belum Ditarik</div>
@@ -1051,7 +1051,7 @@
 
           <div class="table-card">
             <div class="table-header">
-              <h3>Riwayat Payout GoPay</h3>
+              <h3>Riwayat Payout DOKU</h3>
             </div>
             <div style="overflow-x:auto">
               <table>
@@ -1226,8 +1226,8 @@
   <!-- PAYOUT MODAL -->
   <div class="modal-overlay" id="payoutModal">
     <div class="modal-box">
-      <div class="modal-title"><i class="bi bi-cash-stack"></i> Tarik Dana via GoPay</div>
-      <div class="modal-sub">Konfirmasi penarikan saldo ke akun GoPay Anda</div>
+      <div class="modal-title"><i class="bi bi-cash-stack"></i> Tarik Dana via DOKU</div>
+      <div class="modal-sub">Konfirmasi penarikan saldo ke akun DOKU Anda</div>
       <div class="payout-summary">
         <div class="payout-row"><span class="label">Pengguna dikreditkan</span><span class="val"
             id="mUserCount">—</span></div>
@@ -1236,8 +1236,8 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Nomor GoPay (HP)</label>
-        <input type="text" id="gopayPhone" placeholder="08xxxxxxxxxx" maxlength="15" />
+        <label>Nomor DOKU Wallet (HP)</label>
+        <input type="text" id="dokuWalletPhone" placeholder="628xxxxxxxxxx" maxlength="15" />
       </div>
       <div id="payoutResult"></div>
       <div class="modal-footer">
@@ -1467,9 +1467,9 @@
     }
 
     async function submitPayout() {
-      const phone = document.getElementById('gopayPhone').value.trim();
-      if (!phone.match(/^08\d{8,12}$/)) {
-        alert('Format nomor GoPay tidak valid (contoh: 081234567890)');
+      const phone = document.getElementById('dokuWalletPhone').value.trim();
+      if (!phone.match(/^628\d{8,12}$/)) {
+        alert('Format nomor DOKU Wallet tidak valid (contoh: 6281234567890)');
         return;
       }
       const total = parseInt(document.getElementById('mTotal').textContent.replace(/\D/g, ''));
@@ -1477,14 +1477,14 @@
       try {
         const r = await apiFetch('/api/payout/gopay/request', {
           method: 'POST',
-          body: JSON.stringify({ gopay_phone: phone, amount_idr: total, user_count: ucount })
+          body: JSON.stringify({ doku_wallet_phone: phone, amount_idr: total, user_count: ucount })
         });
         const d = await r.json();
         const el = document.getElementById('payoutResult');
         el.style.display = 'block';
         if (d.status === 'pending' || d.status === 'recorded') {
           el.className = 'result-pending';
-          el.innerHTML = `<i class="bi bi-hourglass-split"></i> Permintaan payout <b>Rp${fmtRp(total)}</b> ke <b>${phone}</b> sedang diproses.<br>Ref: ${d.reference_id || '—'}<br><small>Akan aktif setelah API GoPay production terhubung.</small>`;
+          el.innerHTML = `<i class="bi bi-hourglass-split"></i> Permintaan payout <b>Rp${fmtRp(total)}</b> ke DOKU Wallet <b>${phone}</b> sedang diproses.<br>Ref: ${d.reference_id || '—'}<br><small>Akan aktif setelah DOKU_WALLET_PHONE dikonfigurasi di .env.</small>`;
         } else if (d.status === 'success') {
           el.className = 'result-success';
           el.innerHTML = `<i class="bi bi-check-circle-fill"></i> Payout <b>Rp${fmtRp(total)}</b> berhasil! Ref: ${d.reference_id}`;
