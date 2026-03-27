@@ -59,6 +59,7 @@ os.makedirs(_DATA_DIR, exist_ok=True)
 _UPLOADS_DIR   = os.path.join(_DATA_DIR, "uploads")
 os.makedirs(_UPLOADS_DIR, exist_ok=True)
 _FEEDBACK_DB   = os.path.join(_DATA_DIR, "feedback.db")
+_ZILF_DB_PATH  = os.path.join(_DATA_DIR, "zilf.db")
 _feedback_streams: dict[str, list[asyncio.Queue]] = {}
 
 def _init_feedback_db():
@@ -357,6 +358,11 @@ def _get_current_user(request: Request) -> dict:
 
 app.include_router(dashboard_router)
 app.include_router(payout_router)
+
+@app.on_event("startup")
+async def on_startup():
+    from agent.dashboard_routes import init_dashboard_tables
+    await init_dashboard_tables()
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
@@ -1375,78 +1381,6 @@ async def get_status(run_id: str) -> dict[str, Any]:
 async def cli_page() -> FileResponse:
     html_path = os.path.join(_TEMPLATES_DIR, "cli.html")
     return FileResponse(html_path, media_type="text/html")
-
-
-# ---------------------------------------------------------------------------
-# DOKU RDL Payout Integration (Phase 3)
-# ---------------------------------------------------------------------------
-
-from agent.doku_payout import doku_rdl_payout_to_gopay
-
-class GoPayPayoutIn(BaseModel):
-    gopay_phone: str = Field(..., min_length=10, max_length=15)
-
-# Override / extend fungsi payout yang sudah ada
-async def payout_gopay_request(request: Request, body: GoPayPayoutIn) -> dict:
-    _require_dashboard_access(request)
-    gopay_phone = body.gopay_phone.strip()
-    if not gopay_phone:
-        raise HTTPException(status_code=400, detail="Nomor GoPay wajib diisi")
-
-    conn = _zilf_db_conn()
-    try:
-        total_users = int((conn.execute("SELECT COUNT(1) AS c FROM users").fetchone() or {"c": 0})["c"])
-        amount_idr = total_users * 20000
-
-        # Record dulu ke tabel payout_requests
-        payout_id = str(uuid.uuid4())
-        conn.execute(
-            """
-            INSERT INTO payout_requests (id, provider, to_account, amount_idr, total_users, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (payout_id, "doku_rdl", gopay_phone, amount_idr, total_users, "pending"),
-        )
-        conn.commit()
-
-        # Jalankan payout ke DOKU RDL
-        payout_result = await doku_rdl_payout_to_gopay(
-            amount_idr=amount_idr,
-            gopay_phone=gopay_phone,
-            notes=f"Zilf.ai reward payout - {total_users} users"
-        )
-
-        status = "success" if payout_result.get("status_code") in (200, 201) else "failed"
-
-        # Update status di DB
-        conn.execute(
-            "UPDATE payout_requests SET status = ?, doku_response = ? WHERE id = ?",
-            (status, json.dumps(payout_result), payout_id)
-        )
-
-        # Jika berhasil → potong saldo user (asumsi kolom saldo/balance)
-        if status == "success":
-            conn.execute(
-                "UPDATE users SET saldo = saldo - ? WHERE saldo >= ?",
-                (amount_idr, amount_idr)
-            )
-            # Alternatif jika kolom bernama balance:
-            # conn.execute("UPDATE users SET balance = balance - ? WHERE balance >= ?", (amount_idr, amount_idr))
-
-            conn.commit()
-            print(f"[PAYOUT SUCCESS] Rp {amount_idr:,} telah dipotong dari saldo users")
-
-        return {
-            "payout_id": payout_id,
-            "provider": "doku_rdl",
-            "to_account": gopay_phone,
-            "amount_idr": amount_idr,
-            "total_users": total_users,
-            "status": status,
-            "doku_response": payout_result
-        }
-    finally:
-        conn.close()
 
 
 # ---------------------------------------------------------------------------
